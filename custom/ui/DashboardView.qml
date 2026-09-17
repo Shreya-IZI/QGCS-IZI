@@ -6,7 +6,6 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QGroundControl
 import Company.UI
-import "controls"
 
 Item {
     id: root

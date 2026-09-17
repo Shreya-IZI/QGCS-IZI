@@ -4,7 +4,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Company.UI
-import "controls"
 
 Rectangle {
     id: root

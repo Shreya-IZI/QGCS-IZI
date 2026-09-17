@@ -12,7 +12,6 @@ import QGroundControl.Controls
 import QGroundControl.FlightMap
 import QGroundControl.PlanView
 import Company.UI
-import "controls"
 
 Item {
     id: root
