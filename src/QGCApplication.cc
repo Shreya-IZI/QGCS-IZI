@@ -381,6 +381,22 @@ void QGCApplication::_missingParamsDisplay()
         return;
     }
 
+    Vehicle* const activeVehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (activeVehicle) {
+        if (!activeVehicle->parameterManager()->parametersReady()) {
+            _missingParamsDelayedDisplayTimer.start();
+            return;
+        }
+
+        _missingParams.removeIf([activeVehicle](const QPair<int, QString>& item) {
+            return activeVehicle->parameterManager()->parameterExists(item.first, item.second);
+        });
+    }
+
+    if (_missingParams.isEmpty()) {
+        return;
+    }
+
     QString params;
     for (QPair<int, QString>& missingParam : _missingParams) {
         const QString param = QStringLiteral("%1:%2").arg(missingParam.first).arg(missingParam.second);

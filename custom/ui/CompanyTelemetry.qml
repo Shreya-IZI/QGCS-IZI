@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QGroundControl
+import Company.UI
 
 QtObject {
     id: root
@@ -18,14 +19,20 @@ QtObject {
     readonly property var _battery:      (hasVehicle && activeVehicle.batteries && activeVehicle.batteries.count > 0) ? activeVehicle.batteries.get(0) : null
     readonly property var _gps:          (hasVehicle && activeVehicle.gps) ? activeVehicle.gps : null
     readonly property var _linkMgr:      (hasVehicle && activeVehicle.vehicleLinkManager) ? activeVehicle.vehicleLinkManager : null
+    readonly property var _gimbalMgr:    (hasVehicle && activeVehicle.gimbalController) ? activeVehicle.gimbalController : null
+    readonly property var _activeGimbal: (_gimbalMgr && _gimbalMgr.activeGimbal) ? _gimbalMgr.activeGimbal : null
+    readonly property var _cameraMgr:    (hasVehicle && activeVehicle.cameraManager) ? activeVehicle.cameraManager : null
+    readonly property var _activeCamera: (_cameraMgr && _cameraMgr.currentCameraInstance) ? _cameraMgr.currentCameraInstance : null
 
     // ========================================================================
     // 2. Core Vehicle State
     // ========================================================================
-    readonly property int    vehicleId:  hasVehicle ? activeVehicle.id : 0
-    readonly property bool   armed:      hasVehicle && activeVehicle.armed
-    readonly property bool   flying:     hasVehicle && activeVehicle.flying
-    readonly property string flightMode: hasVehicle ? activeVehicle.flightMode : ""
+    readonly property int    vehicleId:          hasVehicle ? activeVehicle.id : 0
+    readonly property bool   armed:              hasVehicle && activeVehicle.armed
+    readonly property bool   flying:             hasVehicle && activeVehicle.flying
+    readonly property bool   isAirborne:         hasVehicle && activeVehicle.flying
+    readonly property bool   isGrounded:         hasVehicle && !activeVehicle.flying && !activeVehicle.landing
+    readonly property string flightMode:         hasVehicle ? activeVehicle.flightMode : ""
 
     // ========================================================================
     // 3. Battery Telemetry
@@ -100,4 +107,53 @@ QtObject {
     readonly property real   mavlinkLossPercent:    (hasVehicle && !isNaN(activeVehicle.mavlinkLossPercent)) ? activeVehicle.mavlinkLossPercent : 0
     readonly property int    linkQualityPercent:    hasVehicle ? Math.max(0, Math.min(100, Math.round(100 - mavlinkLossPercent))) : 0
     readonly property bool   communicationLost:     hasVehicle && _linkMgr ? _linkMgr.communicationLost : false
+    readonly property bool   communicationValid:    hasVehicle && _linkMgr ? !_linkMgr.communicationLost : false
+
+    // ========================================================================
+    // ========================================================================
+    // 9. Gimbal Telemetry (Pitch / Yaw / Roll)
+    // ========================================================================
+    readonly property bool   hasGimbal:             _activeGimbal !== null || (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface !== null)
+    readonly property real   gimbalPitch:           (_activeGimbal && _activeGimbal.absolutePitch && !isNaN(_activeGimbal.absolutePitch.rawValue)) ? _activeGimbal.absolutePitch.rawValue : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.pitch : NaN)
+    readonly property string gimbalPitchStr:        !isNaN(gimbalPitch) ? (gimbalPitch.toFixed(1) + "°") : "--"
+    readonly property real   gimbalYaw:             (_activeGimbal && _activeGimbal.absoluteYaw && !isNaN(_activeGimbal.absoluteYaw.rawValue)) ? _activeGimbal.absoluteYaw.rawValue : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.yaw : NaN)
+    readonly property string gimbalYawStr:          !isNaN(gimbalYaw) ? (gimbalYaw.toFixed(1) + "°") : "--"
+    readonly property real   gimbalRoll:            (_activeGimbal && _activeGimbal.absoluteRoll && !isNaN(_activeGimbal.absoluteRoll.rawValue)) ? _activeGimbal.absoluteRoll.rawValue : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.roll : NaN)
+    readonly property string gimbalRollStr:         !isNaN(gimbalRoll) ? (gimbalRoll.toFixed(1) + "°") : "--"
+
+    // ========================================================================
+    // 10. Camera & Sensor FOV Telemetry
+    // ========================================================================
+    readonly property real   rgbHfov:               (QGroundControl.videoManager.hfov > 1.0) ? QGroundControl.videoManager.hfov : (_activeCamera && _activeCamera.currentStreamInstance && _activeCamera.currentStreamInstance.hfov > 0 ? _activeCamera.currentStreamInstance.hfov : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.fov > 0.1) ? CompanyPayloadInterface.fov : NaN))
+    readonly property bool   hasRgbHfov:            !isNaN(rgbHfov) && rgbHfov > 1.0
+    readonly property string rgbHfovStr:            hasRgbHfov ? (rgbHfov.toFixed(1) + "°") : "N/A"
+
+    readonly property real   thermalHfov:           (QGroundControl.videoManager.thermalHfov > 1.0) ? QGroundControl.videoManager.thermalHfov : NaN
+    readonly property bool   hasThermalHfov:        !isNaN(thermalHfov) && thermalHfov > 1.0
+    readonly property string thermalHfovStr:         hasThermalHfov ? (thermalHfov.toFixed(1) + "°") : "N/A"
+
+    readonly property bool   canZoom:               (_activeCamera !== null && _activeCamera.hasZoom) || (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface !== null) || (typeof companyPayload !== "undefined" && companyPayload !== null)
+    readonly property real   zoomLevel:             (_activeCamera !== null && _activeCamera.hasZoom) ? _activeCamera.zoomLevel : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.zoom : ((typeof companyPayload !== "undefined" && companyPayload) ? companyPayload.zoom : NaN))
+    readonly property string zoomLevelStr:          canZoom ? (!isNaN(zoomLevel) ? (zoomLevel.toFixed(1) + "x") : "--") : "--"
+
+    readonly property bool   canCapturePhoto:       _activeCamera !== null ? _activeCamera.capturesPhotos : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.capturesPhotos : ((typeof companyPayload !== "undefined" && companyPayload) ? companyPayload.capturesPhotos : QGroundControl.videoManager.decoding))
+    readonly property bool   canRecordVideo:        _activeCamera !== null ? _activeCamera.capturesVideo : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.capturesVideo : ((typeof companyPayload !== "undefined" && companyPayload) ? companyPayload.capturesVideo : QGroundControl.videoManager.decoding))
+
+    // ========================================================================
+    // 10B. Laser Rangefinder (LRF) Telemetry
+    // ========================================================================
+    readonly property real   lrfDistance:           (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.lrfValid) ? CompanyPayloadInterface.lrfDistance : ((typeof companyPayload !== "undefined" && companyPayload && companyPayload.lrfValid) ? companyPayload.lrfDistance : NaN)
+    readonly property bool   hasLrfDistance:        !isNaN(lrfDistance) && lrfDistance > 0.01
+    readonly property string lrfDistanceStr:        hasLrfDistance ? (lrfDistance.toFixed(1) + " m") : "N/A"
+
+    // ========================================================================
+    // 11. Authoritative Time Reference
+    // ========================================================================
+    // Synchronized to drone GPS epoch via MAVLink SYSTEM_TIME & GPS_RAW_INT.
+    // Seamlessly falls back to local GCS UTC when vehicle GPS time is not yet established.
+    readonly property bool   hasDroneGpsTime:       (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.hasDroneGpsTime : false
+    readonly property string timeSourceLabel:       hasDroneGpsTime ? "DRONE GPS UTC" : "LOCAL GCS UTC"
+    readonly property real   currentDroneTimeMs:    (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.currentDroneTimeMs : Date.now()
+    readonly property string droneTimestampHmsMs:   (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.formattedHmsMs : ""
+    readonly property string droneTimestampFull:    (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.droneUtcTimestamp : ""
 }

@@ -16,9 +16,11 @@
 #include <algorithm>
 
 #include <QtCore/QApplicationStatic>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QTimeZone>
 #include <QtCore/QTimer>
+#include <QtQml/QQmlEngine>
 
 QGC_LOGGING_CATEGORY(OnboardLogControllerLog, "AnalyzeView.OnboardLogController")
 
@@ -29,12 +31,33 @@ static constexpr const char *kMavlinkLogRoot = "@MAV_LOG";
 static constexpr const char *kPx4LogRootFallback = "/fs/microsd/log";
 static constexpr const char *kApmLogRootFallback = "/APM/LOGS";
 
+static OnboardLogController *s_onboardLogControllerInstance = nullptr;
+
+OnboardLogController *OnboardLogController::instance()
+{
+    if (!s_onboardLogControllerInstance) {
+        s_onboardLogControllerInstance = new OnboardLogController(qApp);
+    }
+    return s_onboardLogControllerInstance;
+}
+
+OnboardLogController *OnboardLogController::create(QQmlEngine *qmlEngine, QJSEngine *jsEngine)
+{
+    Q_UNUSED(qmlEngine);
+    Q_UNUSED(jsEngine);
+    return instance();
+}
+
 OnboardLogController::OnboardLogController(QObject *parent)
     : QObject(parent)
     , _timer(new QTimer(this))
     , _logEntriesModel(new QmlObjectListModel(this))
 {
     qCDebug(OnboardLogControllerLog) << this;
+
+    if (!s_onboardLogControllerInstance) {
+        s_onboardLogControllerInstance = this;
+    }
 
     (void) connect(MultiVehicleManager::instance(), &MultiVehicleManager::activeVehicleChanged, this, &OnboardLogController::_setActiveVehicle);
     (void) connect(_timer, &QTimer::timeout, this, &OnboardLogController::_processDownload);
@@ -47,6 +70,9 @@ OnboardLogController::OnboardLogController(QObject *parent)
 OnboardLogController::~OnboardLogController()
 {
     qCDebug(OnboardLogControllerLog) << this;
+    if (s_onboardLogControllerInstance == this) {
+        s_onboardLogControllerInstance = nullptr;
+    }
 }
 
 void OnboardLogController::download(const QString &path)

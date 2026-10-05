@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
 import QtMultimedia
+import QtCore as QtSys
 import QGroundControl
 import QGroundControl.Controls
 import Company.UI
@@ -13,14 +14,25 @@ import Company.UI
 ApplicationWindow {
     id: mainWindow
 
-    title: "COMPANY GCS - Enterprise Flight Control"
+    title: "IZI GCS - Enterprise Flight Control"
     visible: true
-    width: 1280
-    height: 800
-    minimumWidth: 960
-    minimumHeight: 600
+    width: ScreenTools.isMobile ? 860 : 1280
+    height: ScreenTools.isMobile ? 450 : 800
+    minimumWidth: ScreenTools.isMobile ? 360 : 640
+    minimumHeight: ScreenTools.isMobile ? 240 : 400
 
     color: CompanyTheme.bgApp
+
+    readonly property bool _isNarrow: width < 1024 || ScreenTools.isMobile
+
+    // ------------------------------------------------------------------------
+    // Persistent App Settings (QtCore.Settings)
+    // ------------------------------------------------------------------------
+    QtSys.Settings {
+        id: appSettings
+        category: "IZI_GCS"
+        property bool onboardingComplete: false
+    }
 
     // ------------------------------------------------------------------------
     // Global Scope Objects & Functions (Required by QGC Dialogs & Controls)
@@ -87,26 +99,6 @@ ApplicationWindow {
     }
 
     // ------------------------------------------------------------------------
-    // VideoManager Pipeline Sinks (Required by QGC VideoManager initialization)
-    // ------------------------------------------------------------------------
-    Item {
-        id: videoSinkHost
-        visible: false
-        width: 0
-        height: 0
-
-        VideoOutput {
-            objectName: "videoContent"
-            visible: false
-        }
-
-        VideoOutput {
-            objectName: "thermalVideo"
-            visible: false
-        }
-    }
-
-    // ------------------------------------------------------------------------
     // Mission Control Top Status Header
     // ------------------------------------------------------------------------
     TopBar {
@@ -115,41 +107,63 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         z: 10
+        onTabRequested: (tabIndex) => {
+            contentArea.switchTab(tabIndex)
+        }
+        onToggleDrawerRequested: () => {
+            navDrawer.isOpen = !navDrawer.isOpen
+        }
+        onShowUserGuideRequested: () => {
+            onboardingLoader.active = true
+        }
     }
 
     // ------------------------------------------------------------------------
-    // Main Workspace Layout (Sidebar + Content View)
+    // Main Workspace Layout
     // ------------------------------------------------------------------------
-    RowLayout {
+    Item {
+        id: workspaceRoot
         anchors.top: topBar.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        spacing: 0
 
-        // Navigation Sidebar
-        Sidebar {
-            id: sidebar
-            Layout.fillHeight: true
-            currentTab: 1
-            onTabSelected: (index) => {
-                contentArea.switchTab(index)
-            }
+        // Drawer controller state
+        QtObject {
+            id: navDrawer
+            property bool isOpen: false
         }
 
+        // --------------------------------------------------------------------
         // Central Content Area
+        // On mobile/narrow: occupies full screen width.
+        // On desktop: positioned to the right of the docked sidebar.
+        // --------------------------------------------------------------------
         Item {
             id: contentArea
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: mainWindow._isNarrow ? parent.left : sidebar.right
+            anchors.right: parent.right
 
             function switchTab(index) {
                 sidebar.currentTab = index
                 viewStack.currentIndex = index
-                if (index === 0) {
-                    dashboardView.currentSubView = "PFD"
-                } else if (index === 1) {
-                    dashboardView.currentSubView = "MAP"
+                if (index <= 1) {
+                    sidebar.activeSection = "OPERATIONS"
+                    sidebar.activeTool = -1
+                    sidebar.activeVehicleItem = -1
+                    if (index === 0) {
+                        dashboardView.currentSubView = "PFD"
+                    }
+                } else if (index === 6 || index === 7) {
+                    sidebar.activeSection = "VEHICLE"
+                    sidebar.activeVehicleItem = index
+                    sidebar.activeTool = -1
+                } else {
+                    sidebar.activeSection = "TOOLS"
+                    sidebar.activeTool = index
+                    sidebar.activeVehicleItem = -1
                 }
             }
 
@@ -164,12 +178,9 @@ ApplicationWindow {
             Connections {
                 target: dashboardView
                 function onCurrentSubViewChanged() {
-                    if (sidebar.currentTab === 0 || sidebar.currentTab === 1) {
-                        if (dashboardView.currentSubView === "PFD") {
-                            sidebar.currentTab = 0
-                        } else if (dashboardView.currentSubView === "MAP") {
-                            sidebar.currentTab = 1
-                        }
+                    sidebar.activeSubView = dashboardView.currentSubView
+                    if (sidebar.currentTab >= 2) {
+                        contentArea.switchTab(1)
                     }
                 }
             }
@@ -181,13 +192,17 @@ ApplicationWindow {
                 currentIndex: sidebar.currentTab
                 visible: sidebar.currentTab >= 2
 
-                // Tab 0 & 1: Lightweight placeholders (DashboardView is rendered above)
+                // Tab 0 & 1: Placeholders (DashboardView is rendered above)
                 Item { id: tab0Placeholder }
                 Item { id: tab1Placeholder }
 
                 // Tab 2: Mission Planning
                 MissionPlannerView {
                     id: missionsView
+                    onFlightActionRequested: (actionType) => {
+                        contentArea.switchTab(1)
+                        dashboardView.requestActionConfirmation(actionType)
+                    }
                 }
 
                 // Tab 3: Fleet Management
@@ -201,25 +216,165 @@ ApplicationWindow {
                 }
 
                 // Tab 4: Flight Logs & Dataflash
-                Placeholders {
+                FlightLogsView {
                     id: logsView
-                    pageTitle: "Flight Logs & Analysis"
-                    pageSubtitle: "ULog parser, telemetry graphs & flight dataflash inspection"
-                    iconName: "logs"
-                    moduleTag: "ULOG"
-                    Component.onCompleted: logsView.navigateToTab.connect(contentArea.switchTab)
                 }
 
-                // Tab 5: System Settings
-                Placeholders {
+                // Tab 5: System Settings & Telemetry
+                SettingsView {
                     id: settingsView
-                    pageTitle: "System Settings"
-                    pageSubtitle: "Communication links, radio configurations & GCS preferences"
-                    iconName: "settings"
-                    moduleTag: "CONFIG"
-                    Component.onCompleted: settingsView.navigateToTab.connect(contentArea.switchTab)
+                }
+
+                // Tab 6: Parameters & Flight Controller Tuning
+                Item {
+                    id: parametersPage
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    Loader {
+                        id: parametersLoader
+                        anchors.fill: parent
+                        active: sidebar.currentTab === 6 || item !== null
+                        source: "ParametersView.qml"
+                    }
+                }
+
+                // Tab 7: Vehicle Setup & Hardware Calibration
+                Item {
+                    id: vehicleSetupPage
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    Loader {
+                        id: vehicleConfigLoader
+                        anchors.fill: parent
+                        active: sidebar.currentTab === 7
+                        source: "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml"
+                    }
                 }
             }
         }
+
+        // --------------------------------------------------------------------
+        // Mobile Edge Tap Opener (Thin strip along left edge to open drawer)
+        // --------------------------------------------------------------------
+        MouseArea {
+            id: edgeSwipeArea
+            visible: mainWindow._isNarrow && !navDrawer.isOpen
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 20
+            z: 50
+            onClicked: navDrawer.isOpen = true
+        }
+
+        // --------------------------------------------------------------------
+        // Dimming Backdrop (Tap outside to close drawer on mobile)
+        // --------------------------------------------------------------------
+        Rectangle {
+            id: drawerBackdrop
+            visible: mainWindow._isNarrow && (navDrawer.isOpen || sidebar.x > -sidebar.width)
+            anchors.fill: parent
+            color: "#CC000000"
+            opacity: navDrawer.isOpen ? 1.0 : 0.0
+            z: 180
+
+            Behavior on opacity {
+                NumberAnimation { duration: 180 }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: navDrawer.isOpen = false
+            }
+
+            Text {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.rightMargin: 16
+                text: "✕ TAP TO CLOSE"
+                color: "#80FFFFFF"
+                font.pointSize: 9
+                font.bold: true
+                font.letterSpacing: 1.2
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Unified Navigation Sidebar
+        // - Desktop mode: docked on left (x = 0, z = 1).
+        // - Mobile/Narrow mode: overlay Drawer (slides between -width and 0, z = 200).
+        // --------------------------------------------------------------------
+        Sidebar {
+            id: sidebar
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            // Absolutely NO anchors.left here!
+            x: mainWindow._isNarrow ? (navDrawer.isOpen ? 0 : -sidebar.width) : 0
+            z: mainWindow._isNarrow ? 200 : 1
+            visible: !mainWindow._isNarrow || navDrawer.isOpen || x > -sidebar.width
+            isExpanded: mainWindow._isNarrow ? true : isExpanded
+
+            Behavior on x {
+                NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+            }
+
+            currentTab: 1
+            activeSubView: dashboardView.currentSubView
+
+            onCloseRequested: {
+                navDrawer.isOpen = false
+            }
+
+            onTabSelected: (index) => {
+                if (mainWindow._isNarrow) navDrawer.isOpen = false
+                contentArea.switchTab(index)
+            }
+            onSubViewSelected: (viewId) => {
+                if (mainWindow._isNarrow) navDrawer.isOpen = false
+                dashboardView.currentSubView = viewId
+                contentArea.switchTab(1)
+            }
+            onFlightActionRequested: (actionType) => {
+                if (mainWindow._isNarrow) navDrawer.isOpen = false
+                contentArea.switchTab(1)
+                dashboardView.requestActionConfirmation(actionType)
+            }
+            onToolSelected: (tabIndex) => {
+                if (mainWindow._isNarrow) navDrawer.isOpen = false
+                contentArea.switchTab(tabIndex)
+            }
+            onVehicleItemSelected: (tabIndex) => {
+                if (mainWindow._isNarrow) navDrawer.isOpen = false
+                contentArea.switchTab(tabIndex)
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // First-Run / Field Onboarding Guide Overlay
+    // ------------------------------------------------------------------------
+    Loader {
+        id: onboardingLoader
+        anchors.fill: parent
+        z: 500
+        active: false
+        source: "OnboardingGuide.qml"
+    }
+
+    Component.onCompleted: {
+        if (!appSettings.onboardingComplete) {
+            onboardingLoader.active = true
+        }
+    }
+
+    Connections {
+        target: onboardingLoader.item
+        function onDismissed() {
+            appSettings.onboardingComplete = true
+            onboardingLoader.active = false
+        }
+        ignoreUnknownSignals: true
     }
 }

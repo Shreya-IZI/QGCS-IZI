@@ -188,3 +188,7 @@ pytest-of-*/
 .tool-versions
 .python-version
 !tools/.python-version
+
+# Local Docker CLI & build signatures
+.docker_cli/
+*.idsig

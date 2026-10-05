@@ -5,6 +5,7 @@
 
 class CustomOptions;
 class QQmlApplicationEngine;
+class SimulatedPayloadAdapter;
 
 Q_DECLARE_LOGGING_CATEGORY(CustomPluginLog)
 
@@ -25,4 +26,5 @@ public:
 
 private:
     CustomOptions *_options = nullptr;
+    SimulatedPayloadAdapter *_payloadAdapter = nullptr;
 };

@@ -162,20 +162,21 @@ Item {
         id: mapScale
         anchors.left: parent.left
         anchors.bottom: parent.bottom
-        anchors.margins: CompanyTheme.spacingMd
+        anchors.leftMargin: CompanyTheme.spacingMd
+        anchors.bottomMargin: 52
         mapControl: flightMap
         z: 10
     }
 
     // ------------------------------------------------------------------------
-    // Top-Left Floating Tactical Telemetry HUD Card
+    // Top-Left Floating Tactical Telemetry HUD Card (Compact Modern Dark)
     // ------------------------------------------------------------------------
     Rectangle {
         id: telemetryCard
         anchors.top: parent.top
-        anchors.topMargin: 56
+        anchors.topMargin: 48
         anchors.left: parent.left
-        anchors.leftMargin: 76
+        anchors.leftMargin: CompanyTheme.spacingMd
         z: 10
         radius: CompanyTheme.radiusSm
         color: CompanyTheme.bgOverlayDark
@@ -189,9 +190,9 @@ Item {
             anchors.centerIn: parent
             spacing: 4
 
-            // Row 1: Vehicle Identifier + Flight Mode + Arm Status
+            // Row 1: UAS #1 | DISARMED | CUSTOM: 0x0
             RowLayout {
-                spacing: CompanyTheme.spacingSm
+                spacing: 6
 
                 Rectangle {
                     Layout.preferredWidth: 6
@@ -201,92 +202,132 @@ Item {
                 }
 
                 Text {
-                    text: root._hasVehicle ? qsTr("UAS #%1").arg(root._activeVehicle.id) : qsTr("NO VEHICLE")
+                    text: root._hasVehicle ? qsTr("UAS #%1").arg(root._activeVehicle.id) : qsTr("UAS #1")
                     color: CompanyTheme.textPrimary
                     font.pointSize: CompanyTheme.fontSmall
                     font.bold: true
                 }
 
                 Text {
-                    visible: root._hasVehicle
                     text: "•"
                     color: CompanyTheme.textMuted
                     font.pointSize: CompanyTheme.fontSmall
                 }
 
                 Text {
-                    visible: root._hasVehicle
                     text: root._isArmed ? qsTr("ARMED") : qsTr("DISARMED")
                     color: root._isArmed ? CompanyTheme.danger : CompanyTheme.warning
                     font.pointSize: CompanyTheme.fontTiny
                     font.bold: true
                 }
 
-                Rectangle {
-                    visible: root._hasVehicle && root._flightMode !== ""
-                    Layout.preferredHeight: 16
-                    radius: 2
-                    color: CompanyTheme.primaryDim
-                    implicitWidth: modeText.implicitWidth + 8
-
-                    Text {
-                        id: modeText
-                        anchors.centerIn: parent
-                        text: root._flightMode.toUpperCase()
-                        color: CompanyTheme.primary
-                        font.pointSize: CompanyTheme.fontTiny
-                        font.bold: true
-                    }
+                Text {
+                    text: "•"
+                    color: CompanyTheme.textMuted
+                    font.pointSize: CompanyTheme.fontSmall
                 }
-            }
-
-            // Row 2: Monospace GPS Coordinates
-            RowLayout {
-                spacing: CompanyTheme.spacingSm
 
                 Text {
                     text: {
-                        if (!CompanyTelemetry.hasVehicle) return qsTr("Standby for Telemetry")
-                        if (!CompanyTelemetry.hasValidCoord) return qsTr("Awaiting GPS Fix...")
-                        var lat = CompanyTelemetry.latitude.toFixed(6)
-                        var lon = CompanyTelemetry.longitude.toFixed(6)
-                        return qsTr("LAT: %1°   LON: %2°").arg(lat).arg(lon)
+                        if (!root._hasVehicle) return "CUSTOM: 0x0"
+                        return root._flightMode !== "" ? root._flightMode.toUpperCase() : "CUSTOM: 0x0"
                     }
-                    color: CompanyTelemetry.hasValidCoord ? CompanyTheme.textPrimary : CompanyTheme.textMuted
-                    font.pointSize: CompanyTheme.fontSmall
-                    font.family: CompanyTheme.fontMono
-                    font.bold: CompanyTelemetry.hasValidCoord
+                    color: CompanyTheme.primary
+                    font.pointSize: CompanyTheme.fontTiny
+                    font.bold: true
                 }
             }
 
-            // Row 3: Tactical Quick Readouts (Altitude, Groundspeed, Heading)
+            // Row 2: ALT 0.0m | GS 0.0m/s | HDG 0°
             RowLayout {
-                visible: root._hasVehicle
-                spacing: CompanyTheme.spacingMd
+                spacing: 8
 
                 Text {
-                    text: "ALT: " + CompanyTelemetry.altitudeRelativeStr
+                    text: "ALT " + (root._hasVehicle ? CompanyTelemetry.altitudeRelativeStr : "0.0m")
                     color: CompanyTheme.textSecondary
                     font.pointSize: CompanyTheme.fontTiny
                     font.family: CompanyTheme.fontMono
+                    font.bold: true
                 }
 
                 Text {
-                    text: "GS: " + CompanyTelemetry.groundSpeedStr
-                    color: CompanyTheme.textSecondary
+                    text: "•"
+                    color: CompanyTheme.textMuted
                     font.pointSize: CompanyTheme.fontTiny
-                    font.family: CompanyTheme.fontMono
                 }
 
                 Text {
-                    text: "HDG: " + CompanyTelemetry.headingStr
+                    text: "GS " + (root._hasVehicle ? CompanyTelemetry.groundSpeedStr : "0.0m/s")
                     color: CompanyTheme.textSecondary
                     font.pointSize: CompanyTheme.fontTiny
                     font.family: CompanyTheme.fontMono
+                    font.bold: true
+                }
+
+                Text {
+                    text: "•"
+                    color: CompanyTheme.textMuted
+                    font.pointSize: CompanyTheme.fontTiny
+                }
+
+                Text {
+                    text: "HDG " + (root._hasVehicle ? CompanyTelemetry.headingStr : "0°")
+                    color: CompanyTheme.textSecondary
+                    font.pointSize: CompanyTheme.fontTiny
+                    font.family: CompanyTheme.fontMono
+                    font.bold: true
                 }
             }
         }
     }
+
+    // ------------------------------------------------------------------------
+    // Top-Left Floating Clean Connection / GPS Status Notification
+    // ------------------------------------------------------------------------
+    Rectangle {
+        id: connectionStatusNotification
+        anchors.top: telemetryCard.bottom
+        anchors.left: parent.left
+        anchors.leftMargin: CompanyTheme.spacingMd
+        anchors.topMargin: 6
+        z: 10
+        visible: !root._hasVehicle || !root._hasValidCoord
+        radius: CompanyTheme.radiusSm
+        color: CompanyTheme.bgOverlayDark
+        border.color: CompanyTheme.borderCard
+        border.width: 1
+        implicitWidth: notifLayout.implicitWidth + CompanyTheme.spacingMd * 2
+        implicitHeight: notifLayout.implicitHeight + 10
+
+        RowLayout {
+            id: notifLayout
+            anchors.centerIn: parent
+            spacing: 8
+
+            Rectangle {
+                Layout.preferredWidth: 6
+                Layout.preferredHeight: 6
+                radius: 3
+                color: root._hasVehicle ? CompanyTheme.warning : CompanyTheme.secondaryBlue
+            }
+
+            ColumnLayout {
+                spacing: 1
+                Text {
+                    text: root._hasVehicle ? qsTr("GPS: %1 Sats (No Fix)").arg(CompanyTelemetry.gpsCountStr) : qsTr("No Vehicle Connected")
+                    color: CompanyTheme.textPrimary
+                    font.pointSize: CompanyTheme.fontSmall
+                    font.bold: true
+                }
+                Text {
+                    text: root._hasVehicle ? qsTr("Acquiring 3D satellite navigation lock") : qsTr("Connect telemetry link or USB to start")
+                    color: CompanyTheme.textMuted
+                    font.pointSize: 8
+                }
+            }
+        }
+    }
+
 
     // ------------------------------------------------------------------------
     // Top-Right Map Layer Mode Selector (Street / Satellite / Hybrid)
@@ -355,7 +396,10 @@ Item {
                             var mgr = QGroundControl.mapEngineManager
                             var providerFact = QGroundControl.settingsManager.flightMapSettings.mapProvider
                             var typeFact = QGroundControl.settingsManager.flightMapSettings.mapType
-                            var types = mgr.mapTypeList(providerFact.rawValue)
+                            if (providerFact.rawValue !== "Google") {
+                                providerFact.rawValue = "Google"
+                            }
+                            var types = mgr.mapTypeList("Google")
                             for (var i = 0; i < types.length; i++) {
                                 if (types[i].indexOf(typeBtn.modelData.typeName) >= 0) {
                                     typeFact.rawValue = types[i]
@@ -380,7 +424,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.rightMargin: CompanyTheme.spacingMd
-        anchors.bottomMargin: 68
+        anchors.bottomMargin: 52
         z: 10
         radius: CompanyTheme.radiusSm
         color: CompanyTheme.bgOverlayDark
@@ -526,7 +570,42 @@ Item {
                 }
             }
 
-            // Button 5: Toggle Follow Vehicle
+            // Button 5: Center on GCS / Operator Location
+            Rectangle {
+                id: centerGcsBtn
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                radius: CompanyTheme.radiusSm
+                readonly property bool _hasGcs: flightMap.gcsPosition && flightMap.gcsPosition.isValid
+                color: centerGcsMouseArea.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary
+                border.color: _hasGcs ? CompanyTheme.borderCard : CompanyTheme.borderSubtle
+                border.width: 1
+                opacity: _hasGcs ? 1.0 : 0.4
+
+                IconVector {
+                    anchors.centerIn: parent
+                    name: "radio"
+                    size: 14
+                    color: centerGcsBtn._hasGcs ? CompanyTheme.primary : CompanyTheme.textMuted
+                }
+
+                MouseArea {
+                    id: centerGcsMouseArea
+                    anchors.fill: parent
+                    enabled: centerGcsBtn._hasGcs
+                    hoverEnabled: true
+                    cursorShape: centerGcsBtn._hasGcs ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: {
+                        if (centerGcsBtn._hasGcs) {
+                            flightMap.center = flightMap.gcsPosition
+                            flightMap.zoomLevel = QGroundControl.flightMapInitialZoom
+                            root.followVehicle = false
+                        }
+                    }
+                }
+            }
+
+            // Button 6: Toggle Follow Vehicle
             Rectangle {
                 id: followToggleBtn
                 Layout.preferredWidth: 28
@@ -562,53 +641,26 @@ Item {
     }
 
     // ------------------------------------------------------------------------
-    // Notice Pill: When Connected Vehicle is Awaiting GPS Position
-    // ------------------------------------------------------------------------
-    Rectangle {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 68
-        z: 10
-        visible: root._hasVehicle && !root._hasValidCoord
-        radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.warning
-        border.width: 1
-        implicitHeight: 28
-        implicitWidth: awaitingLayout.implicitWidth + CompanyTheme.spacingMd * 2
-
-        RowLayout {
-            id: awaitingLayout
-            anchors.centerIn: parent
-            spacing: 6
-
-            Rectangle {
-                Layout.preferredWidth: 6
-                Layout.preferredHeight: 6
-                radius: 3
-                color: CompanyTheme.warning
-            }
-
-            Text {
-                text: qsTr("Vehicle Connected • Awaiting GPS Lock...")
-                color: CompanyTheme.textPrimary
-                font.pointSize: CompanyTheme.fontSmall
-                font.bold: true
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------
     // Initialization: Center to Vehicle / GCS / Last Position
     // ------------------------------------------------------------------------
     Component.onCompleted: {
+        var providerFact = QGroundControl.settingsManager.flightMapSettings.mapProvider
+        var typeFact = QGroundControl.settingsManager.flightMapSettings.mapType
+        if (providerFact && (!providerFact.rawValue || providerFact.rawValue === "Bing")) {
+            providerFact.rawValue = "Google"
+            if (typeFact) {
+                typeFact.rawValue = "Hybrid"
+            }
+        }
         if (root._hasValidCoord) {
             flightMap.center = root._vehicleCoord
             flightMap.zoomLevel = QGroundControl.flightMapInitialZoom
         } else if (flightMap.gcsPosition && flightMap.gcsPosition.isValid) {
             flightMap.center = flightMap.gcsPosition
+            flightMap.zoomLevel = QGroundControl.flightMapInitialZoom
         } else {
             flightMap.center = QGroundControl.flightMapPosition
+            flightMap.zoomLevel = 10.0
         }
     }
 }

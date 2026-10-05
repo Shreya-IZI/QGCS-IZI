@@ -34,6 +34,8 @@ Item {
     readonly property int  _flightItemCount: Math.max(0, root._itemCount - 1)
     readonly property bool _hasMissionItems: root._flightItemCount > 0 && ((root._missionController && root._missionController.containsItems) || planMasterController.containsItems || root._itemCount > 1)
 
+    signal flightActionRequested(string actionType)
+
     // Interactive Mode Controls
     property bool addWaypointMode:           true
     property bool followVehicle:             false
@@ -185,6 +187,17 @@ Item {
     readonly property var  _missionController: planMasterController.missionController
     readonly property var  _visualItems:       _missionController ? _missionController.visualItems : null
     readonly property int  _itemCount:         _visualItems ? _visualItems.count : 0
+
+    // ============================================================
+    // IZI MISSION HEALTH
+    // ============================================================
+
+    MissionHealth {
+        id: missionHealth
+
+        missionController: root._missionController
+        visualItems: root._visualItems
+    }
     readonly property var  _selectedItem:      _missionController ? _missionController.currentPlanViewItem : null
     readonly property int  _selectedSeqNum:    _missionController ? _missionController.currentPlanViewSeqNum : 0
     readonly property int  _selectedVIIndex:   _missionController ? _missionController.currentPlanViewVIIndex : -1
@@ -222,6 +235,94 @@ Item {
     }
 
     // ====================================================================
+    // Mission Upload & Pre-Flight Validation Helper
+    // ====================================================================
+    function _executeUpload() {
+        if (root._missionController && root._missionController.sendToVehiclePreCheck() === MissionController.SendToVehiclePreCheckStateFirwmareVehicleMismatch) {
+            QGroundControl.showMessageDialog(
+                root,
+                qsTr("Plan Upload Mismatch"),
+                qsTr("This Plan was created for a different firmware or vehicle type than the vehicle you are uploading to.\n\nClick 'Ok' to upload the Plan anyway."),
+                Dialog.Ok | Dialog.Cancel,
+                function() {
+                    root._missionCompleted = false
+                    root._wasExecutingMission = false
+                    planMasterController.sendToVehicle()
+                }
+            )
+            return
+        }
+
+        root._missionCompleted = false
+        root._wasExecutingMission = false
+        planMasterController.sendToVehicle()
+    }
+
+    function initiateMissionUpload() {
+        if (root._isMissionActive) {
+            return
+        }
+
+        // 1. QGC Structural Save/Upload Gate (Incomplete data or waiting on terrain elevation)
+        var saveState = planMasterController.readyForSaveState()
+        if (saveState === 1 /* VisualMissionItem.NotReadyForSaveTerrain */) {
+            QGroundControl.showMessageDialog(
+                root,
+                qsTr("Unable to Upload"),
+                qsTr("Plan is waiting on terrain elevation data from the server for correct altitude values.")
+            )
+            return
+        } else if (saveState === 2 /* VisualMissionItem.NotReadyForSaveData */) {
+            QGroundControl.showMessageDialog(
+                root,
+                qsTr("Unable to Upload"),
+                qsTr("Plan has incomplete items. Complete all mission parameters and attempt upload again.")
+            )
+            return
+        }
+
+        // 2. QGC Active Mission Check
+        if (root._missionController) {
+            var preCheck = root._missionController.sendToVehiclePreCheck()
+            if (preCheck === MissionController.SendToVehiclePreCheckStateActiveMission) {
+                QGroundControl.showMessageDialog(
+                    root,
+                    qsTr("Send To Vehicle"),
+                    qsTr("Current mission must be paused prior to uploading a new Plan.")
+                )
+                return
+            }
+        }
+
+        // 3. IZI Mission Health Advisory Validation
+        if (!missionHealth.ready) {
+            var failedList = []
+            for (var i = 0; i < missionHealth.checkItems.length; i++) {
+                var check = missionHealth.checkItems[i]
+                if (!check.passed) {
+                    failedList.push("• " + check.name + ": " + check.detail)
+                }
+            }
+            var failedSummary = failedList.join("\n")
+            var warningMsg = qsTr("One or more pre-flight health checks require attention:\n\n%1\n\nDetail: %2\n\nDo you want to proceed with uploading this plan to the vehicle anyway?").arg(failedSummary).arg(missionHealth.statusDetail)
+
+            QGroundControl.showMessageDialog(
+                root,
+                qsTr("Pre-Flight Health Notice"),
+                warningMsg,
+                Dialog.Ok | Dialog.Cancel,
+                function() {
+                    root._executeUpload()
+                }
+            )
+            return
+        }
+
+        // 4. All checks passed: proceed directly with upload
+        root._executeUpload()
+    }
+
+    // ====================================================================
     // 1. TOP COMMAND & SYNC STRIP (Floating QGC Style)
     // ====================================================================
     Rectangle {
@@ -236,12 +337,23 @@ Item {
         color: CompanyTheme.bgOverlayDark
         border.color: CompanyTheme.borderCard
         border.width: 1
+        clip: true
+
+        Flickable {
+            id: missionToolbarFlickable
+            anchors.fill: parent
+            contentWidth: Math.max(width, missionToolbarLayout.x + missionToolbarLayout.implicitWidth + CompanyTheme.spacingMd)
+            contentHeight: height
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.HorizontalFlick
+            clip: true
 
             RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: CompanyTheme.spacingMd
-                anchors.rightMargin: CompanyTheme.spacingMd
+                id: missionToolbarLayout
+                x: CompanyTheme.spacingMd
+                anchors.verticalCenter: parent.verticalCenter
                 spacing: CompanyTheme.spacingMd
+                width: Math.max(missionToolbarFlickable.width - CompanyTheme.spacingMd * 2, implicitWidth)
 
                 // Mission Badge & Name
                 RowLayout {
@@ -250,6 +362,8 @@ Item {
                     Rectangle {
                         Layout.preferredWidth: 30
                         Layout.preferredHeight: 30
+                        implicitWidth: 30
+                        implicitHeight: 30
                         radius: CompanyTheme.radiusSm
                         color: CompanyTheme.primaryDim
                         IconVector {
@@ -280,6 +394,8 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: 1
                     Layout.preferredHeight: 24
+                    implicitWidth: 1
+                    implicitHeight: 24
                     color: CompanyTheme.borderCard
                 }
 
@@ -334,11 +450,27 @@ Item {
                     pulse: root._syncInProgress
                 }
 
-                Item { Layout.fillWidth: true }
+                // Mission Pre-Flight Health Pill
+                StatusBadge {
+                    text: missionHealth.status
+                    badgeColor: {
+                        if (missionHealth.ready) return CompanyTheme.success
+                        if (missionHealth.passedChecks >= 4) return CompanyTheme.warning
+                        return CompanyTheme.danger
+                    }
+                    pulse: !missionHealth.ready && root._hasVehicle
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: CompanyTheme.spacingSm
+                    implicitWidth: 0
+                }
 
                 // Actions: Mode Toggle
                 Rectangle {
                     Layout.preferredHeight: 32
+                    implicitHeight: 32
                     radius: CompanyTheme.radiusSm
                     color: root.addWaypointMode ? CompanyTheme.primaryDim : CompanyTheme.bgInput
                     border.color: root.addWaypointMode ? CompanyTheme.primary : CompanyTheme.borderCard
@@ -372,6 +504,7 @@ Item {
                 // Action: Fit Viewport
                 Button {
                     Layout.preferredHeight: 32
+                    implicitHeight: 32
                     implicitWidth: fitText.implicitWidth + 20
                     contentItem: Text {
                         id: fitText
@@ -391,6 +524,7 @@ Item {
                 // Action: Download from Vehicle
                 Button {
                     Layout.preferredHeight: 32
+                    implicitHeight: 32
                     enabled: root._hasVehicle && !root._syncInProgress
                     implicitWidth: dlText.implicitWidth + 20
                     contentItem: Text {
@@ -412,6 +546,7 @@ Item {
                 Button {
                     id: uploadBtn
                     Layout.preferredHeight: 32
+                    implicitHeight: 32
                     enabled: root._hasVehicle && !root._syncInProgress && root._itemCount > 0 && !root._isMissionActive
                     implicitWidth: upText.implicitWidth + 20
                     contentItem: Text {
@@ -429,20 +564,25 @@ Item {
                             return uploadBtn.hovered ? CompanyTheme.primaryHover : CompanyTheme.primary
                         }
                     }
-                    onClicked: {
-                        if (root._isMissionActive) return
-                        if (planMasterController.readyForSaveState() === 0) {
-                            root._missionCompleted = false
-                            root._wasExecutingMission = false
-                            planMasterController.sendToVehicle()
-                        }
+                    ToolTip.visible: uploadBtn.hovered
+                    ToolTip.delay: 400
+                    ToolTip.text: {
+                        if (!root._hasVehicle) return qsTr("No vehicle connected")
+                        if (root._isMissionActive) return qsTr("Mission is currently executing or paused")
+                        if (root._itemCount <= 0) return qsTr("No mission items to upload")
+                        if (root._syncInProgress) return qsTr("Sync already in progress")
+                        if (!missionHealth.ready) return qsTr("Pre-flight Health Notice: %1").arg(missionHealth.status)
+                        return qsTr("Upload mission plan to vehicle")
                     }
+                    onClicked: root.initiateMissionUpload()
                 }
 
                 // Action: Open / Save Dropdown Menu
                 Rectangle {
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: 32
+                    implicitWidth: 32
+                    implicitHeight: 32
                     radius: CompanyTheme.radiusSm
                     color: fileMenuArea.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
                     border.color: CompanyTheme.borderCard
@@ -504,7 +644,29 @@ Item {
                     }
                 }
             }
+
+            ScrollBar.horizontal: ScrollBar {
+                id: hScrollBar
+                policy: (missionToolbarFlickable.contentWidth > missionToolbarFlickable.width) ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                height: 2
+                anchors.bottom: parent.bottom
+                contentItem: Rectangle {
+                    implicitHeight: 2
+                    radius: 1
+                    color: hScrollBar.pressed ? CompanyTheme.primary : (hScrollBar.hovered ? CompanyTheme.borderActive : CompanyTheme.borderCard)
+                }
+            }
+
+            WheelHandler {
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: (event) => {
+                    var delta = event.angleDelta.x !== 0 ? event.angleDelta.x : event.angleDelta.y
+                    var maxContentX = Math.max(0, missionToolbarFlickable.contentWidth - missionToolbarFlickable.width)
+                    missionToolbarFlickable.contentX = Math.max(0, Math.min(maxContentX, missionToolbarFlickable.contentX - delta))
+                }
+            }
         }
+    }
 
     // ====================================================================
     // 2. FULL-BLEED INTERACTIVE MISSION FLIGHTMAP (QGC PlanView Canvas)
@@ -725,6 +887,91 @@ Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 1
                         color: CompanyTheme.borderCard
+                    }
+
+                    // Pre-Flight Mission Health Overview
+                    Rectangle {
+                        Layout.fillWidth: true
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgInput
+                        border.color: missionHealth.ready ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.3) : CompanyTheme.borderCard
+                        border.width: 1
+                        implicitHeight: healthCol.implicitHeight + 16
+
+                        ColumnLayout {
+                            id: healthCol
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            spacing: 6
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    text: qsTr("PRE-FLIGHT HEALTH")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontTiny
+                                    font.bold: true
+                                    font.letterSpacing: 0.5
+                                }
+                                Item { Layout.fillWidth: true }
+                                Text {
+                                    text: qsTr("%1/%2 Checks").arg(missionHealth.passedChecks).arg(missionHealth.totalChecks)
+                                    color: missionHealth.ready ? CompanyTheme.success : (missionHealth.passedChecks >= 4 ? CompanyTheme.warning : CompanyTheme.danger)
+                                    font.pointSize: CompanyTheme.fontTiny
+                                    font.bold: true
+                                }
+                            }
+
+                            // 2-column Grid of the 6 checks
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: 2
+                                rowSpacing: 4
+                                columnSpacing: 8
+
+                                Repeater {
+                                    model: missionHealth.checkItems
+                                    delegate: RowLayout {
+                                        id: checkRow
+                                        required property var modelData
+                                        spacing: 5
+                                        Layout.fillWidth: true
+
+                                        Rectangle {
+                                            Layout.preferredWidth: 6
+                                            Layout.preferredHeight: 6
+                                            radius: 3
+                                            color: checkRow.modelData.passed ? CompanyTheme.success : CompanyTheme.danger
+                                        }
+
+                                        Text {
+                                            text: checkRow.modelData.name
+                                            color: checkRow.modelData.passed ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            text: checkRow.modelData.detail
+                                            color: checkRow.modelData.passed ? CompanyTheme.textSecondary : CompanyTheme.danger
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.family: CompanyTheme.fontMono
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: missionHealth.statusDetail
+                                color: missionHealth.ready ? CompanyTheme.textMuted : CompanyTheme.warning
+                                font.pointSize: CompanyTheme.fontTiny
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                            }
+                        }
                     }
 
                     // Waypoint List View
@@ -1093,7 +1340,7 @@ Item {
                         id: startMissionBtn
                         Layout.preferredHeight: 34
                         implicitWidth: 120
-                        enabled: root._hasVehicle && root._hasMissionItems && !root._inMissionMode
+                        enabled: root._hasVehicle && CompanyTelemetry.communicationValid && root._hasMissionItems && !root._inMissionMode
                         contentItem: Text {
                             text: qsTr("Start Mission")
                             color: startMissionBtn.enabled ? CompanyTheme.textLight : CompanyTheme.textMuted
@@ -1110,10 +1357,8 @@ Item {
                             }
                         }
                         onClicked: {
-                            if (root._hasVehicle) {
-                                root._missionCompleted = false
-                                root._wasExecutingMission = false
-                                root._activeVehicle.startMission()
+                            if (root._hasVehicle && CompanyTelemetry.communicationValid && root._hasMissionItems && !root._inMissionMode) {
+                                root.flightActionRequested("START_MISSION")
                             }
                         }
                     }
@@ -1123,7 +1368,7 @@ Item {
                         id: pauseBtn
                         Layout.preferredHeight: 34
                         implicitWidth: 80
-                        enabled: root._hasVehicle && root._isArmed
+                        enabled: root._hasVehicle && CompanyTelemetry.communicationValid && root._isArmed
                         contentItem: Text {
                             text: qsTr("Pause")
                             color: pauseBtn.enabled ? CompanyTheme.textPrimary : CompanyTheme.textMuted
@@ -1138,8 +1383,8 @@ Item {
                             border.color: CompanyTheme.borderCard
                         }
                         onClicked: {
-                            if (root._hasVehicle) {
-                                root._activeVehicle.pauseVehicle()
+                            if (root._hasVehicle && CompanyTelemetry.communicationValid && root._isArmed) {
+                                root.flightActionRequested("HOLD")
                             }
                         }
                     }
@@ -1149,7 +1394,7 @@ Item {
                         id: rtlMissionBtn
                         Layout.preferredHeight: 34
                         implicitWidth: 70
-                        enabled: root._hasVehicle && root._isArmed
+                        enabled: root._hasVehicle && CompanyTelemetry.communicationValid && root._isArmed
                         contentItem: Text {
                             text: qsTr("RTL")
                             color: rtlMissionBtn.enabled ? CompanyTheme.textSecondary : CompanyTheme.textMuted
@@ -1164,8 +1409,8 @@ Item {
                             border.color: CompanyTheme.borderCard
                         }
                         onClicked: {
-                            if (root._hasVehicle) {
-                                root._activeVehicle.guidedModeRTL(false)
+                            if (root._hasVehicle && CompanyTelemetry.communicationValid && root._isArmed) {
+                                root.flightActionRequested("RTL")
                             }
                         }
                     }

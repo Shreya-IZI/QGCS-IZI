@@ -5,12 +5,13 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QGroundControl
+import QGroundControl.Controls
 import Company.UI
 
 Item {
     id: root
 
-    property string currentSubView: "MAP" // "MAP", "PFD", "SYSTEM"
+    property string currentSubView: "MAP" // "MAP", "PFD", "CAM", "SYSTEM"
     signal navigateToTab(int tabIndex)
 
     readonly property bool _hasVehicle:         CompanyTelemetry.hasVehicle
@@ -18,55 +19,153 @@ Item {
     readonly property bool _isFlying:           CompanyTelemetry.flying
     readonly property string _flightMode:       CompanyTelemetry.flightMode
     readonly property real _heading:            CompanyTelemetry.heading
+    readonly property bool _isNarrow:           width < 1024 || ScreenTools.isMobile
 
     // ------------------------------------------------------------------------
     // Safety Confirmation Interlock State & Handlers
     // ------------------------------------------------------------------------
     property bool   _confirmDialogOpen: false
-    property string _confirmActionType: "" // "ARM", "DISARM", "HOLD", "RTL", "LAND"
+    property string _confirmActionType: "" // "ARM", "DISARM", "HOLD", "RTL", "LAND", "START_MISSION"
     property string _confirmTitle:      ""
     property string _confirmMessage:    ""
     property color  _confirmColor:      CompanyTheme.warning
     property string _confirmIcon:       ""
     property bool   _isExecutingAction: false
 
+    // Safety Feedback / Abort Notification Toast
+    property string _safetyNotificationText:    ""
+    property color  _safetyNotificationColor:   CompanyTheme.danger
+    property bool   _safetyNotificationVisible: false
+
+    function showSafetyNotification(message, isError) {
+        _safetyNotificationText = message
+        _safetyNotificationColor = (isError === undefined || isError) ? CompanyTheme.danger : CompanyTheme.warning
+        _safetyNotificationVisible = true
+        safetyNotificationTimer.restart()
+    }
+
+    Timer {
+        id: safetyNotificationTimer
+        interval: 4500
+        repeat: false
+        onTriggered: root._safetyNotificationVisible = false
+    }
+
+    function invalidateConfirmation(reasonMessage) {
+        if (!_confirmDialogOpen) return
+        _confirmDialogOpen = false
+        _confirmActionType = ""
+        if (reasonMessage && reasonMessage !== "") {
+            showSafetyNotification(reasonMessage, true)
+        }
+    }
+
+    // Reactive invalidation connections
+    Connections {
+        target: CompanyTelemetry
+        function onHasVehicleChanged() {
+            if (root._confirmDialogOpen && !CompanyTelemetry.hasVehicle) {
+                root.invalidateConfirmation(qsTr("Command cancelled — vehicle disconnected."))
+            }
+        }
+        function onCommunicationLostChanged() {
+            if (root._confirmDialogOpen && CompanyTelemetry.communicationLost) {
+                root.invalidateConfirmation(qsTr("Command cancelled — telemetry link lost."))
+            }
+        }
+        function onIsAirborneChanged() {
+            if (root._confirmDialogOpen) {
+                if (root._confirmActionType === "DISARM" && CompanyTelemetry.isAirborne) {
+                    root.invalidateConfirmation(qsTr("DISARM ABORTED — UAS IS AIRBORNE"))
+                } else if (root._confirmActionType === "ARM" && CompanyTelemetry.isAirborne) {
+                    root.invalidateConfirmation(qsTr("ARM ABORTED — UAS IS AIRBORNE"))
+                }
+            }
+        }
+        function onIsGroundedChanged() {
+            if (root._confirmDialogOpen && (root._confirmActionType === "ARM" || root._confirmActionType === "DISARM")) {
+                if (!CompanyTelemetry.isGrounded) {
+                    root.invalidateConfirmation(qsTr("Command cancelled — vehicle no longer grounded."))
+                }
+            }
+        }
+    }
+
     function requestActionConfirmation(actionType) {
-        if (!CompanyTelemetry.hasVehicle || !CompanyTelemetry.activeVehicle || _isExecutingAction) return
+        if (_isExecutingAction) return
+
+        // 1. Connection & Comms Pre-check
+        if (!CompanyTelemetry.hasVehicle || !CompanyTelemetry.activeVehicle) {
+            showSafetyNotification(qsTr("Command unavailable — no vehicle connected."))
+            return
+        }
+        if (CompanyTelemetry.communicationLost || !CompanyTelemetry.communicationValid) {
+            showSafetyNotification(qsTr("Command unavailable — telemetry link lost."))
+            return
+        }
 
         _confirmActionType = actionType
         switch (actionType) {
         case "ARM":
+            if (CompanyTelemetry.isAirborne) {
+                showSafetyNotification(qsTr("ARM ABORTED — UAS is airborne."))
+                return
+            }
+            if (CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("Vehicle is already armed."))
+                return
+            }
             _confirmTitle = qsTr("Confirm Vehicle Arming")
             _confirmMessage = qsTr("Are you sure you want to ARM UAS #%1? Motors will spin if armed.").arg(CompanyTelemetry.vehicleId)
             _confirmColor = CompanyTheme.danger
             _confirmIcon = "arm"
             break
+
         case "DISARM":
+            // STRICT SAFETY INVARIANT: Standard DISARM is strictly ground-only!
+            if (CompanyTelemetry.isAirborne || !CompanyTelemetry.isGrounded) {
+                showSafetyNotification(qsTr("DISARM ABORTED — UAS IS AIRBORNE"))
+                return
+            }
+            if (!CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("Vehicle is already disarmed."))
+                return
+            }
             _confirmTitle = qsTr("Confirm Vehicle Disarm")
-            _confirmMessage = CompanyTelemetry.flying ?
-                qsTr("CRITICAL WARNING: UAS #%1 is currently airborne! Disarming in flight will cause an immediate crash!").arg(CompanyTelemetry.vehicleId) :
-                qsTr("Are you sure you want to DISARM UAS #%1?").arg(CompanyTelemetry.vehicleId)
+            _confirmMessage = qsTr("Are you sure you want to DISARM UAS #%1?").arg(CompanyTelemetry.vehicleId)
             _confirmColor = CompanyTheme.danger
             _confirmIcon = "arm"
             break
+
         case "HOLD":
+        case "PAUSE":
             _confirmTitle = qsTr("Confirm Hold / Loiter")
             _confirmMessage = qsTr("Command UAS #%1 to pause flight and hold its current position?").arg(CompanyTelemetry.vehicleId)
             _confirmColor = CompanyTheme.warning
             _confirmIcon = "hold"
             break
+
         case "RTL":
             _confirmTitle = qsTr("Confirm Return to Launch")
             _confirmMessage = qsTr("Command UAS #%1 to return to launch location (RTL)?").arg(CompanyTelemetry.vehicleId)
             _confirmColor = CompanyTheme.warning
             _confirmIcon = "rtl"
             break
+
         case "LAND":
             _confirmTitle = qsTr("Confirm Land")
             _confirmMessage = qsTr("Command UAS #%1 to land immediately at its current position?").arg(CompanyTelemetry.vehicleId)
             _confirmColor = CompanyTheme.warning
             _confirmIcon = "land"
             break
+
+        case "START_MISSION":
+            _confirmTitle = qsTr("Confirm Mission Start")
+            _confirmMessage = qsTr("Start the uploaded mission for UAS #%1?\nThe vehicle may begin autonomous flight.").arg(CompanyTelemetry.vehicleId)
+            _confirmColor = CompanyTheme.primary
+            _confirmIcon = "flight"
+            break
+
         default:
             return
         }
@@ -86,24 +185,91 @@ Item {
         _confirmDialogOpen = false
         _confirmActionType = ""
 
-        if (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle) {
-            switch (action) {
-            case "ARM":
-                CompanyTelemetry.activeVehicle.armed = true
-                break
-            case "DISARM":
-                CompanyTelemetry.activeVehicle.armed = false
-                break
-            case "HOLD":
-                CompanyTelemetry.activeVehicle.pauseVehicle()
-                break
-            case "RTL":
-                CompanyTelemetry.activeVehicle.guidedModeRTL(false)
-                break
-            case "LAND":
-                CompanyTelemetry.activeVehicle.guidedModeLand()
-                break
+        // 1. Connection & Comms Validation Immediately Before Execution
+        if (!CompanyTelemetry.hasVehicle || !CompanyTelemetry.activeVehicle) {
+            showSafetyNotification(qsTr("Command aborted — no active vehicle connected."))
+            _isExecutingAction = false
+            return
+        }
+
+        if (CompanyTelemetry.communicationLost || !CompanyTelemetry.communicationValid) {
+            showSafetyNotification(qsTr("Command cancelled — telemetry link lost."))
+            _isExecutingAction = false
+            return
+        }
+
+        var vehicle = CompanyTelemetry.activeVehicle
+
+        // 2. Action-Specific Live Revalidation Immediately Before Execution
+        switch (action) {
+        case "ARM":
+            if (CompanyTelemetry.isAirborne || !CompanyTelemetry.isGrounded) {
+                showSafetyNotification(qsTr("ARM ABORTED — UAS is airborne or not grounded."))
+                _isExecutingAction = false
+                return
             }
+            if (CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("ARM ABORTED — Vehicle is already armed."))
+                _isExecutingAction = false
+                return
+            }
+            vehicle.armed = true
+            break
+
+        case "DISARM":
+            // STRICT SAFETY INVARIANT: Standard DISARM must never execute while airborne!
+            if (CompanyTelemetry.isAirborne || !CompanyTelemetry.isGrounded) {
+                showSafetyNotification(qsTr("DISARM ABORTED — UAS IS AIRBORNE"))
+                _isExecutingAction = false
+                return
+            }
+            if (!CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("DISARM ABORTED — Vehicle is already disarmed."))
+                _isExecutingAction = false
+                return
+            }
+            vehicle.armed = false
+            break
+
+        case "HOLD":
+        case "PAUSE":
+            if (!CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("HOLD ABORTED — Vehicle is disarmed."))
+                _isExecutingAction = false
+                return
+            }
+            vehicle.pauseVehicle()
+            break
+
+        case "RTL":
+            if (!CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("RTL ABORTED — Vehicle is disarmed."))
+                _isExecutingAction = false
+                return
+            }
+            vehicle.guidedModeRTL(false)
+            break
+
+        case "LAND":
+            if (!CompanyTelemetry.armed) {
+                showSafetyNotification(qsTr("LAND ABORTED — Vehicle is disarmed."))
+                _isExecutingAction = false
+                return
+            }
+            vehicle.guidedModeLand()
+            break
+
+        case "START_MISSION":
+            if (!CompanyTelemetry.hasVehicle || !CompanyTelemetry.communicationValid) {
+                showSafetyNotification(qsTr("MISSION START ABORTED — Telemetry link lost."))
+                _isExecutingAction = false
+                return
+            }
+            vehicle.startMission()
+            break
+
+        default:
+            break
         }
 
         _isExecutingAction = false
@@ -133,19 +299,25 @@ Item {
             anchors.fill: parent
             visible: root.currentSubView === "SYSTEM"
         }
+
+        // Viewport 4: Dual-Camera Surveillance Workspace (RGB & Thermal)
+        CameraView {
+            anchors.fill: parent
+            visible: root.currentSubView === "CAM"
+        }
     }
 
     // ------------------------------------------------------------------------
-    // 2. Floating View Switcher Pill (Top Left, Offset from Toolstrip)
+    // ------------------------------------------------------------------------
+    // 2. Floating View Switcher Pill (Top Left)
     // ------------------------------------------------------------------------
     Rectangle {
         id: viewSwitcherPill
         anchors.top: parent.top
-        anchors.left: actionToolstrip.right
-        anchors.leftMargin: CompanyTheme.spacingMd
-        anchors.topMargin: CompanyTheme.spacingMd
+        anchors.left: parent.left
+        anchors.margins: CompanyTheme.spacingMd
         z: 10
-        height: 32
+        height: 28
         radius: CompanyTheme.radiusSm
         color: CompanyTheme.bgOverlayDark
         border.color: CompanyTheme.borderCard
@@ -162,6 +334,7 @@ Item {
                 model: [
                     { id: "MAP",    label: qsTr("MAP"),    icon: "flight" },
                     { id: "PFD",    label: qsTr("PFD"),    icon: "dashboard" },
+                    { id: "CAM",    label: qsTr("CAM"),    icon: "video" },
                     { id: "SYSTEM", label: qsTr("SYSTEM"), icon: "settings" }
                 ]
 
@@ -172,7 +345,7 @@ Item {
                     readonly property bool isSelected: root.currentSubView === switchBtn.modelData.id
                     readonly property bool isHovered: switchMouseArea.containsMouse
 
-                    Layout.preferredWidth: 68
+                    Layout.preferredWidth: 64
                     Layout.fillHeight: true
                     radius: CompanyTheme.radiusSm - 1
                     color: {
@@ -180,6 +353,8 @@ Item {
                         if (switchBtn.isHovered) return CompanyTheme.bgCardHover
                         return "transparent"
                     }
+                    border.color: switchBtn.isSelected ? CompanyTheme.borderActive : "transparent"
+                    border.width: 1
 
                     RowLayout {
                         anchors.centerIn: parent
@@ -187,7 +362,7 @@ Item {
 
                         IconVector {
                             name: switchBtn.modelData.icon
-                            size: 12
+                            size: 11
                             color: switchBtn.isSelected ? CompanyTheme.primary : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                         }
 
@@ -213,297 +388,7 @@ Item {
     }
 
     // ------------------------------------------------------------------------
-    // 3. Floating Left Operational Action Toolstrip (QGC Style)
-    // ------------------------------------------------------------------------
-    Rectangle {
-        id: actionToolstrip
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.margins: CompanyTheme.spacingMd
-        z: 10
-        width: 52
-        radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
-        border.width: 1
-        implicitHeight: toolstripColumn.implicitHeight + CompanyTheme.spacingSm * 2
-
-        ColumnLayout {
-            id: toolstripColumn
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: CompanyTheme.spacingXs
-            spacing: CompanyTheme.spacingXs
-
-            // Tool 1: ARM / DISARM
-            Rectangle {
-                id: armToolBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                radius: CompanyTheme.radiusSm
-                color: {
-                    if (!root._hasVehicle) return "transparent"
-                    if (armMouseArea.containsMouse) return CompanyTheme.bgCardHover
-                    return root._isArmed ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.2) : "transparent"
-                }
-                border.color: {
-                    if (!root._hasVehicle) return "transparent"
-                    if (root._isArmed) return CompanyTheme.danger
-                    return armMouseArea.containsMouse ? CompanyTheme.primary : CompanyTheme.borderSubtle
-                }
-                border.width: 1
-                opacity: root._hasVehicle ? 1.0 : 0.4
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 2
-
-                    IconVector {
-                        Layout.alignment: Qt.AlignHCenter
-                        name: "arm"
-                        size: 15
-                        color: {
-                            if (!root._hasVehicle) return CompanyTheme.textMuted
-                            return root._isArmed ? CompanyTheme.danger : CompanyTheme.primary
-                        }
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: root._isArmed ? qsTr("DISARM") : qsTr("ARM")
-                        color: {
-                            if (!root._hasVehicle) return CompanyTheme.textMuted
-                            return root._isArmed ? CompanyTheme.danger : CompanyTheme.textPrimary
-                        }
-                        font.pointSize: CompanyTheme.fontTiny - 1
-                        font.bold: true
-                    }
-                }
-
-                MouseArea {
-                    id: armMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    enabled: root._hasVehicle
-                    cursorShape: root._hasVehicle ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: {
-                        if (CompanyTelemetry.hasVehicle) {
-                            root.requestActionConfirmation(root._isArmed ? "DISARM" : "ARM")
-                        }
-                    }
-                }
-
-                ToolTip.visible: armMouseArea.containsMouse
-                ToolTip.delay: 300
-                ToolTip.text: root._hasVehicle ? (root._isArmed ? qsTr("Disarm Vehicle") : qsTr("Arm Vehicle")) : qsTr("No Vehicle Connected")
-            }
-
-            // Tool 2: HOLD / PAUSE
-            Rectangle {
-                id: holdToolBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                radius: CompanyTheme.radiusSm
-                color: (holdMouseArea.containsMouse && holdToolBtn.enabled) ? CompanyTheme.bgCardHover : "transparent"
-                border.color: (holdMouseArea.containsMouse && holdToolBtn.enabled) ? CompanyTheme.borderActive : "transparent"
-                border.width: 1
-                enabled: root._hasVehicle && root._isArmed
-                opacity: enabled ? 1.0 : 0.35
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 2
-
-                    IconVector {
-                        Layout.alignment: Qt.AlignHCenter
-                        name: "hold"
-                        size: 15
-                        color: holdToolBtn.enabled ? CompanyTheme.warning : CompanyTheme.textMuted
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("HOLD")
-                        color: holdToolBtn.enabled ? CompanyTheme.textPrimary : CompanyTheme.textMuted
-                        font.pointSize: CompanyTheme.fontTiny - 1
-                        font.bold: true
-                    }
-                }
-
-                MouseArea {
-                    id: holdMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    enabled: holdToolBtn.enabled
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: {
-                        if (CompanyTelemetry.hasVehicle && root._isArmed) {
-                            root.requestActionConfirmation("HOLD")
-                        }
-                    }
-                }
-
-                ToolTip.visible: holdMouseArea.containsMouse
-                ToolTip.delay: 300
-                ToolTip.text: qsTr("Hold / Loiter in Place")
-            }
-
-            // Tool 3: RTL (Return To Launch)
-            Rectangle {
-                id: rtlToolBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                radius: CompanyTheme.radiusSm
-                color: (rtlMouseArea.containsMouse && rtlToolBtn.enabled) ? CompanyTheme.bgCardHover : "transparent"
-                border.color: (rtlMouseArea.containsMouse && rtlToolBtn.enabled) ? CompanyTheme.borderActive : "transparent"
-                border.width: 1
-                enabled: root._hasVehicle && root._isArmed
-                opacity: enabled ? 1.0 : 0.35
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 2
-
-                    IconVector {
-                        Layout.alignment: Qt.AlignHCenter
-                        name: "rtl"
-                        size: 15
-                        color: rtlToolBtn.enabled ? CompanyTheme.warning : CompanyTheme.textMuted
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("RTL")
-                        color: rtlToolBtn.enabled ? CompanyTheme.textPrimary : CompanyTheme.textMuted
-                        font.pointSize: CompanyTheme.fontTiny - 1
-                        font.bold: true
-                    }
-                }
-
-                MouseArea {
-                    id: rtlMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    enabled: rtlToolBtn.enabled
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: {
-                        if (CompanyTelemetry.hasVehicle && root._isArmed) {
-                            root.requestActionConfirmation("RTL")
-                        }
-                    }
-                }
-
-                ToolTip.visible: rtlMouseArea.containsMouse
-                ToolTip.delay: 300
-                ToolTip.text: qsTr("Return to Launch (RTL)")
-            }
-
-            // Tool 4: LAND
-            Rectangle {
-                id: landToolBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                radius: CompanyTheme.radiusSm
-                color: (landMouseArea.containsMouse && landToolBtn.enabled) ? CompanyTheme.bgCardHover : "transparent"
-                border.color: (landMouseArea.containsMouse && landToolBtn.enabled) ? CompanyTheme.borderActive : "transparent"
-                border.width: 1
-                enabled: root._hasVehicle && root._isArmed
-                opacity: enabled ? 1.0 : 0.35
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 2
-
-                    IconVector {
-                        Layout.alignment: Qt.AlignHCenter
-                        name: "land"
-                        size: 15
-                        color: landToolBtn.enabled ? CompanyTheme.textSecondary : CompanyTheme.textMuted
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("LAND")
-                        color: landToolBtn.enabled ? CompanyTheme.textPrimary : CompanyTheme.textMuted
-                        font.pointSize: CompanyTheme.fontTiny - 1
-                        font.bold: true
-                    }
-                }
-
-                MouseArea {
-                    id: landMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    enabled: landToolBtn.enabled
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: {
-                        if (CompanyTelemetry.hasVehicle && root._isArmed) {
-                            root.requestActionConfirmation("LAND")
-                        }
-                    }
-                }
-
-                ToolTip.visible: landMouseArea.containsMouse
-                ToolTip.delay: 300
-                ToolTip.text: qsTr("Land at Current Position")
-            }
-
-            // Toolstrip Divider
-            Rectangle {
-                Layout.preferredWidth: 36
-                Layout.preferredHeight: 1
-                Layout.alignment: Qt.AlignHCenter
-                color: CompanyTheme.borderCard
-            }
-
-            // Tool 5: JUMP TO MISSIONS (PLAN)
-            Rectangle {
-                id: planToolBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                radius: CompanyTheme.radiusSm
-                color: planMouseArea.containsMouse ? CompanyTheme.bgCardHover : "transparent"
-                border.color: planMouseArea.containsMouse ? CompanyTheme.borderActive : "transparent"
-                border.width: 1
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 2
-
-                    IconVector {
-                        Layout.alignment: Qt.AlignHCenter
-                        name: "missions"
-                        size: 15
-                        color: planMouseArea.containsMouse ? CompanyTheme.primary : CompanyTheme.textSecondary
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("PLAN")
-                        color: planMouseArea.containsMouse ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
-                        font.pointSize: CompanyTheme.fontTiny - 1
-                        font.bold: true
-                    }
-                }
-
-                MouseArea {
-                    id: planMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.navigateToTab(2) // Jump to Missions Planner
-                }
-
-                ToolTip.visible: planMouseArea.containsMouse
-                ToolTip.delay: 300
-                ToolTip.text: qsTr("Switch to Mission Planner")
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------
-    // 4. Floating Bottom Operational Telemetry Strip (QGC HUD Bar)
+    // 3. Floating Bottom Operational Telemetry Strip (Professional Aviation HUD)
     // ------------------------------------------------------------------------
     Rectangle {
         id: bottomTelemetryStrip
@@ -512,7 +397,7 @@ Item {
         anchors.bottom: parent.bottom
         anchors.margins: CompanyTheme.spacingMd
         z: 10
-        height: 44
+        height: 38
         radius: CompanyTheme.radiusSm
         color: CompanyTheme.bgOverlayDark
         border.color: CompanyTheme.borderCard
@@ -522,12 +407,12 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: CompanyTheme.spacingMd
             anchors.rightMargin: CompanyTheme.spacingMd
-            spacing: CompanyTheme.spacingLg
+            spacing: CompanyTheme.spacingMd
 
-            // Telemetry Item 1: Altitude (Relative)
+            // Column 1: ALT
             RowLayout {
-                spacing: 6
-                Text { text: qsTr("ALT:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                spacing: 5
+                Text { text: "ALT"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
                     text: CompanyTelemetry.altitudeRelativeStr
                     color: CompanyTheme.textPrimary
@@ -537,10 +422,12 @@ Item {
                 }
             }
 
-            // Telemetry Item 2: Ground Speed
+            Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 14; color: CompanyTheme.borderCard }
+
+            // Column 2: GS
             RowLayout {
-                spacing: 6
-                Text { text: qsTr("GS:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                spacing: 5
+                Text { text: "GS"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
                     text: CompanyTelemetry.groundSpeedStr
                     color: CompanyTheme.textPrimary
@@ -550,10 +437,13 @@ Item {
                 }
             }
 
-            // Telemetry Item 3: Climb Rate (VSI)
+            Rectangle { visible: !root._isNarrow; Layout.preferredWidth: 1; Layout.preferredHeight: 14; color: CompanyTheme.borderCard }
+
+            // Column 3: VS
             RowLayout {
-                spacing: 6
-                Text { text: qsTr("VSI:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                visible: !root._isNarrow
+                spacing: 5
+                Text { text: "VS"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
                     text: CompanyTelemetry.climbRateStr
                     color: CompanyTheme.textPrimary
@@ -563,10 +453,13 @@ Item {
                 }
             }
 
-            // Telemetry Item 4: Heading
+            Rectangle { visible: !root._isNarrow; Layout.preferredWidth: 1; Layout.preferredHeight: 14; color: CompanyTheme.borderCard }
+
+            // Column 4: HDG
             RowLayout {
-                spacing: 6
-                Text { text: qsTr("HDG:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                visible: !root._isNarrow
+                spacing: 5
+                Text { text: "HDG"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
                     text: CompanyTelemetry.headingStr
                     color: CompanyTheme.textPrimary
@@ -576,33 +469,45 @@ Item {
                 }
             }
 
-            // Telemetry Item 5: Flight Mode
+            Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 14; color: CompanyTheme.borderCard }
+
+            // Column 5: MODE
             RowLayout {
-                spacing: 6
-                Text { text: qsTr("MODE:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                spacing: 5
+                Text { text: "MODE"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
-                    text: root._hasVehicle && root._flightMode !== "" ? root._flightMode.toUpperCase() : "--"
+                    text: root._hasVehicle && root._flightMode !== "" ? root._flightMode.toUpperCase() : "STANDBY"
                     color: CompanyTheme.primary
                     font.pointSize: CompanyTheme.fontSmall
                     font.bold: true
                 }
             }
 
-            // Spacer to push right-hand status indicators
             Item { Layout.fillWidth: true }
 
-            // Telemetry Item 6: Battery
+            // Column 6: LINK
             RowLayout {
-                spacing: 6
-                IconVector { name: "battery"; size: 14; color: CompanyTheme.textSecondary }
-                Text {
-                    text: CompanyTelemetry.batteryPercentStr
+                visible: !root._isNarrow
+                spacing: 5
+                IconVector {
+                    name: "signal"
+                    size: 13
                     color: {
-                        if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
-                        var pct = CompanyTelemetry.batteryPercent
-                        if (pct > 30) return CompanyTheme.success
-                        if (pct > 15) return CompanyTheme.warning
-                        return CompanyTheme.danger
+                        if (!root._hasVehicle) return CompanyTheme.textMuted
+                        return CompanyTelemetry.communicationLost ? CompanyTheme.danger : CompanyTheme.success
+                    }
+                }
+                Text { text: "LINK"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                Text {
+                    text: {
+                        if (!root._hasVehicle) return "--%"
+                        if (CompanyTelemetry.communicationLost) return "LOST"
+                        return CompanyTelemetry.linkQualityPercent + "%"
+                    }
+                    color: {
+                        if (!root._hasVehicle) return CompanyTheme.textMuted
+                        if (CompanyTelemetry.communicationLost) return CompanyTheme.danger
+                        return CompanyTheme.textPrimary
                     }
                     font.pointSize: CompanyTheme.fontSmall
                     font.family: CompanyTheme.fontMono
@@ -610,10 +515,23 @@ Item {
                 }
             }
 
-            // Telemetry Item 7: GPS Satellites
+            Rectangle { visible: !root._isNarrow; Layout.preferredWidth: 1; Layout.preferredHeight: 14; color: CompanyTheme.borderCard }
+
+            // Column 7: SATS
             RowLayout {
-                spacing: 6
-                IconVector { name: "satellite"; size: 14; color: CompanyTheme.textSecondary }
+                visible: !root._isNarrow
+                spacing: 5
+                IconVector {
+                    name: "satellite"
+                    size: 13
+                    color: {
+                        if (!root._hasVehicle) return CompanyTheme.textMuted
+                        if (CompanyTelemetry.gpsLock >= 3) return CompanyTheme.success
+                        if (CompanyTelemetry.gpsLock >= 2) return CompanyTheme.warning
+                        return CompanyTheme.danger
+                    }
+                }
+                Text { text: "SATS"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
                     text: {
                         if (!CompanyTelemetry.hasVehicle) return "--"
@@ -629,20 +547,31 @@ Item {
                 }
             }
 
-            // Telemetry Item 8: Link Quality
+            Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 14; color: CompanyTheme.borderCard }
+
+            // Column 8: BAT
             RowLayout {
-                spacing: 6
-                IconVector { name: "signal"; size: 14; color: CompanyTheme.textSecondary }
-                Text {
-                    text: {
-                        if (!CompanyTelemetry.hasVehicle) return "--%"
-                        if (CompanyTelemetry.communicationLost) return "LOST"
-                        return CompanyTelemetry.linkQualityPercent + "%"
-                    }
+                spacing: 5
+                IconVector {
+                    name: "battery"
+                    size: 13
                     color: {
-                        if (!CompanyTelemetry.hasVehicle) return CompanyTheme.textMuted
-                        if (CompanyTelemetry.communicationLost) return CompanyTheme.danger
-                        return CompanyTheme.success
+                        if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                        var pct = CompanyTelemetry.batteryPercent
+                        if (pct > 30) return CompanyTheme.success
+                        if (pct > 15) return CompanyTheme.warning
+                        return CompanyTheme.danger
+                    }
+                }
+                Text { text: "BAT"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
+                Text {
+                    text: CompanyTelemetry.batteryPercentStr
+                    color: {
+                        if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                        var pct = CompanyTelemetry.batteryPercent
+                        if (pct > 30) return CompanyTheme.success
+                        if (pct > 15) return CompanyTheme.warning
+                        return CompanyTheme.danger
                     }
                     font.pointSize: CompanyTheme.fontSmall
                     font.family: CompanyTheme.fontMono
@@ -795,13 +724,50 @@ Item {
 
                     CompanyButton {
                         Layout.fillWidth: true
-                        text: qsTr("Confirm %1").arg(root._confirmActionType)
+                        text: root._confirmActionType === "START_MISSION" ? qsTr("Confirm Mission Start") : qsTr("Confirm %1").arg(root._confirmActionType)
                         isDanger: root._confirmActionType === "ARM" || root._confirmActionType === "DISARM"
                         isPrimary: root._confirmActionType !== "ARM" && root._confirmActionType !== "DISARM"
                         customColor: root._confirmColor
                         onClicked: root.executeConfirmedAction()
                     }
                 }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Transient Safety Feedback / Abort Notification Toast Banner
+    // ========================================================================
+    Rectangle {
+        id: safetyToast
+        anchors.top: parent.top
+        anchors.topMargin: CompanyTheme.spacingLg
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(parent.width - 40, toastRow.implicitWidth + 32)
+        height: 42
+        radius: CompanyTheme.radiusSm
+        color: CompanyTheme.bgCardElevated
+        border.color: root._safetyNotificationColor
+        border.width: 1.5
+        z: 99999
+        visible: root._safetyNotificationVisible
+
+        RowLayout {
+            id: toastRow
+            anchors.centerIn: parent
+            spacing: CompanyTheme.spacingSm
+
+            IconVector {
+                name: "warning"
+                size: 16
+                color: root._safetyNotificationColor
+            }
+
+            Text {
+                text: root._safetyNotificationText
+                color: CompanyTheme.textPrimary
+                font.pointSize: CompanyTheme.fontSmall
+                font.bold: true
             }
         }
     }

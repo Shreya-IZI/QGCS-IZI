@@ -812,7 +812,9 @@ Fact *ParameterManager::getParameter(int componentId, const QString &paramName)
 
     const QString mappedParamName = _remapParamNameToVersion(paramName);
     if (!_mapCompId2FactMap.contains(componentId) || !_mapCompId2FactMap[componentId].contains(mappedParamName)) {
-        qgcApp()->reportMissingParameter(componentId, mappedParamName);
+        if (_parametersReady) {
+            qgcApp()->reportMissingParameter(componentId, mappedParamName);
+        }
         return &_defaultFact;
     }
 

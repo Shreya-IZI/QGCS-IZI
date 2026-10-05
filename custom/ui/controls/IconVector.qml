@@ -230,6 +230,86 @@ Item {
                     ctx.stroke()
                     break
 
+                case "camera":
+                    // Camera body with top shutter bump & center lens
+                    ctx.strokeRect(2*f, 4.5*f, 12*f, 9*f)
+                    ctx.beginPath()
+                    ctx.moveTo(5.5*f, 4.5*f); ctx.lineTo(6.5*f, 2.5*f); ctx.lineTo(9.5*f, 2.5*f); ctx.lineTo(10.5*f, 4.5*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(8*f, 9*f, 2.5*f, 0, 2*Math.PI)
+                    ctx.stroke()
+                    break
+
+                case "record":
+                    // Recording circle
+                    ctx.beginPath()
+                    ctx.arc(8*f, 8*f, 5*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    break
+
+                case "stop":
+                    // Stop recording square
+                    ctx.fillRect(4*f, 4*f, 8*f, 8*f)
+                    break
+
+                case "plus":
+                    // Plus / Zoom in
+                    ctx.beginPath()
+                    ctx.moveTo(8*f, 3*f); ctx.lineTo(8*f, 13*f)
+                    ctx.moveTo(3*f, 8*f); ctx.lineTo(13*f, 8*f)
+                    ctx.stroke()
+                    break
+
+                case "minus":
+                    // Minus / Zoom out
+                    ctx.beginPath()
+                    ctx.moveTo(3*f, 8*f); ctx.lineTo(13*f, 8*f)
+                    ctx.stroke()
+                    break
+
+                case "crosshair":
+                    // Subtle reticle
+                    ctx.beginPath()
+                    ctx.arc(8*f, 8*f, 5.5*f, 0, 2*Math.PI)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.moveTo(8*f, 1*f); ctx.lineTo(8*f, 4.5*f)
+                    ctx.moveTo(8*f, 11.5*f); ctx.lineTo(8*f, 15*f)
+                    ctx.moveTo(1*f, 8*f); ctx.lineTo(4.5*f, 8*f)
+                    ctx.moveTo(11.5*f, 8*f); ctx.lineTo(15*f, 8*f)
+                    ctx.stroke()
+                    break
+
+                case "params":
+                case "tuning":
+                    // 3 horizontal slider bars with indicator nodes
+                    ctx.beginPath()
+                    ctx.moveTo(2.5*f, 4.5*f); ctx.lineTo(13.5*f, 4.5*f)
+                    ctx.moveTo(2.5*f, 8*f);   ctx.lineTo(13.5*f, 8*f)
+                    ctx.moveTo(2.5*f, 11.5*f); ctx.lineTo(13.5*f, 11.5*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(6*f, 4.5*f, 1.6*f, 0, 2*Math.PI)
+                    ctx.arc(10.5*f, 8*f, 1.6*f, 0, 2*Math.PI)
+                    ctx.arc(5*f, 11.5*f, 1.6*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    break
+
+                case "setup":
+                case "calibrate":
+                    // Wrench / Tool symbol
+                    ctx.beginPath()
+                    ctx.moveTo(13*f, 5*f)
+                    ctx.lineTo(11*f, 3*f)
+                    ctx.lineTo(8.5*f, 5.5*f)
+                    ctx.lineTo(4*f, 10*f)
+                    ctx.lineTo(6*f, 12*f)
+                    ctx.lineTo(10.5*f, 7.5*f)
+                    ctx.closePath()
+                    ctx.stroke()
+                    break
+
                 default:
                     ctx.beginPath()
                     ctx.arc(8*f, 8*f, 4*f, 0, 2*Math.PI)

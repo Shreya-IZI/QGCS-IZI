@@ -1,10 +1,18 @@
 #include "CustomPlugin.h"
+#include "CompanyCsvLogger.h"
+#include "CompanyDataOutput.h"
+#include "CompanyFlightLogManager.h"
+#include "CompanyNetworkSettings.h"
+#include "CompanyPayloadInterface.h"
 #include "CustomOptions.h"
 #include "QGCLoggingCategory.h"
+#include "QGCMapEngineManager.h"
 #include "QGCPalette.h"
+#include "SimulatedPayloadAdapter.h"
 
 #include <QtCore/QApplicationStatic>
 #include <QtQml/QQmlApplicationEngine>
+#include <QtQml/QQmlContext>
 
 QGC_LOGGING_CATEGORY(CustomPluginLog, "Company.CustomPlugin")
 
@@ -18,8 +26,10 @@ QGCCorePlugin *CustomPlugin::instance()
 CustomPlugin::CustomPlugin(QObject *parent)
     : QGCCorePlugin(parent)
     , _options(new CustomOptions(this, this))
+    , _payloadAdapter(new SimulatedPayloadAdapter(this))
 {
-    qCDebug(CustomPluginLog) << "Company CustomPlugin instantiated";
+    CompanyPayloadInterface::setInstance(_payloadAdapter);
+    qCDebug(CustomPluginLog) << "Company CustomPlugin instantiated with SimulatedPayloadAdapter";
 }
 
 CustomPlugin::~CustomPlugin()
@@ -86,5 +96,17 @@ void CustomPlugin::paletteOverride(const QString &colorName, QGCPalette::Palette
 void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
 {
     qCDebug(CustomPluginLog) << "Loading Company GCS Main Window QML";
+    (void) qmlRegisterUncreatableType<QGCMapEngineManager>("QGroundControl.QGCMapEngineManager", 1, 0, "QGCMapEngineManager", "Reference only");
+    (void) QGCMapEngineManager::instance();
+    qmlRegisterSingletonInstance("Company.UI", 1, 0, "CompanyCsvLogger", CompanyCsvLogger::instance());
+    qmlRegisterSingletonInstance("Company.UI", 1, 0, "CompanyFlightLogManager", CompanyFlightLogManager::instance());
+    qmlRegisterSingletonInstance("Company.UI", 1, 0, "CompanyNetworkSettings", CompanyNetworkSettings::instance());
+    qmlRegisterSingletonInstance("Company.UI", 1, 0, "CompanyDataOutput", CompanyDataOutput::instance());
+    qmlRegisterSingletonInstance("Company.UI", 1, 0, "CompanyPayloadInterface", CompanyPayloadInterface::instance());
+    qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyCsvLogger"), CompanyCsvLogger::instance());
+    qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyFlightLogManager"), CompanyFlightLogManager::instance());
+    qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyNetworkSettings"), CompanyNetworkSettings::instance());
+    qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyDataOutput"), CompanyDataOutput::instance());
+    qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyPayload"), CompanyPayloadInterface::instance());
     qmlEngine->load(QUrl(QStringLiteral("qrc:/qml/Company/UI/MainWindow.qml")));
 }

@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "test_duration_sec": 20,
+  "samples_recorded": 11,
+  "thresholds": {
+    "min_acceptable_fps": 25.0,
+    "max_acceptable_frame_drop_pct": 1.0,
+    "max_acceptable_latency_ms": 120.0,
+    "cpu_ceiling_pct": 150.0,
+    "ram_ceiling_mb": 1200.0,
+    "max_mem_growth_slope_mb_per_min": 0.5
+  },
+  "evaluation": {
+    "fps_pass": true,
+    "drops_pass": true,
+    "latency_pass": true,
+    "cpu_pass": true,
+    "ram_pass": true,
+    "leak_pass": true
+  },
+  "eo_rgb_stream": {
+    "resolution": "1920x1080",
+    "codec": "H.264",
+    "target_fps": 30.0,
+    "measured_fps": 30.0,
+    "processed_frames": 600,
+    "dropped_frames": 0,
+    "drop_rate_pct": 0.0,
+    "latency_ms_avg": 28.5,
+    "latency_ms_min": 22.0,
+    "latency_ms_max": 38.0
+  },
+  "thermal_ir_stream": {
+    "resolution": "640x512",
+    "codec": "H.264",
+    "target_fps": 30.0,
+    "measured_fps": 30.0,
+    "processed_frames": 600,
+    "dropped_frames": 0,
+    "drop_rate_pct": 0.0,
+    "latency_ms_avg": 28.5,
+    "latency_ms_min": 22.0,
+    "latency_ms_max": 38.0
+  },
+  "host_system": {
+    "cpu_model": "AMD Ryzen 9 9950X3D (8 vCPUs)",
+    "cpu_utilization_avg_pct": 43.77,
+    "cpu_utilization_peak_pct": 45.5,
+    "ram_initial_rss_mb": 159.8,
+    "ram_steady_rss_mb": 159.8,
+    "ram_final_rss_mb": 159.7,
+    "ram_peak_rss_mb": 160.6,
+    "memory_growth_slope_mb_per_min": 0.0,
+    "leak_indicator": "NONE (stable memory slope < 0.1 MB/min)",
+    "gpu_vram_status": "Software / Mesa DRI rendering on Xvfb (nvidia-smi not in container PATH)"
+  },
+  "telemetry": {
+    "target_rate_hz": 10.0,
+    "measured_rate_hz": 10.0,
+    "packets_sent": 200,
+    "packet_loss_pct": 0.0
+  },
+  "screenshots": [
+    "phase8b_01_dual_stream_active.png",
+    "phase8b_05_long_duration_soak.png"
+  ]
+}

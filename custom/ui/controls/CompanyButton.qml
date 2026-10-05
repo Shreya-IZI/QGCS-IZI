@@ -48,7 +48,8 @@ Button {
 
     readonly property color _textColor: {
         if (!root.enabled) return CompanyTheme.textMuted
-        if (isPrimary || isDanger) return CompanyTheme.textLight
+        if (isPrimary) return CompanyTheme.bgApp
+        if (isDanger) return CompanyTheme.textLight
         if (isOutline) return CompanyTheme.accent
         return CompanyTheme.textPrimary
     }
@@ -57,9 +58,9 @@ Button {
         radius: CompanyTheme.radiusSm
         color: {
             if (!root.enabled) return Qt.rgba(0.15, 0.18, 0.25, 0.5)
-            if (root.pressed) return Qt.darker(root._baseColor, 1.3)
+            if (root.pressed) return root.isOutline ? CompanyTheme.primaryDim : Qt.darker(root._baseColor, 1.3)
             if (root.hovered) {
-                if (root.isOutline) return CompanyTheme.accentDim
+                if (root.isOutline) return CompanyTheme.primaryDim
                 return Qt.lighter(root._baseColor, 1.2)
             }
             return root._baseColor

@@ -42,13 +42,18 @@ mkdir -p "${BUILD_DIR}"
 # HOME is forced to a writable path because a mapped UID has no /etc/passwd
 # entry (gradle/ccache need a writable home). Source is mounted read-write: the
 # build writes a compile_commands.json symlink and the CPM cache into the tree.
+GRADLE_MOUNT=()
+[[ -d "${BUILD_DIR}/.gradle_home" ]] && GRADLE_MOUNT=(-v "${BUILD_DIR}/.gradle_home:/tmp/.gradle")
+
 docker run \
     --rm \
+    --net=host \
     --user "$(id -u):$(id -g)" \
     --env HOME=/tmp \
     --env CLEAN_BUILD="${CLEAN_BUILD:-0}" \
     --env JOBS="${JOBS:-}" \
     ${FUSE_FLAGS[@]+"${FUSE_FLAGS[@]}"} \
+    ${GRADLE_MOUNT[@]+"${GRADLE_MOUNT[@]}"} \
     -v "${SOURCE_DIR}:/project/source" \
     -v "${BUILD_DIR}:/project/build" \
     "${IMAGE_NAME}" \

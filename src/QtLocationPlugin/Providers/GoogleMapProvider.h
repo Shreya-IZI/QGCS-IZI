@@ -42,7 +42,7 @@ private:
     const QString _version;
     const QString _mapUrl = QStringLiteral("http://mt%1.google.com/vt/%2=%3&hl=%4&x=%5%6&y=%7&z=%8&s=%9&scale=%10");
     const QString _secGoogleWord = QStringLiteral("Galileo");
-    const QString _scale = QStringLiteral("1");
+    const QString _scale = QStringLiteral("2");
 };
 
 class GoogleStreetMapProvider : public GoogleMapProvider

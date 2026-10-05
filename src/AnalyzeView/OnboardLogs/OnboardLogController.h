@@ -12,6 +12,8 @@ class QmlObjectListModel;
 class QTimer;
 class QThread;
 class Vehicle;
+class QQmlEngine;
+class QJSEngine;
 class OnboardLogDownloadTest;
 class OnboardLogFtpDownloadTest;
 
@@ -42,6 +44,9 @@ public:
     explicit OnboardLogController(QObject *parent = nullptr);
     ~OnboardLogController();
 
+    static OnboardLogController *instance();
+    static OnboardLogController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
+
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void download(const QString &path = QString());
     Q_INVOKABLE void eraseAll();
@@ -58,6 +63,10 @@ public:
     bool allLogsSelected() const;
     bool sortAscending() const { return _sortAscending; }
     void setSortAscending(bool ascending);
+
+    QmlObjectListModel *model() const { return _logEntriesModel; }
+    bool requestingList() const { return _requestingLogEntries; }
+    bool downloadingLogs() const { return _downloadingLogs; }
 
     /// Transport currently used to list/download logs: "messages" (LOG_* messages) or "ftp" (MAVLink FTP)
     QString transport() const { return (_transport == Transport::Ftp) ? QStringLiteral("ftp") : QStringLiteral("messages"); }

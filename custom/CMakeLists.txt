@@ -20,14 +20,21 @@ set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/PrimaryFlightDisplay.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/TacticalMapView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/SystemDiagnosticsView.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/CameraView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/MissionPlannerView.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/MissionHealth.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/Placeholders.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/FlightLogsView.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/SettingsView.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/ParametersView.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/OnboardingGuide.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/CompanyCard.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/CompanyButton.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/StatusBadge.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/MetricTile.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/IconVector.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/DroneGraphic.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/IziLogo.qml
 )
 
 # Set resource aliases to filename so they are cleanly accessible in QML and C++
@@ -58,6 +65,18 @@ set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomPlugin.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomOptions.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomOptions.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyCsvLogger.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyCsvLogger.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyNetworkSettings.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyNetworkSettings.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyDataOutput.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyDataOutput.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyPayloadInterface.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyPayloadInterface.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/SimulatedPayloadAdapter.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/SimulatedPayloadAdapter.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyFlightLogManager.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyFlightLogManager.h
     PARENT_SCOPE
 )
 

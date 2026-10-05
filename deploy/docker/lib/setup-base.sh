@@ -13,9 +13,10 @@ Acquire::http::Timeout "30";
 Acquire::https::Timeout "30";
 EOF
 
-for f in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
-    [ -f "$f" ] && sed -i 's|https\?://archive.ubuntu.com/ubuntu|mirror://mirrors.ubuntu.com/mirrors.txt|g' "$f"
-done
+# Keep official Ubuntu archive repositories
+# for f in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+#     [ -f "$f" ] && sed -i 's|https\?://archive.ubuntu.com/ubuntu|mirror://mirrors.ubuntu.com/mirrors.txt|g' "$f"
+# done
 
 apt-get update
 # shellcheck disable=SC2086
