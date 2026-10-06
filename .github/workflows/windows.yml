@@ -226,14 +226,11 @@ jobs:
           binary-path: ${{ runner.temp }}\qgc-install-test\bin\QGroundControl.exe
           type: exe
 
-      - name: Attest and Upload
+
+      - name: Upload Windows Installer
         if: matrix.build_type == 'Release'
-        uses: ./.github/actions/attest-and-upload
+        uses: actions/upload-artifact@v7
         with:
-          artifact-name: ${{ matrix.package }}.exe
-          package-name: ${{ matrix.package }}
-          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
-          aws-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-distribution-id: ${{ secrets.AWS_DISTRIBUTION_ID }}
-          upload-aws: ${{ matrix.variant == 'arm64-cross' && 'false' || 'true' }}
+          name: ${{ matrix.package }}
+          path: ${{ runner.temp }}\build\${{ matrix.build_type }}\*.exe
+          if-no-files-found: error
