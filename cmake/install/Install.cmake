@@ -221,6 +221,22 @@ elseif(LINUX)
     # Windows Installation & Installer Creation
     # ----------------------------------------------------------------------------
 elseif(WIN32)
+    # Ensure required Qt add-on module runtime DLLs are deployed into bin/
+    set(_qgc_win_qt_runtime_targets
+        Qt6::SerialPort
+        Qt6::Bluetooth
+        Qt6::Graphs
+        Qt6::StateMachine
+    )
+    foreach(_qt_target IN LISTS _qgc_win_qt_runtime_targets)
+        if(TARGET ${_qt_target})
+            install(FILES "$<TARGET_FILE:${_qt_target}>"
+                    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                    COMPONENT Runtime
+            )
+        endif()
+    endforeach()
+
     # Pass variables to Windows installer creation script
     if(CMAKE_CROSSCOMPILING)
         string(CONCAT _win_installer_out "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}-installer-"
