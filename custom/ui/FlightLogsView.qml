@@ -18,7 +18,7 @@ Item {
     readonly property bool _requestingList:  companyFlightLogManager.isRequestingList || OnboardLogController.requestingList
     readonly property int  _logCount:        companyFlightLogManager.logEntries ? companyFlightLogManager.logEntries.count : 0
     readonly property int  _selectedCount:   companyFlightLogManager.selectedCount
-    readonly property bool _isNarrow:        width < 1024 || ScreenTools.isMobile
+    readonly property bool _isNarrow:        width < 1180 || ScreenTools.isMobile
 
     property string filterMode: "all" // "all", "onboard", "telemetry"
 
@@ -261,11 +261,13 @@ Item {
             // ----------------------------------------------------------------
             Rectangle {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
                 Layout.preferredHeight: 112
                 radius: CompanyTheme.radiusMd
                 color: CompanyTheme.bgCard
                 border.color: CompanyTheme.borderCard
                 border.width: 1
+                clip: true
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -288,6 +290,7 @@ Item {
                             font.pointSize: CompanyTheme.fontSmall
                             font.bold: true
                             font.letterSpacing: 0.5
+                            elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
 
@@ -308,6 +311,7 @@ Item {
                             Layout.fillWidth: true
 
                             RowLayout {
+                                Layout.fillWidth: true
                                 spacing: 4
                                 Text {
                                     text: qsTr("Active Session:")
@@ -330,6 +334,7 @@ Item {
                             }
 
                             RowLayout {
+                                Layout.fillWidth: true
                                 spacing: CompanyTheme.spacingMd
                                 Text {
                                     text: qsTr("Recorded Bytes: %1").arg(root.formatBytes(companyFlightLogManager.groundTelemetryBytes))
@@ -346,13 +351,16 @@ Item {
                                     text: qsTr("Never Deleted When Disarmed")
                                     color: CompanyTheme.success
                                     font.pointSize: CompanyTheme.fontTiny
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
                                 }
                             }
                         }
 
                         CompanyButton {
-                            text: qsTr("Open Telemetry Folder")
+                            text: qsTr("Open Folder")
                             isOutline: true
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                             onClicked: companyFlightLogManager.openTelemetryDirectory()
                         }
                     }
@@ -364,11 +372,13 @@ Item {
             // ----------------------------------------------------------------
             Rectangle {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
                 Layout.preferredHeight: 112
                 radius: CompanyTheme.radiusMd
                 color: CompanyTheme.bgCard
                 border.color: CompanyTheme.borderCard
                 border.width: 1
+                clip: true
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -391,6 +401,7 @@ Item {
                             font.pointSize: CompanyTheme.fontSmall
                             font.bold: true
                             font.letterSpacing: 0.5
+                            elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
 
@@ -411,6 +422,7 @@ Item {
                             Layout.fillWidth: true
 
                             RowLayout {
+                                Layout.fillWidth: true
                                 spacing: 4
                                 Text {
                                     text: qsTr("Safety Lockout:")
@@ -422,13 +434,21 @@ Item {
                                     color: root._isArmed ? CompanyTheme.warning : CompanyTheme.success
                                     font.pointSize: CompanyTheme.fontTiny
                                     font.bold: true
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
                                 }
                             }
 
                             RowLayout {
-                                spacing: CompanyTheme.spacingMd
+                                Layout.fillWidth: true
+                                spacing: 4
                                 Text {
-                                    text: qsTr("Storage: %1").arg(companyFlightLogManager.onboardLogSavePath)
+                                    text: qsTr("Storage:")
+                                    color: CompanyTheme.textMuted
+                                    font.pointSize: CompanyTheme.fontTiny
+                                }
+                                Text {
+                                    text: companyFlightLogManager.onboardLogSavePath
                                     color: CompanyTheme.textSecondary
                                     font.pointSize: CompanyTheme.fontTiny
                                     font.family: CompanyTheme.fontMono
@@ -439,8 +459,9 @@ Item {
                         }
 
                         CompanyButton {
-                            text: qsTr("Open Onboard Folder")
+                            text: qsTr("Open Folder")
                             isOutline: true
+                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                             onClicked: companyFlightLogManager.openLogDirectory()
                         }
                     }
@@ -834,7 +855,7 @@ Item {
                     ColumnLayout {
                         anchors.centerIn: parent
                         spacing: CompanyTheme.spacingSm
-                        visible: !root._hasVehicle
+                        visible: !root._hasVehicle && root._logCount === 0
 
                         IconVector {
                             Layout.alignment: Qt.AlignHCenter

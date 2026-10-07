@@ -29,7 +29,7 @@ Item {
     Timer {
         id: utcTimer
         interval: 33 // ~30 FPS refresh for smooth millisecond video timestamping
-        running: true
+        running: root.visible
         repeat: true
         onTriggered: {
             var nowMs = CompanyTelemetry.hasDroneGpsTime ?
