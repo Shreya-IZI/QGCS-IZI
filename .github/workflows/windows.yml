@@ -217,15 +217,17 @@ jobs:
           $sanitizedPath = (($env:PATH -split ';') | Where-Object { $_ -and ($_ -ne $sdkBin) }) -join ';'
           "QGC_VERIFY_INSTALLED_PATH=$sanitizedPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Verify installed executable
+      - name: Verify Windows Deployment Lifecycle & Persistence
         if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
-        uses: ./.github/actions/verify-executable
-        env:
-          PATH: ${{ env.QGC_VERIFY_INSTALLED_PATH || env.PATH }}
-        with:
-          binary-path: ${{ runner.temp }}\qgc-install-test\bin\QGroundControl.exe
-          type: exe
-
+        shell: pwsh
+        run: |
+          $buildDir = "${{ runner.temp }}\build"
+          $installerExe = Get-ChildItem -Path $buildDir -Filter "*installer*.exe" | Select-Object -First 1
+          if (-not $installerExe) {
+            Write-Error "Installer executable not found in $buildDir"
+            exit 1
+          }
+          & "${GITHUB_WORKSPACE}\deploy\windows\verify-deployment.ps1" -InstallerPath $installerExe.FullName -InstallDir "${{ runner.temp }}\qgc-lifecycle-test"
 
       - name: Upload Windows Installer
         if: matrix.build_type == 'Release'
