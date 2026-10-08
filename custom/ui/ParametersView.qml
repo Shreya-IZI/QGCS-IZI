@@ -557,28 +557,32 @@ Rectangle {
         anchors.left: parent.left
         anchors.leftMargin: 12
         clip: true
+        contentWidth: availableWidth
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
         visible: !root.isSearching && (!root._isNarrow || root.showCategoriesOnMobile)
         z: root._isNarrow ? 40 : 1
 
-        ColumnLayout {
-            width: groupScroll.width - 12
+        Column {
+            id: categoryColumn
+            width: groupScroll.availableWidth
             spacing: 2
 
             Repeater {
                 model: controller.categories
-                delegate: ColumnLayout {
+                delegate: Column {
                     id: catCol
-                    Layout.fillWidth: true
+                    width: categoryColumn.width
                     spacing: 2
 
                     readonly property var categoryObj: (typeof object !== "undefined" && object !== null) ? object : (model && model.object ? model.object : null)
                     readonly property bool isCurrentCat: controller.currentCategory === catCol.categoryObj
 
                     Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 32
+                        width: parent.width
+                        height: 32
                         radius: 3
-                        color: catCol.isCurrentCat ? "#383838" : "#282828"
+                        color: catCol.isCurrentCat ? "#383838" : (catMouse.containsMouse ? CompanyTheme.bgCardHover : "#282828")
                         border.color: catCol.isCurrentCat ? CompanyTheme.borderActive : CompanyTheme.borderCard
 
                         RowLayout {
@@ -604,8 +608,11 @@ Rectangle {
                         }
 
                         MouseArea {
+                            id: catMouse
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            preventStealing: false
                             onClicked: {
                                 if (catCol.categoryObj) {
                                     controller.currentCategory = catCol.categoryObj
@@ -618,17 +625,17 @@ Rectangle {
                     }
 
                     // Child Groups (shown under category)
-                    ColumnLayout {
+                    Column {
                         visible: catCol.isCurrentCat
-                        Layout.fillWidth: true
+                        width: parent.width
                         spacing: 2
 
                         Repeater {
                             model: (catCol.isCurrentCat && catCol.categoryObj) ? catCol.categoryObj.groups : null
                             delegate: Button {
                                 id: grpBtn
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 30
+                                width: parent.width
+                                height: 30
 
                                 readonly property var groupObj: (typeof object !== "undefined" && object !== null) ? object : (model && model.object ? model.object : null)
                                 readonly property bool isCurrentGrp: controller.currentGroup === grpBtn.groupObj
@@ -964,6 +971,9 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
+                contentWidth: availableWidth
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
                 ColumnLayout {
                     width: editorDrawer.width - 24
