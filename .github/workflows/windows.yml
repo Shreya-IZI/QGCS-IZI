@@ -227,7 +227,8 @@ jobs:
             Write-Error "Installer executable not found in $buildDir"
             exit 1
           }
-          & "${GITHUB_WORKSPACE}\deploy\windows\verify-deployment.ps1" -InstallerPath $installerExe.FullName -InstallDir "${{ runner.temp }}\qgc-lifecycle-test"
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "deploy\windows\verify-deployment.ps1"
+          & $scriptPath -InstallerPath $installerExe.FullName -InstallDir "${{ runner.temp }}\qgc-lifecycle-test"
 
       - name: Upload Windows Installer
         if: matrix.build_type == 'Release'

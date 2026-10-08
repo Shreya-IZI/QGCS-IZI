@@ -95,8 +95,8 @@ Write-Host "      PASS: Executable verified at $exePath" -ForegroundColor Green
 
 # 5. Application Launch & Post-Exit Persistence Test
 Write-Host "`n[4/7] Testing Application Launch & Shutdown Persistence..." -ForegroundColor Yellow
-Write-Host "      Launching $exePath (offscreen verification)..."
-$appProcess = Start-Process -FilePath $exePath -ArgumentList "-platform", "offscreen", "--version" -Wait -PassThru -NoNewWindow
+Write-Host "      Launching $exePath (boot verification)..."
+$appProcess = Start-Process -FilePath $exePath -ArgumentList "--simple-boot-test", "-platform", "offscreen" -Wait -PassThru -NoNewWindow
 Write-Host "      Application exited normally with code $($appProcess.ExitCode)"
 
 # Verify EXE STILL EXISTS after exit
