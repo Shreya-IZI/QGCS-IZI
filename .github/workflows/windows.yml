@@ -227,8 +227,11 @@ jobs:
             Write-Error "Installer executable not found in $buildDir"
             exit 1
           }
-          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "deploy\windows\verify-deployment.ps1"
-          & $scriptPath -InstallerPath $installerExe.FullName -InstallDir "${{ runner.temp }}\qgc-lifecycle-test"
+          $verifyScript = Join-Path $env:GITHUB_WORKSPACE "deploy/windows/verify-deployment.ps1"
+          if (-not (Test-Path $verifyScript)) {
+            throw "Deployment verification script not found: $verifyScript"
+          }
+          & $verifyScript -InstallerPath $installerExe.FullName -InstallDir "${{ runner.temp }}\qgc-lifecycle-test"
 
       - name: Upload Windows Installer
         if: matrix.build_type == 'Release'
