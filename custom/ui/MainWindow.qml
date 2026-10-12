@@ -57,13 +57,14 @@ ApplicationWindow {
     // ------------------------------------------------------------------------
     // Global Application Message Dialogs (Invoked by QGCApplication C++)
     // ------------------------------------------------------------------------
-    function _showMessageDialogWorker(owner, dialogTitle, dialogText, buttons, acceptFunction, closeFunction) {
+    function _showMessageDialogWorker(owner, dialogTitle, dialogText, buttons, acceptFunction, closeFunction, bypassNavigationCheck) {
         var dialog = simpleMessageDialogComponent.createObject(owner, {
             title: dialogTitle,
             text: dialogText,
             buttons: (buttons !== undefined && buttons !== null) ? buttons : Dialog.Ok,
             acceptFunction: (acceptFunction !== undefined) ? acceptFunction : null,
-            closeFunction: (closeFunction !== undefined) ? closeFunction : null
+            closeFunction: (closeFunction !== undefined) ? closeFunction : null,
+            bypassNavigationCheck: (bypassNavigationCheck !== undefined) ? bypassNavigationCheck : true
         })
         if (dialog) {
             dialog.open()
