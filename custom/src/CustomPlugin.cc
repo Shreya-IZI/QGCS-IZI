@@ -11,8 +11,11 @@
 #include "SimulatedPayloadAdapter.h"
 
 #include <QtCore/QApplicationStatic>
+#include <QtGui/QGuiApplication>
+#include <QtGui/QIcon>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlContext>
+#include <QtQuick/QQuickWindow>
 
 QGC_LOGGING_CATEGORY(CustomPluginLog, "Company.CustomPlugin")
 
@@ -108,5 +111,22 @@ void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
     qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyNetworkSettings"), CompanyNetworkSettings::instance());
     qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyDataOutput"), CompanyDataOutput::instance());
     qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyPayload"), CompanyPayloadInterface::instance());
+
+    QGuiApplication::setApplicationDisplayName(QStringLiteral("IZI GCS"));
     qmlEngine->load(QUrl(QStringLiteral("qrc:/qml/Company/UI/MainWindow.qml")));
+
+    QIcon appIcon;
+    appIcon.addFile(QStringLiteral(":/res/icons/izi_icon.png"));
+    appIcon.addFile(QStringLiteral(":/res/qgroundcontrol.png"));
+    appIcon.addFile(QStringLiteral(":/res/qgroundcontrol.ico"));
+    if (!appIcon.isNull()) {
+        QGuiApplication::setWindowIcon(appIcon);
+        const auto rootObjects = qmlEngine->rootObjects();
+        for (QObject *obj : rootObjects) {
+            auto *window = qobject_cast<QQuickWindow*>(obj);
+            if (window) {
+                window->setIcon(appIcon);
+            }
+        }
+    }
 }

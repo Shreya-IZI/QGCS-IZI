@@ -62,6 +62,7 @@ qt_add_qml_module(CompanyUIModule
 # ----------------------------------------------------------------------------
 set(CUSTOM_ICON_ICO "${CMAKE_CURRENT_SOURCE_DIR}/deploy/windows/WindowsIZI.ico")
 set(CUSTOM_ICON_PNG "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/izi_icon.png")
+set(CUSTOM_ICON_SVG "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/izi_icon.svg")
 
 set_source_files_properties("${CUSTOM_ICON_ICO}"
     PROPERTIES QT_RESOURCE_ALIAS "qgroundcontrol.ico"
@@ -69,12 +70,16 @@ set_source_files_properties("${CUSTOM_ICON_ICO}"
 set_source_files_properties("${CUSTOM_ICON_PNG}"
     PROPERTIES QT_RESOURCE_ALIAS "qgroundcontrol.png"
 )
+set_source_files_properties("${CUSTOM_ICON_SVG}"
+    PROPERTIES QT_RESOURCE_ALIAS "izi_icon.svg"
+)
 
 qt_add_resources(${CMAKE_PROJECT_NAME} custom_app_icons
     PREFIX "/res"
     FILES
         "${CUSTOM_ICON_ICO}"
         "${CUSTOM_ICON_PNG}"
+        "${CUSTOM_ICON_SVG}"
 )
 
 # ----------------------------------------------------------------------------
