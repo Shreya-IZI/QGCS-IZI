@@ -17,3 +17,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/deploy/windows/WindowsIZI.ico")
     set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/deploy/windows/WindowsIZI.ico" CACHE FILEPATH "NSIS Installer Icon" FORCE)
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/deploy/windows/WindowsIZI.ico" CACHE FILEPATH "NSIS Uninstaller Icon" FORCE)
 endif()
+
+# Official IZI Linux AppImage & Desktop Icons
+if(EXISTS "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/res/icons/izi_icon.png")
+    set(QGC_APPIMAGE_ICON_256_PATH "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/res/icons/izi_icon.png" CACHE FILEPATH "AppImage 256x256 icon path" FORCE)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/res/icons/izi_icon.svg")
+    set(QGC_APPIMAGE_ICON_SCALABLE_PATH "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/res/icons/izi_icon.svg" CACHE FILEPATH "AppImage SVG icon path" FORCE)
+endif()
