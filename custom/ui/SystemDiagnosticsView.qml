@@ -16,14 +16,14 @@ Item {
     // Vehicle & Telemetry Bindings (Strictly Real Vehicle Data - Zero Fake Values)
     // ------------------------------------------------------------------------
     readonly property var  _activeVehicle:      CompanyTelemetry.activeVehicle
-    readonly property bool _hasVehicle:         CompanyTelemetry.hasVehicle
-    readonly property var  _linkMgr:            _hasVehicle ? _activeVehicle.vehicleLinkManager : null
-    readonly property var  _gps:                _hasVehicle ? _activeVehicle.gps : null
-    readonly property var  _estimator:          _hasVehicle ? _activeVehicle.estimatorStatus : null
-    readonly property var  _vibration:          _hasVehicle ? _activeVehicle.vibration : null
-    readonly property var  _sensorInfo:         _hasVehicle ? _activeVehicle.sysStatusSensorInfo : null
-    readonly property var  _batteries:          _hasVehicle ? _activeVehicle.batteries : null
-    readonly property var  _radioStatus:        _hasVehicle ? _activeVehicle.radioStatus : null
+    readonly property bool _hasVehicle:         CompanyTelemetry.hasVehicle && _activeVehicle !== null
+    readonly property var  _linkMgr:            (_hasVehicle && _activeVehicle) ? _activeVehicle.vehicleLinkManager : null
+    readonly property var  _gps:                (_hasVehicle && _activeVehicle) ? _activeVehicle.gps : null
+    readonly property var  _estimator:          (_hasVehicle && _activeVehicle) ? _activeVehicle.estimatorStatus : null
+    readonly property var  _vibration:          (_hasVehicle && _activeVehicle) ? _activeVehicle.vibration : null
+    readonly property var  _sensorInfo:         (_hasVehicle && _activeVehicle) ? _activeVehicle.sysStatusSensorInfo : null
+    readonly property var  _batteries:          (_hasVehicle && _activeVehicle) ? _activeVehicle.batteries : null
+    readonly property var  _radioStatus:        (_hasVehicle && _activeVehicle) ? _activeVehicle.radioStatus : null
 
     // Multi-Battery Selection
     property int selectedBatteryIndex:          0
@@ -86,7 +86,7 @@ Item {
         radius: CompanyTheme.radiusMd
         color: CompanyTheme.bgCardElevated
         border.color: {
-            if (!root._hasVehicle) return CompanyTheme.borderCard
+            if (!root._hasVehicle || !root._activeVehicle) return CompanyTheme.borderCard
             if (root._activeVehicle.prearmError !== "") return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.6)
             if (root._linkMgr && root._linkMgr.communicationLost) return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.6)
             if (!root._activeVehicle.allSensorsHealthy) return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.6)
@@ -1266,13 +1266,13 @@ Item {
                             Item { Layout.fillWidth: true }
                             StatusBadge {
                                 text: {
-                                    if (!root._hasVehicle) return "--"
+                                    if (!root._hasVehicle || !root._activeVehicle) return "--"
                                     if (root._activeVehicle.checkListState === 1) return qsTr("Completed")
                                     if (root._activeVehicle.checkListState === 2) return qsTr("Failed")
                                     return qsTr("NOT SET UP")
                                 }
                                 badgeColor: {
-                                    if (!root._hasVehicle) return CompanyTheme.textMuted
+                                    if (!root._hasVehicle || !root._activeVehicle) return CompanyTheme.textMuted
                                     if (root._activeVehicle.checkListState === 1) return CompanyTheme.success
                                     if (root._activeVehicle.checkListState === 2) return CompanyTheme.danger
                                     return CompanyTheme.textMuted
@@ -1381,7 +1381,7 @@ Item {
                     Layout.columnSpan: diagGrid.columns
                     title: qsTr("Recent Vehicle Events & System Log")
                     subtitle: qsTr("Autopilot STATUSTEXT message stream")
-                    headerAccent: (root._hasVehicle && root._activeVehicle.messageTypeError) ? CompanyTheme.danger : ((root._hasVehicle && root._activeVehicle.messageTypeWarning) ? CompanyTheme.warning : CompanyTheme.primary)
+                    headerAccent: (root._hasVehicle && root._activeVehicle && root._activeVehicle.messageTypeError) ? CompanyTheme.danger : ((root._hasVehicle && root._activeVehicle && root._activeVehicle.messageTypeWarning) ? CompanyTheme.warning : CompanyTheme.primary)
 
                     ColumnLayout {
                         anchors.left: parent.left
@@ -1395,21 +1395,21 @@ Item {
                             spacing: 8
 
                             Text {
-                                text: qsTr("Logged Messages: %1").arg(root._hasVehicle ? root._activeVehicle.messageCount : 0)
+                                text: qsTr("Logged Messages: %1").arg((root._hasVehicle && root._activeVehicle) ? root._activeVehicle.messageCount : 0)
                                 color: CompanyTheme.textSecondary
                                 font.pointSize: CompanyTheme.fontSmall
                                 font.family: CompanyTheme.fontMono
                             }
 
                             StatusBadge {
-                                visible: root._hasVehicle && root._activeVehicle.messageTypeError
+                                visible: root._hasVehicle && root._activeVehicle && root._activeVehicle.messageTypeError
                                 text: qsTr("Errors Present")
                                 badgeColor: CompanyTheme.danger
                                 pulse: true
                             }
 
                             StatusBadge {
-                                visible: root._hasVehicle && !root._activeVehicle.messageTypeError && root._activeVehicle.messageTypeWarning
+                                visible: root._hasVehicle && root._activeVehicle && !root._activeVehicle.messageTypeError && root._activeVehicle.messageTypeWarning
                                 text: qsTr("Warnings Present")
                                 badgeColor: CompanyTheme.warning
                             }
@@ -1420,9 +1420,9 @@ Item {
                                 text: qsTr("Clear Log")
                                 Layout.preferredHeight: 26
                                 isOutline: true
-                                enabled: root._hasVehicle
+                                enabled: root._hasVehicle && root._activeVehicle
                                 onClicked: {
-                                    if (root._hasVehicle) {
+                                    if (root._hasVehicle && root._activeVehicle) {
                                         root._activeVehicle.clearMessages()
                                         logTextArea.text = ""
                                     }
@@ -1468,7 +1468,7 @@ Item {
                                     }
 
                                     Component.onCompleted: {
-                                        if (root._hasVehicle && root._activeVehicle.formattedMessages !== "") {
+                                        if (root._hasVehicle && root._activeVehicle && root._activeVehicle.formattedMessages !== "") {
                                             logTextArea.text = formatLogMessage(root._activeVehicle.formattedMessages)
                                             root._activeVehicle.resetAllMessages()
                                         }
@@ -1480,7 +1480,7 @@ Item {
                                             logTextArea.insert(0, logTextArea.formatLogMessage(formattedMessage) + "<br/>")
                                         }
                                         function onFormattedMessagesChanged() {
-                                            if (root._hasVehicle) {
+                                            if (root._hasVehicle && root._activeVehicle) {
                                                 logTextArea.text = logTextArea.formatLogMessage(root._activeVehicle.formattedMessages)
                                             }
                                         }

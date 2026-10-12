@@ -1142,6 +1142,7 @@ Item {
 
                     property var _tcpConfig: getTcpConfig()
                     readonly property bool _isTcpActive: _tcpConfig ? _tcpConfig.linkActive : false
+                    property string _statusMessage: ""
 
                     ColumnLayout {
                         id: tcpCardCol
@@ -1161,8 +1162,8 @@ Item {
                                 Layout.fillWidth: true
                             }
                             StatusBadge {
-                                text: tcpLinkCard._isTcpActive ? qsTr("CONNECTED") : qsTr("DISCONNECTED")
-                                badgeColor: tcpLinkCard._isTcpActive ? CompanyTheme.success : CompanyTheme.warning
+                                text: tcpLinkCard._isTcpActive ? qsTr("CONNECTED") : qsTr("STANDBY")
+                                badgeColor: tcpLinkCard._isTcpActive ? CompanyTheme.success : CompanyTheme.textMuted
                             }
                         }
 
@@ -1255,26 +1256,78 @@ Item {
                                 text: tcpLinkCard._isTcpActive ? qsTr("DISCONNECT TCP") : qsTr("CONNECT TCP")
                                 isOutline: !tcpLinkCard._isTcpActive
                                 onClicked: {
+                                    var host = tcpHostInput.text.trim()
+                                    var port = parseInt(tcpPortInput.text)
+                                    if (host === "") {
+                                        tcpLinkCard._statusMessage = qsTr("Please enter a valid target host IP address.")
+                                        return
+                                    }
+                                    if (isNaN(port) || port < 1 || port > 65535) {
+                                        tcpLinkCard._statusMessage = qsTr("Please enter a valid TCP port between 1 and 65535.")
+                                        return
+                                    }
+
                                     var cfg = tcpLinkCard._tcpConfig
                                     if (!cfg) {
                                         cfg = QGroundControl.linkManager.createConfiguration(2, "GroundStation_TCP")
                                         if (cfg) {
-                                            cfg.host = tcpHostInput.text.trim()
-                                            cfg.port = parseInt(tcpPortInput.text) || 20002
+                                            cfg.host = host
+                                            cfg.port = port
                                             cfg.autoConnect = false
                                             QGroundControl.linkManager.endCreateConfiguration(cfg)
                                             tcpLinkCard._tcpConfig = cfg
                                         }
                                     } else {
-                                        cfg.host = tcpHostInput.text.trim()
-                                        cfg.port = parseInt(tcpPortInput.text) || 20002
+                                        cfg.host = host
+                                        cfg.port = port
                                     }
                                     if (cfg) {
                                         if (cfg.linkActive) {
                                             QGroundControl.linkManager.disconnectLinkConfiguration(cfg)
+                                            tcpLinkCard._statusMessage = qsTr("Disconnected.")
                                         } else {
+                                            tcpLinkCard._statusMessage = qsTr("Connecting to %1:%2...").arg(host).arg(port)
                                             QGroundControl.linkManager.createConnectedLink(cfg)
                                         }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Guidance & Inline Status Notice
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: inlineNoticeRow.implicitHeight + 16
+                            radius: CompanyTheme.radiusSm
+                            color: tcpLinkCard._isTcpActive ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.08) : CompanyTheme.bgCardElevated
+                            border.color: tcpLinkCard._isTcpActive ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.3) : CompanyTheme.borderSubtle
+                            border.width: 1
+
+                            RowLayout {
+                                id: inlineNoticeRow
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 8
+
+                                IconVector {
+                                    name: "info"
+                                    size: 14
+                                    color: tcpLinkCard._isTcpActive ? CompanyTheme.success : (tcpLinkCard._statusMessage.indexOf(qsTr("Please")) !== -1 ? CompanyTheme.warning : CompanyTheme.textMuted)
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    font.pointSize: CompanyTheme.fontTiny
+                                    color: tcpLinkCard._isTcpActive ? CompanyTheme.success : (tcpLinkCard._statusMessage.indexOf(qsTr("Please")) !== -1 ? CompanyTheme.warning : CompanyTheme.textSecondary)
+                                    text: {
+                                        if (tcpLinkCard._isTcpActive) {
+                                            return qsTr("Active TCP connection established with telemetry host %1:%2").arg(tcpHostInput.text.trim()).arg(tcpPortInput.text.trim())
+                                        }
+                                        if (tcpLinkCard._statusMessage !== "") {
+                                            return tcpLinkCard._statusMessage
+                                        }
+                                        return qsTr("Automatic Link Discovery: USB Comms and UDP Broadcast (port 14550) connect automatically upon vehicle detection. Manual TCP client configuration is only required when routing via a companion computer proxy.")
                                     }
                                 }
                             }

@@ -10,7 +10,8 @@ import Company.UI
 
 Item {
     id: root
-    anchors.fill: parent
+    Layout.fillWidth: true
+    Layout.fillHeight: true
 
     readonly property bool _hasVehicle:      companyFlightLogManager.hasVehicle
     readonly property bool _isArmed:         companyFlightLogManager.isArmed

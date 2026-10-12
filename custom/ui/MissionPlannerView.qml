@@ -20,17 +20,17 @@ Item {
     // Vehicle & Telemetry Bindings
     // ------------------------------------------------------------------------
     readonly property var  _activeVehicle:   CompanyTelemetry.activeVehicle
-    readonly property bool _hasVehicle:      CompanyTelemetry.hasVehicle
+    readonly property bool _hasVehicle:      CompanyTelemetry.hasVehicle && _activeVehicle !== null
     readonly property var  _vehicleCoord:    CompanyTelemetry.coordinate
     readonly property bool _hasValidCoord:   CompanyTelemetry.hasValidCoord
     readonly property bool _isArmed:         CompanyTelemetry.armed
     readonly property bool _isFlying:        CompanyTelemetry.flying
     readonly property string _flightMode:    CompanyTelemetry.flightMode
-    readonly property bool _isMissionExecuting: _hasVehicle && _isArmed && _isFlying && (_flightMode !== "") && (_flightMode === _activeVehicle.missionFlightMode)
+    readonly property bool _isMissionExecuting: _hasVehicle && _isArmed && _isFlying && (_flightMode !== "") && (_activeVehicle ? (_flightMode === _activeVehicle.missionFlightMode) : false)
     readonly property bool _inMissionMode:   _isMissionExecuting
-    readonly property bool _isMissionPaused: _hasVehicle && _isArmed && _isFlying && (_flightMode !== "") && (_flightMode === _activeVehicle.pauseFlightMode) && _wasExecutingMission && !_missionCompleted
+    readonly property bool _isMissionPaused: _hasVehicle && _isArmed && _isFlying && (_flightMode !== "") && (_activeVehicle ? (_flightMode === _activeVehicle.pauseFlightMode) : false) && _wasExecutingMission && !_missionCompleted
     readonly property bool _isMissionActive: (_isMissionExecuting || _isMissionPaused) && !_missionCompleted
-    readonly property int  _currentMissionIndex: (_hasVehicle && _activeVehicle.missionItemIndex) ? Number(_activeVehicle.missionItemIndex.rawValue) : 0
+    readonly property int  _currentMissionIndex: (_hasVehicle && _activeVehicle && _activeVehicle.missionItemIndex) ? Number(_activeVehicle.missionItemIndex.rawValue) : 0
     readonly property int  _flightItemCount: Math.max(0, root._itemCount - 1)
     readonly property bool _hasMissionItems: root._flightItemCount > 0 && ((root._missionController && root._missionController.containsItems) || planMasterController.containsItems || root._itemCount > 1)
 
@@ -71,12 +71,12 @@ Item {
         }
 
         // Live vehicle GPS coordinate
-        var vehiclePos = (root._hasVehicle && root._activeVehicle.coordinate && root._activeVehicle.coordinate.isValid) ? root._activeVehicle.coordinate : null
+        var vehiclePos = (root._hasVehicle && root._activeVehicle && root._activeVehicle.coordinate && root._activeVehicle.coordinate.isValid) ? root._activeVehicle.coordinate : null
 
         // Segment start coordinate: home position / takeoff anchor for item 1, previous waypoint for subsequent items
         var startCoord = null
         if (current === 1) {
-            if (root._hasVehicle && root._activeVehicle.homePosition && root._activeVehicle.homePosition.isValid) {
+            if (root._hasVehicle && root._activeVehicle && root._activeVehicle.homePosition && root._activeVehicle.homePosition.isValid) {
                 startCoord = root._activeVehicle.homePosition
             } else if (root._visualItems && root._itemCount > 0) {
                 var item0 = root._visualItems.get(0)
@@ -1277,7 +1277,7 @@ Item {
                                     return qsTr("Tracking Waypoint %1 of %2").arg(currentFlightWP).arg(root._flightItemCount)
                                 }
                                 if (root._isArmed && root._isFlying) {
-                                    if (root._hasVehicle && root._flightMode === root._activeVehicle.pauseFlightMode) {
+                                    if (root._hasVehicle && root._activeVehicle && root._flightMode === root._activeVehicle.pauseFlightMode) {
                                         return qsTr("Mission Paused")
                                     }
                                     return qsTr("Standby (In Flight)")
