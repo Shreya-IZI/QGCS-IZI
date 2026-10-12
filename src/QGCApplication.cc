@@ -312,8 +312,10 @@ void QGCApplication::_initForNormalAppBoot()
 #if defined(Q_OS_LINUX) || defined(Q_OS_WIN)
     QIcon appIcon;
     appIcon.addFile(QStringLiteral(":/res/icons/izi_icon.png"));
+    appIcon.addFile(QStringLiteral(":/res/icons/izi_icon.svg"));
     appIcon.addFile(QStringLiteral(":/res/qgroundcontrol.png"));
     appIcon.addFile(QStringLiteral(":/res/qgroundcontrol.ico"));
+    appIcon.addFile(QStringLiteral(":/res/izi_icon.svg"));
     if (appIcon.isNull()) {
         QUrl windowIcon = QUrl("qrc:/res/qgroundcontrol.ico");
         windowIcon = _qmlAppEngine->interceptUrl(windowIcon, QQmlAbstractUrlInterceptor::UrlString);

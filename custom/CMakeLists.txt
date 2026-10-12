@@ -82,6 +82,13 @@ qt_add_resources(${CMAKE_PROJECT_NAME} custom_app_icons
         "${CUSTOM_ICON_SVG}"
 )
 
+qt_add_resources(${CMAKE_PROJECT_NAME} custom_brand_icons
+    PREFIX "/res/icons"
+    FILES
+        "${CUSTOM_ICON_PNG}"
+        "${CUSTOM_ICON_SVG}"
+)
+
 # ----------------------------------------------------------------------------
 # Custom Plugin Sources & Configuration
 # ----------------------------------------------------------------------------

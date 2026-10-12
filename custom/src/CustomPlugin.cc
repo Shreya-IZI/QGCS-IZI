@@ -117,8 +117,10 @@ void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
 
     QIcon appIcon;
     appIcon.addFile(QStringLiteral(":/res/icons/izi_icon.png"));
+    appIcon.addFile(QStringLiteral(":/res/icons/izi_icon.svg"));
     appIcon.addFile(QStringLiteral(":/res/qgroundcontrol.png"));
     appIcon.addFile(QStringLiteral(":/res/qgroundcontrol.ico"));
+    appIcon.addFile(QStringLiteral(":/res/izi_icon.svg"));
     if (!appIcon.isNull()) {
         QGuiApplication::setWindowIcon(appIcon);
         const auto rootObjects = qmlEngine->rootObjects();
