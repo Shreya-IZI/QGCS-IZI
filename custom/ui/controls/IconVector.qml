@@ -127,6 +127,46 @@ Item {
                     ctx.stroke()
                     break
 
+                case "link":
+                case "chain":
+                    // Two interlocking link loops
+                    ctx.beginPath()
+                    ctx.moveTo(3*f, 9.5*f)
+                    ctx.lineTo(6.5*f, 6*f)
+                    ctx.moveTo(9.5*f, 10*f)
+                    ctx.lineTo(13*f, 6.5*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.moveTo(5*f, 11*f); ctx.lineTo(11*f, 5*f)
+                    ctx.stroke()
+                    break
+
+                case "wifi":
+                    // Concentric arcs with signal dot
+                    ctx.beginPath()
+                    ctx.arc(8*f, 13*f, 1.2*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    ctx.beginPath()
+                    ctx.arc(8*f, 13*f, 4.5*f, Math.PI * 1.25, Math.PI * 1.75)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(8*f, 13*f, 7.5*f, Math.PI * 1.25, Math.PI * 1.75)
+                    ctx.stroke()
+                    break
+
+                case "rc":
+                case "joystick":
+                    // Radio transmitter / joystick controller
+                    ctx.strokeRect(3*f, 7*f, 10*f, 7*f)
+                    ctx.beginPath()
+                    ctx.arc(6*f, 10.5*f, 1.2*f, 0, 2*Math.PI)
+                    ctx.arc(10*f, 10.5*f, 1.2*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    ctx.beginPath()
+                    ctx.moveTo(4.5*f, 7*f); ctx.lineTo(2.5*f, 3*f)
+                    ctx.stroke()
+                    break
+
                 case "arm":
                 case "lock":
                     // Padlock

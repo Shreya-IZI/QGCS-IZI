@@ -11,7 +11,7 @@ import Company.UI
 Item {
     id: root
 
-    property string currentSubView: "MAP" // "MAP", "PFD", "CAM", "SYSTEM"
+    property string currentSubView: "SYSTEM" // "MAP", "PFD", "CAM", "SYSTEM"
     signal navigateToTab(int tabIndex)
 
     readonly property bool _hasVehicle:         CompanyTelemetry.hasVehicle
@@ -349,8 +349,8 @@ Item {
                     Layout.fillHeight: true
                     radius: CompanyTheme.radiusSm - 1
                     color: {
-                        if (switchBtn.isSelected) return CompanyTheme.primaryDim
-                        if (switchBtn.isHovered) return CompanyTheme.bgCardHover
+                        if (switchBtn.isSelected) return CompanyTheme.bgCardHover
+                        if (switchBtn.isHovered) return CompanyTheme.bgCard
                         return "transparent"
                     }
                     border.color: switchBtn.isSelected ? CompanyTheme.borderActive : "transparent"
@@ -363,12 +363,12 @@ Item {
                         IconVector {
                             name: switchBtn.modelData.icon
                             size: 11
-                            color: switchBtn.isSelected ? CompanyTheme.primary : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                            color: switchBtn.isSelected ? CompanyTheme.textLight : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                         }
 
                         Text {
                             text: switchBtn.modelData.label
-                            color: switchBtn.isSelected ? CompanyTheme.primary : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                            color: switchBtn.isSelected ? CompanyTheme.textLight : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                             font.pointSize: CompanyTheme.fontTiny
                             font.bold: switchBtn.isSelected
                             font.letterSpacing: 0.5

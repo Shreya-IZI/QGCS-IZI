@@ -16,6 +16,7 @@ ApplicationWindow {
 
     title: "IZI GCS - Enterprise Flight Control"
     visible: true
+    flags: Qt.Window | (ScreenTools.isMobile ? 0 : Qt.FramelessWindowHint)
     width: ScreenTools.isMobile ? 860 : 1280
     height: ScreenTools.isMobile ? 450 : 800
     minimumWidth: ScreenTools.isMobile ? 360 : 640
@@ -377,5 +378,82 @@ ApplicationWindow {
             onboardingLoader.active = false
         }
         ignoreUnknownSignals: true
+    }
+
+    // ------------------------------------------------------------------------
+    // Frameless Window Resize Handles (Desktop Only)
+    // ------------------------------------------------------------------------
+    Item {
+        id: resizeBorders
+        anchors.fill: parent
+        z: 9999
+        visible: !ScreenTools.isMobile && (mainWindow.flags & Qt.FramelessWindowHint) && mainWindow.visibility !== Window.Maximized && mainWindow.visibility !== Window.FullScreen
+
+        readonly property int borderThickness: 5
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: resizeBorders.borderThickness
+            cursorShape: Qt.SizeVerCursor
+            onPressed: mainWindow.startSystemResize(Qt.TopEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: resizeBorders.borderThickness
+            cursorShape: Qt.SizeVerCursor
+            onPressed: mainWindow.startSystemResize(Qt.BottomEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: resizeBorders.borderThickness
+            cursorShape: Qt.SizeHorCursor
+            onPressed: mainWindow.startSystemResize(Qt.LeftEdge)
+        }
+        MouseArea {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: resizeBorders.borderThickness
+            cursorShape: Qt.SizeHorCursor
+            onPressed: mainWindow.startSystemResize(Qt.RightEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            width: resizeBorders.borderThickness * 2
+            height: resizeBorders.borderThickness * 2
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: mainWindow.startSystemResize(Qt.TopEdge | Qt.LeftEdge)
+        }
+        MouseArea {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            width: resizeBorders.borderThickness * 2
+            height: resizeBorders.borderThickness * 2
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: mainWindow.startSystemResize(Qt.TopEdge | Qt.RightEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            width: resizeBorders.borderThickness * 2
+            height: resizeBorders.borderThickness * 2
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: mainWindow.startSystemResize(Qt.BottomEdge | Qt.LeftEdge)
+        }
+        MouseArea {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            width: resizeBorders.borderThickness * 2
+            height: resizeBorders.borderThickness * 2
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: mainWindow.startSystemResize(Qt.BottomEdge | Qt.RightEdge)
+        }
     }
 }

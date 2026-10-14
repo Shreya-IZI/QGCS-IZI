@@ -77,9 +77,9 @@ Item {
     Rectangle {
         id: heroBanner
         anchors.top: parent.top
-        anchors.topMargin: 52
+        anchors.topMargin: 46
         anchors.left: parent.left
-        anchors.leftMargin: 72
+        anchors.leftMargin: CompanyTheme.spacingMd
         anchors.right: parent.right
         anchors.rightMargin: CompanyTheme.spacingMd
         z: 20
@@ -272,11 +272,11 @@ Item {
         anchors.top: heroBanner.bottom
         anchors.topMargin: CompanyTheme.spacingMd
         anchors.left: parent.left
-        anchors.leftMargin: 72
+        anchors.leftMargin: CompanyTheme.spacingMd
         anchors.right: parent.right
         anchors.rightMargin: CompanyTheme.spacingMd
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 68
+        anchors.bottomMargin: 52
         clip: true
         contentWidth: width
         contentHeight: cardsContainer.implicitHeight
@@ -317,7 +317,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                columns: root.width > 1280 ? 3 : (root.width > 760 ? 2 : 1)
+                columns: (root.width > 760) ? 2 : 1
                 columnSpacing: CompanyTheme.spacingMd
                 rowSpacing: CompanyTheme.spacingMd
 
@@ -1008,6 +1008,7 @@ Item {
                 // ============================================================
                 CompanyCard {
                     Layout.fillWidth: true
+                    Layout.columnSpan: diagGrid.columns
                     title: qsTr("EKF / State Estimator")
                     subtitle: qsTr("Kalman filter solution integrity")
                     headerAccent: CompanyTheme.primary

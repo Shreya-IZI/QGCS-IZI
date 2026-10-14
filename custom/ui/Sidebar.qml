@@ -10,10 +10,10 @@ Rectangle {
 
     property int    currentTab: 1 // Backward-compatible tab index (0/1: Dashboard, 2: Missions, 3: Fleet, 4: Logs, 5: Settings, 6: Parameters, 7: Vehicle Setup)
     property string activeSection: "OPERATIONS" // "OPERATIONS", "VEHICLE", "TOOLS"
-    property string activeSubView: "MAP"        // "MAP", "PFD", "CAM", "SYSTEM"
+    property string activeSubView: "SYSTEM"     // "MAP", "PFD", "CAM", "SYSTEM"
     property int    activeTool: -1              // 2: Missions, 3: Fleet, 4: Logs, 5: Settings
     property int    activeVehicleItem: -1       // 6: Parameters, 7: Vehicle Setup
-    property bool   isExpanded: false
+    property bool   isExpanded: true
 
     signal tabSelected(int index)
     signal subViewSelected(string viewId)
@@ -170,20 +170,8 @@ Rectangle {
                 spacing: 3
 
                 // ============================================================
-                // 1. OPERATIONS (MAP, PFD, CAM, SYSTEM)
+                // 1. NAVIGATION ITEMS (MAP, PFD, CAM, SYSTEM)
                 // ============================================================
-                Text {
-                    visible: root.isExpanded
-                    Layout.leftMargin: CompanyTheme.spacingSm
-                    Layout.topMargin: 2
-                    Layout.bottomMargin: 1
-                    text: qsTr("OPERATIONS")
-                    color: CompanyTheme.textMuted
-                    font.pointSize: 8
-                    font.bold: true
-                    font.letterSpacing: 0.8
-                }
-
                 Repeater {
                     model: [
                         { id: "MAP",    title: qsTr("Map View"), icon: "flight" },
@@ -205,10 +193,12 @@ Rectangle {
                         readonly property bool isHovered: opMouseArea.containsMouse
 
                         color: {
-                            if (isSelected) return CompanyTheme.primaryDim
+                            if (isSelected) return CompanyTheme.bgCardHover
                             if (isHovered) return CompanyTheme.bgCard
                             return "transparent"
                         }
+                        border.color: isSelected ? CompanyTheme.borderActive : "transparent"
+                        border.width: 1
 
                         // Left active indicator
                         Rectangle {
@@ -217,7 +207,7 @@ Rectangle {
                             width: 3
                             height: 18
                             radius: 1.5
-                            color: CompanyTheme.primary
+                            color: CompanyTheme.textLight
                             visible: opItem.isSelected
                         }
 
@@ -235,14 +225,14 @@ Rectangle {
                                     anchors.centerIn: parent
                                     name: opItem.modelData.icon
                                     size: 15
-                                    color: opItem.isSelected ? CompanyTheme.primary : (opItem.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                                    color: opItem.isSelected ? CompanyTheme.textLight : (opItem.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                                 }
                             }
 
                             Text {
                                 visible: root.isExpanded
                                 text: opItem.modelData.title
-                                color: opItem.isSelected ? CompanyTheme.textPrimary : (opItem.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                                color: opItem.isSelected ? CompanyTheme.textLight : (opItem.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                                 font.pointSize: CompanyTheme.fontSmall
                                 font.bold: opItem.isSelected
                                 Layout.fillWidth: true

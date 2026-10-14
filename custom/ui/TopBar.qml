@@ -32,10 +32,30 @@ Rectangle {
         color: CompanyTheme.borderCard
     }
 
+    // Window drag and double-click maximize area (Desktop Frameless Mode)
+    MouseArea {
+        anchors.fill: parent
+        z: -1
+        onPressed: {
+            if (typeof mainWindow !== "undefined" && mainWindow.startSystemMove) {
+                mainWindow.startSystemMove()
+            }
+        }
+        onDoubleClicked: {
+            if (typeof mainWindow !== "undefined") {
+                if (mainWindow.visibility === Window.Maximized) {
+                    mainWindow.showNormal()
+                } else {
+                    mainWindow.showMaximized()
+                }
+            }
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: root._isNarrow ? CompanyTheme.spacingSm : CompanyTheme.spacingMd
-        anchors.rightMargin: root._isNarrow ? CompanyTheme.spacingSm : CompanyTheme.spacingMd
+        anchors.rightMargin: root._isNarrow ? CompanyTheme.spacingSm : 0
         spacing: root._isNarrow ? CompanyTheme.spacingSm : CompanyTheme.spacingMd
 
         // Mobile / Narrow Drawer Toggle Button
@@ -537,67 +557,26 @@ Rectangle {
                 color: CompanyTheme.borderCard
             }
 
-            // Battery Indicator
+            // Status Icons Group (Link, Signal, Wifi, RC)
             RowLayout {
-                spacing: 5
+                spacing: 12
+                visible: !root._isNarrow
+
                 IconVector {
-                    name: "battery"
+                    name: "link"
                     size: 13
-                    color: {
-                        if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
-                        var pct = CompanyTelemetry.batteryPercent
-                        if (pct > 30) return CompanyTheme.success
-                        if (pct > 15) return CompanyTheme.warning
-                        return CompanyTheme.danger
+                    color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.textMuted
+                    ToolTip.visible: linkHover.containsMouse
+                    ToolTip.delay: 300
+                    ToolTip.text: root._hasVehicle ? (root._linkMgr ? root._linkMgr.primaryLinkName : qsTr("Link Connected")) : qsTr("No MAVLink Link")
+
+                    MouseArea {
+                        id: linkHover
+                        anchors.fill: parent
+                        hoverEnabled: true
                     }
                 }
-                Text {
-                    text: CompanyTelemetry.batteryPercentStr
-                    color: CompanyTheme.textPrimary
-                    font.pointSize: CompanyTheme.fontSmall
-                    font.family: CompanyTheme.fontMono
-                    font.bold: true
-                }
-                Text {
-                    visible: !root._isNarrow && !isNaN(CompanyTelemetry.batteryVoltage)
-                    text: CompanyTelemetry.batteryVoltageStr
-                    color: CompanyTheme.textSecondary
-                    font.pointSize: CompanyTheme.fontTiny
-                    font.family: CompanyTheme.fontMono
-                }
-            }
 
-            // GPS Indicator
-            RowLayout {
-                spacing: 5
-                IconVector {
-                    name: "satellite"
-                    size: 13
-                    color: {
-                        if (!root._hasVehicle) return CompanyTheme.textMuted
-                        if (CompanyTelemetry.gpsLock >= 3) return CompanyTheme.success
-                        if (CompanyTelemetry.gpsLock >= 2) return CompanyTheme.warning
-                        return CompanyTheme.danger
-                    }
-                }
-                Text {
-                    text: root._hasVehicle ? CompanyTelemetry.gpsCountStr : "--"
-                    color: CompanyTheme.textPrimary
-                    font.pointSize: CompanyTheme.fontSmall
-                    font.family: CompanyTheme.fontMono
-                    font.bold: true
-                }
-                Text {
-                    visible: !root._isNarrow && root._hasVehicle && CompanyTelemetry.gpsLockString !== "" && CompanyTelemetry.gpsLockString !== "No Fix" && CompanyTelemetry.gpsLockString !== "--"
-                    text: "(" + CompanyTelemetry.gpsLockString + ")"
-                    color: CompanyTheme.textSecondary
-                    font.pointSize: CompanyTheme.fontTiny
-                }
-            }
-
-            // Comm Link Indicator
-            RowLayout {
-                spacing: 5
                 IconVector {
                     name: "signal"
                     size: 13
@@ -605,29 +584,46 @@ Rectangle {
                         if (!root._hasVehicle) return CompanyTheme.textMuted
                         return CompanyTelemetry.communicationLost ? CompanyTheme.danger : CompanyTheme.success
                     }
-                }
-                Text {
-                    text: {
-                        if (!root._hasVehicle) return "--%"
-                        if (CompanyTelemetry.communicationLost) return "LOST"
-                        return CompanyTelemetry.linkQualityPercent + "%"
-                    }
-                    color: {
-                        if (!root._hasVehicle) return CompanyTheme.textMuted
-                        if (CompanyTelemetry.communicationLost) return CompanyTheme.danger
-                        return CompanyTheme.textPrimary
-                    }
-                    font.pointSize: CompanyTheme.fontSmall
-                    font.family: CompanyTheme.fontMono
-                    font.bold: true
-                }
-            }
+                    ToolTip.visible: signalHover.containsMouse
+                    ToolTip.delay: 300
+                    ToolTip.text: root._hasVehicle ? (qsTr("Telemetry Signal: ") + CompanyTelemetry.linkQualityPercent + "%") : qsTr("No Signal")
 
-            // Divider
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: 16
-                color: CompanyTheme.borderCard
+                    MouseArea {
+                        id: signalHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                    }
+                }
+
+                IconVector {
+                    name: "wifi"
+                    size: 13
+                    color: root._hasVehicle ? CompanyTheme.info : CompanyTheme.textMuted
+                    ToolTip.visible: wifiHover.containsMouse
+                    ToolTip.delay: 300
+                    ToolTip.text: qsTr("Network Communication Link")
+
+                    MouseArea {
+                        id: wifiHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                    }
+                }
+
+                IconVector {
+                    name: "rc"
+                    size: 13
+                    color: root._hasVehicle ? CompanyTheme.warning : CompanyTheme.textMuted
+                    ToolTip.visible: rcHover.containsMouse
+                    ToolTip.delay: 300
+                    ToolTip.text: root._hasVehicle ? qsTr("RC Controller Online") : qsTr("RC Disconnected")
+
+                    MouseArea {
+                        id: rcHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                    }
+                }
             }
 
             // Connection Action Button
@@ -635,20 +631,21 @@ Rectangle {
                 id: connectBtn
                 Layout.preferredHeight: 28
                 implicitHeight: 28
-                implicitWidth: connText.implicitWidth + 20
+                implicitWidth: connRow.implicitWidth + 24
 
                 contentItem: RowLayout {
-                    spacing: 6
+                    id: connRow
+                    spacing: 7
                     Rectangle {
                         Layout.preferredWidth: 6
                         Layout.preferredHeight: 6
-                        radius: 1
-                        color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.warning
+                        radius: 3
+                        color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.textPrimary
                     }
                     Text {
                         id: connText
-                        text: root._hasVehicle ? qsTr("DISCONNECT") : (root._isNarrow ? qsTr("CONNECT") : qsTr("CONNECT VEHICLE"))
-                        color: root._hasVehicle ? CompanyTheme.textSecondary : CompanyTheme.textPrimary
+                        text: root._hasVehicle ? qsTr("DISCONNECT") : qsTr("CONNECT VEHICLE")
+                        color: CompanyTheme.textPrimary
                         font.pointSize: CompanyTheme.fontSmall
                         font.bold: true
                         font.letterSpacing: 0.6
@@ -658,7 +655,7 @@ Rectangle {
                 }
 
                 background: Rectangle {
-                    radius: CompanyTheme.radiusSm
+                    radius: 14
                     color: {
                         if (!connectBtn.enabled) return CompanyTheme.bgInput
                         if (root._hasVehicle) {
@@ -678,11 +675,7 @@ Rectangle {
 
                 onClicked: {
                     if (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle) {
-
-                        // Close the active vehicle session directly on Vehicle
                         CompanyTelemetry.activeVehicle.closeVehicle()
-
-                        // Disconnect active links to prevent immediate auto-reconnect
                         if (QGroundControl.linkManager && QGroundControl.linkManager.linkConfigurations) {
                             for (var i = 0; i < QGroundControl.linkManager.linkConfigurations.count; i++) {
                                 var cfg = QGroundControl.linkManager.linkConfigurations.get(i)
@@ -691,16 +684,95 @@ Rectangle {
                                 }
                             }
                         }
-
                     } else if (QGroundControl.linkManager && QGroundControl.linkManager.linkConfigurations) {
-
-                        // Connect available/configured link(s)
                         for (var j = 0; j < QGroundControl.linkManager.linkConfigurations.count; j++) {
                             var config = QGroundControl.linkManager.linkConfigurations.get(j)
                             if (config && !config.linkActive) {
                                 QGroundControl.linkManager.createConnectedLink(config)
                             }
                         }
+                    }
+                }
+            }
+
+            // Window Management Controls (Minimize, Maximize/Restore, Close)
+            RowLayout {
+                visible: !ScreenTools.isMobile && (mainWindow.flags & Qt.FramelessWindowHint)
+                spacing: 0
+                Layout.fillHeight: true
+
+                // Minimize Button
+                Rectangle {
+                    Layout.preferredWidth: 36
+                    Layout.fillHeight: true
+                    color: minMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "—"
+                        color: minMouse.containsMouse ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontSmall
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: minMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mainWindow.showMinimized()
+                    }
+                }
+
+                // Maximize / Restore Button
+                Rectangle {
+                    Layout.preferredWidth: 36
+                    Layout.fillHeight: true
+                    color: maxMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: mainWindow.visibility === Window.Maximized ? "❐" : "□"
+                        color: maxMouse.containsMouse ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontSmall
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: maxMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (mainWindow.visibility === Window.Maximized) {
+                                mainWindow.showNormal()
+                            } else {
+                                mainWindow.showMaximized()
+                            }
+                        }
+                    }
+                }
+
+                // Close Button
+                Rectangle {
+                    Layout.preferredWidth: 40
+                    Layout.fillHeight: true
+                    color: closeMouse.containsMouse ? CompanyTheme.danger : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "✕"
+                        color: closeMouse.containsMouse ? CompanyTheme.textLight : CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontSmall
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: closeMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mainWindow.close()
                     }
                 }
             }
