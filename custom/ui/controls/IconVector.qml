@@ -350,6 +350,77 @@ Item {
                     ctx.stroke()
                     break
 
+                case "volume":
+                case "volume-2":
+                    // Speaker body
+                    ctx.beginPath()
+                    ctx.moveTo(2*f, 6*f)
+                    ctx.lineTo(4.5*f, 6*f)
+                    ctx.lineTo(8.5*f, 3*f)
+                    ctx.lineTo(8.5*f, 13*f)
+                    ctx.lineTo(4.5*f, 10*f)
+                    ctx.lineTo(2*f, 10*f)
+                    ctx.closePath()
+                    ctx.fill()
+                    // Sound waves
+                    ctx.beginPath()
+                    ctx.arc(8.5*f, 8*f, 3.2*f, -Math.PI * 0.28, Math.PI * 0.28)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(8.5*f, 8*f, 5.5*f, -Math.PI * 0.28, Math.PI * 0.28)
+                    ctx.stroke()
+                    break
+
+                case "volume-x":
+                case "volume-off":
+                case "mute":
+                    // Speaker body
+                    ctx.beginPath()
+                    ctx.moveTo(2*f, 6*f)
+                    ctx.lineTo(4.5*f, 6*f)
+                    ctx.lineTo(8.5*f, 3*f)
+                    ctx.lineTo(8.5*f, 13*f)
+                    ctx.lineTo(4.5*f, 10*f)
+                    ctx.lineTo(2*f, 10*f)
+                    ctx.closePath()
+                    ctx.fill()
+                    // Cross 'X'
+                    ctx.beginPath()
+                    ctx.moveTo(11*f, 6*f); ctx.lineTo(15*f, 10*f)
+                    ctx.moveTo(15*f, 6*f); ctx.lineTo(11*f, 10*f)
+                    ctx.stroke()
+                    break
+
+                case "alert-triangle":
+                case "warning":
+                    // Equilateral triangle with exclamation
+                    ctx.beginPath()
+                    ctx.moveTo(8*f, 2*f)
+                    ctx.lineTo(14.5*f, 13.5*f)
+                    ctx.lineTo(1.5*f, 13.5*f)
+                    ctx.closePath()
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.moveTo(8*f, 6*f); ctx.lineTo(8*f, 9.5*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(8*f, 11.5*f, 0.8*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    break
+
+                case "shield":
+                case "safety":
+                    ctx.beginPath()
+                    ctx.moveTo(8*f, 2*f)
+                    ctx.lineTo(13.5*f, 4*f)
+                    ctx.lineTo(13.5*f, 8*f)
+                    ctx.bezierCurveTo(13.5*f, 12*f, 8*f, 14.5*f, 8*f, 14.5*f)
+                    ctx.bezierCurveTo(8*f, 14.5*f, 2.5*f, 12*f, 2.5*f, 8*f)
+                    ctx.lineTo(2.5*f, 4*f)
+                    ctx.closePath()
+                    ctx.stroke()
+                    break
+
                 default:
                     ctx.beginPath()
                     ctx.arc(8*f, 8*f, 4*f, 0, 2*Math.PI)

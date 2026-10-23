@@ -1,4 +1,3 @@
-pragma ComponentBehavior: Bound
 // qmllint disable unqualified
 
 import QtQuick
@@ -117,6 +116,13 @@ ApplicationWindow {
         }
         onShowUserGuideRequested: () => {
             onboardingLoader.active = true
+        }
+        onFlightActionRequested: (actionType) => {
+            contentArea.switchTab(1)
+            dashboardView.requestActionConfirmation(actionType)
+        }
+        onSafetyModalRequested: () => {
+            safetyModal.isOpen = true
         }
     }
 
@@ -351,6 +357,28 @@ ApplicationWindow {
                 if (mainWindow._isNarrow) navDrawer.isOpen = false
                 contentArea.switchTab(tabIndex)
             }
+            onSafetyDashboardRequested: () => {
+                if (mainWindow._isNarrow) navDrawer.isOpen = false
+                safetyModal.isOpen = true
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Flight Safety & Failsafes Dashboard Modal
+    // ------------------------------------------------------------------------
+    SafetyFailsafesModal {
+        id: safetyModal
+        isOpen: false
+        onClosed: {
+            isOpen = false
+        }
+        onFlightActionRequested: (actionType) => {
+            contentArea.switchTab(1)
+            dashboardView.requestActionConfirmation(actionType)
+        }
+        onConfigureSafetyRequested: {
+            contentArea.switchTab(7)
         }
     }
 

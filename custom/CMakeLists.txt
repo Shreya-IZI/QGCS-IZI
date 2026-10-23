@@ -28,6 +28,7 @@ set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/SettingsView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/ParametersView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/OnboardingGuide.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/SafetyFailsafesModal.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/CompanyCard.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/CompanyButton.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/StatusBadge.qml
@@ -87,6 +88,36 @@ qt_add_resources(${CMAKE_PROJECT_NAME} custom_brand_icons
     FILES
         "${CUSTOM_ICON_PNG}"
         "${CUSTOM_ICON_SVG}"
+)
+
+# ----------------------------------------------------------------------------
+# Custom QML Core Overrides (Fact Controls & Vehicle Setup)
+# ----------------------------------------------------------------------------
+set(CUSTOM_FACT_TEXT_FIELD_SLIDER "${CMAKE_CURRENT_SOURCE_DIR}/ui/overrides/FactTextFieldSlider.qml")
+set(CUSTOM_SAFETY_COMPONENT "${CMAKE_CURRENT_SOURCE_DIR}/ui/overrides/SafetyComponent.qml")
+set(CUSTOM_APM_SAFETY_SUMMARY "${CMAKE_CURRENT_SOURCE_DIR}/ui/overrides/APMFlightSafetyComponentSummary.qml")
+set(CUSTOM_VEHICLE_CONFIG_VIEW "${CMAKE_CURRENT_SOURCE_DIR}/ui/overrides/VehicleConfigView.qml")
+
+set_source_files_properties("${CUSTOM_FACT_TEXT_FIELD_SLIDER}"
+    PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/FactControls/FactTextFieldSlider.qml"
+)
+set_source_files_properties("${CUSTOM_SAFETY_COMPONENT}"
+    PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/AutoPilotPlugins/PX4/SafetyComponent.qml"
+)
+set_source_files_properties("${CUSTOM_APM_SAFETY_SUMMARY}"
+    PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/AutoPilotPlugins/APM/APMFlightSafetyComponentSummary.qml"
+)
+set_source_files_properties("${CUSTOM_VEHICLE_CONFIG_VIEW}"
+    PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/VehicleSetup/VehicleConfigView.qml"
+)
+
+qt_add_resources(${CMAKE_PROJECT_NAME} custom_qml_core_overrides
+    PREFIX "/qml"
+    FILES
+        "${CUSTOM_FACT_TEXT_FIELD_SLIDER}"
+        "${CUSTOM_SAFETY_COMPONENT}"
+        "${CUSTOM_APM_SAFETY_SUMMARY}"
+        "${CUSTOM_VEHICLE_CONFIG_VIEW}"
 )
 
 # ----------------------------------------------------------------------------

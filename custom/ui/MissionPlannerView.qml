@@ -392,15 +392,17 @@ Item {
 
                 // Vertical Divider
                 Rectangle {
+                    visible: topCommandStrip.width >= 1050
                     Layout.preferredWidth: 1
                     Layout.preferredHeight: 24
-                    implicitWidth: 1
+                    implicitWidth: visible ? 1 : 0
                     implicitHeight: 24
                     color: CompanyTheme.borderCard
                 }
 
                 // Route Distance Chip
                 RowLayout {
+                    visible: topCommandStrip.width >= 1050
                     spacing: 4
                     Text { text: qsTr("Distance:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontSmall }
                     Text {
@@ -418,6 +420,7 @@ Item {
 
                 // Route Flight Time Chip
                 RowLayout {
+                    visible: topCommandStrip.width >= 1050
                     spacing: 4
                     Text { text: qsTr("Est. Time:"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontSmall }
                     Text {
@@ -437,6 +440,7 @@ Item {
 
                 // Sync Status Pill
                 StatusBadge {
+                    visible: topCommandStrip.width >= 820
                     text: {
                         if (root._syncInProgress) return qsTr("SYNCING...")
                         if (root._dirtyForUpload) return qsTr("UNSAVED TO VEHICLE")
@@ -452,6 +456,7 @@ Item {
 
                 // Mission Pre-Flight Health Pill
                 StatusBadge {
+                    visible: topCommandStrip.width >= 1200
                     text: missionHealth.status
                     badgeColor: {
                         if (missionHealth.ready) return CompanyTheme.success
@@ -1027,7 +1032,7 @@ Item {
                                     Text {
                                         anchors.centerIn: parent
                                         text: itemDelegate.object ? itemDelegate.object.sequenceNumber : (itemDelegate.index + 1)
-                                        color: itemDelegate.isSelected ? CompanyTheme.textLight : CompanyTheme.textSecondary
+                                        color: itemDelegate.isSelected ? CompanyTheme.bgApp : CompanyTheme.textSecondary
                                         font.pointSize: CompanyTheme.fontTiny
                                         font.bold: true
                                     }

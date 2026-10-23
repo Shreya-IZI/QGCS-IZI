@@ -166,6 +166,13 @@ Item {
             _confirmIcon = "flight"
             break
 
+        case "EMERGENCY_STOP":
+            _confirmTitle = qsTr("EMERGENCY MOTOR STOP (E-STOP)")
+            _confirmMessage = qsTr("CRITICAL SAFETY WARNING:\nThis will IMMEDIATELY CUT ALL MOTOR POWER to UAS #%1.\nIf airborne, flight will terminate immediately.\n\nAre you sure you want to kill motor power now?").arg(CompanyTelemetry.vehicleId)
+            _confirmColor = CompanyTheme.danger
+            _confirmIcon = "alert-triangle"
+            break
+
         default:
             return
         }
@@ -266,6 +273,12 @@ Item {
                 return
             }
             vehicle.startMission()
+            break
+
+        case "EMERGENCY_STOP":
+            CompanyTelemetry.say("Emergency motor stop executed")
+            vehicle.emergencyStop()
+            showSafetyNotification(qsTr("EMERGENCY MOTOR STOP COMMAND SENT"))
             break
 
         default:
@@ -502,11 +515,15 @@ Item {
                     text: {
                         if (!root._hasVehicle) return "--%"
                         if (CompanyTelemetry.communicationLost) return "LOST"
+                        if (CompanyTelemetry.hasRadioStatus) {
+                            return CompanyTelemetry.radioLrssiStr + " (" + CompanyTelemetry.linkQualityPercent + "%)"
+                        }
                         return CompanyTelemetry.linkQualityPercent + "%"
                     }
                     color: {
                         if (!root._hasVehicle) return CompanyTheme.textMuted
                         if (CompanyTelemetry.communicationLost) return CompanyTheme.danger
+                        if (CompanyTelemetry.isSignalWeak) return CompanyTheme.warning
                         return CompanyTheme.textPrimary
                     }
                     font.pointSize: CompanyTheme.fontSmall
@@ -565,9 +582,24 @@ Item {
                 }
                 Text { text: "BAT"; color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny; font.bold: true }
                 Text {
-                    text: CompanyTelemetry.batteryPercentStr
+                    text: {
+                        if (!CompanyTelemetry.hasBattery) return "--%"
+                        var str = CompanyTelemetry.batteryPercentStr
+                        if (!isNaN(CompanyTelemetry.batteryVoltage)) {
+                            str += " • " + CompanyTelemetry.batteryVoltageStr
+                        }
+                        if (CompanyTelemetry.hasBatteryConsumed) {
+                            str += " • " + CompanyTelemetry.batteryConsumedMahStr
+                        }
+                        if (CompanyTelemetry.hasBatteryTimeRemaining) {
+                            str += " (" + CompanyTelemetry.batteryEnduranceShortStr + ")"
+                        }
+                        return str
+                    }
                     color: {
                         if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                        if (CompanyTelemetry.isCriticalEndurance) return CompanyTheme.danger
+                        if (CompanyTelemetry.isLowEndurance) return CompanyTheme.warning
                         var pct = CompanyTelemetry.batteryPercent
                         if (pct > 30) return CompanyTheme.success
                         if (pct > 15) return CompanyTheme.warning
@@ -724,9 +756,9 @@ Item {
 
                     CompanyButton {
                         Layout.fillWidth: true
-                        text: root._confirmActionType === "START_MISSION" ? qsTr("Confirm Mission Start") : qsTr("Confirm %1").arg(root._confirmActionType)
-                        isDanger: root._confirmActionType === "ARM" || root._confirmActionType === "DISARM"
-                        isPrimary: root._confirmActionType !== "ARM" && root._confirmActionType !== "DISARM"
+                        text: root._confirmActionType === "START_MISSION" ? qsTr("Confirm Mission Start") : (root._confirmActionType === "EMERGENCY_STOP" ? qsTr("CONFIRM EMERGENCY KILL") : qsTr("Confirm %1").arg(root._confirmActionType))
+                        isDanger: root._confirmActionType === "ARM" || root._confirmActionType === "DISARM" || root._confirmActionType === "EMERGENCY_STOP"
+                        isPrimary: root._confirmActionType !== "ARM" && root._confirmActionType !== "DISARM" && root._confirmActionType !== "EMERGENCY_STOP"
                         customColor: root._confirmColor
                         onClicked: root.executeConfirmedAction()
                     }

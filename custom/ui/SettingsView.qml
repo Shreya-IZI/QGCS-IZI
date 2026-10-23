@@ -1373,6 +1373,64 @@ Item {
 
                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: CompanyTheme.borderSubtle }
 
+                        // Video Stream Source Protocol Selection
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            Text { text: qsTr("Video Source Protocol"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 8
+
+                                Repeater {
+                                    model: [
+                                        { label: "RTSP Stream", val: "RTSP Video Stream" },
+                                        { label: "UDP H.264",   val: "UDP h.264 Video Stream" },
+                                        { label: "UDP H.265",   val: "UDP h.265 Video Stream" },
+                                        { label: "TCP-MPEG2",   val: "TCP-MPEG2 Video Stream" },
+                                        { label: "Disabled",    val: "Video Stream Disabled" }
+                                    ]
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        readonly property bool isSelected: root._videoSettings && root._videoSettings.videoSource.rawValue === modelData.val
+                                        Layout.fillWidth: true
+                                        height: 32
+                                        radius: CompanyTheme.radiusSm
+                                        color: isSelected ? CompanyTheme.primaryDim : CompanyTheme.bgInput
+                                        border.color: isSelected ? CompanyTheme.primary : CompanyTheme.borderCard
+                                        border.width: 1
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.label
+                                            color: isSelected ? CompanyTheme.primary : CompanyTheme.textSecondary
+                                            font.bold: isSelected
+                                            font.pointSize: CompanyTheme.fontSmall
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (root._videoSettings) {
+                                                    root._videoSettings.videoSource.rawValue = modelData.val
+                                                    if (modelData.val !== "Video Stream Disabled") {
+                                                        root._videoSettings.streamEnabled.rawValue = true
+                                                        QGroundControl.videoManager.stopVideo()
+                                                        QGroundControl.videoManager.startVideo()
+                                                    } else {
+                                                        QGroundControl.videoManager.stopVideo()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         GridLayout {
                             Layout.fillWidth: true
                             columns: 2
@@ -1404,6 +1462,11 @@ Item {
                                         onEditingFinished: {
                                             if (root._videoSettings) {
                                                 root._videoSettings.rtspUrl.rawValue = text
+                                                if (root._videoSettings.videoSource.rawValue === "Video Stream Disabled" || root._videoSettings.videoSource.rawValue === "") {
+                                                    root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                                }
+                                                QGroundControl.videoManager.stopVideo()
+                                                QGroundControl.videoManager.startVideo()
                                             }
                                         }
                                     }
@@ -1435,6 +1498,11 @@ Item {
                                         onEditingFinished: {
                                             if (root._videoSettings) {
                                                 root._videoSettings.udpUrl.rawValue = text
+                                                if (root._videoSettings.videoSource.rawValue === "Video Stream Disabled" || root._videoSettings.videoSource.rawValue === "") {
+                                                    root._videoSettings.videoSource.rawValue = "UDP h.264 Video Stream"
+                                                }
+                                                QGroundControl.videoManager.stopVideo()
+                                                QGroundControl.videoManager.startVideo()
                                             }
                                         }
                                     }
@@ -1454,11 +1522,28 @@ Item {
                             }
 
                             CompanyButton {
+                                text: qsTr("RESTART VIDEO")
+                                isOutline: true
+                                onClicked: {
+                                    QGroundControl.videoManager.stopVideo()
+                                    QGroundControl.videoManager.startVideo()
+                                }
+                            }
+
+                            CompanyButton {
                                 text: (root._videoSettings && root._videoSettings.streamEnabled.rawValue) ? qsTr("STREAM: ENABLED") : qsTr("STREAM: DISABLED")
                                 isOutline: !(root._videoSettings && root._videoSettings.streamEnabled.rawValue)
                                 onClicked: {
                                     if (root._videoSettings) {
                                         root._videoSettings.streamEnabled.rawValue = !root._videoSettings.streamEnabled.rawValue
+                                        if (root._videoSettings.streamEnabled.rawValue) {
+                                            if (root._videoSettings.videoSource.rawValue === "Video Stream Disabled" || root._videoSettings.videoSource.rawValue === "") {
+                                                root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                            }
+                                            QGroundControl.videoManager.startVideo()
+                                        } else {
+                                            QGroundControl.videoManager.stopVideo()
+                                        }
                                     }
                                 }
                             }

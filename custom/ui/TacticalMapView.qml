@@ -27,6 +27,38 @@ Item {
     readonly property bool _isArmed:         CompanyTelemetry.armed
     readonly property string _flightMode:    CompanyTelemetry.flightMode
 
+    // ------------------------------------------------------------------------
+    // Dynamic Return-to-Home Battery Range Calculations
+    // ------------------------------------------------------------------------
+    readonly property real _cruiseSpeedMps: {
+        if (_activeVehicle && !isNaN(_activeVehicle.defaultCruiseSpeed) && _activeVehicle.defaultCruiseSpeed > 0) {
+            return _activeVehicle.defaultCruiseSpeed
+        }
+        return 10.0 // Standard multirotor cruise speed (m/s)
+    }
+
+    readonly property real _rthMaxRadiusMeters: {
+        if (!CompanyTelemetry.hasBatteryTimeRemaining || CompanyTelemetry.batteryTimeRemainingSec <= 0) {
+            return 0
+        }
+        // Usable endurance reserving 25% safety & landing reserve
+        var usableEnduranceSec = CompanyTelemetry.batteryTimeRemainingSec * 0.75
+        // Safe one-way radius allowing return journey to Home
+        var safeRadius = (usableEnduranceSec / 2.0) * _cruiseSpeedMps
+        return Math.max(100.0, safeRadius)
+    }
+
+    readonly property real _distToHomeMeters: {
+        if (root._hasHomeCoord && root._hasValidCoord) {
+            return root._vehicleCoord.distanceTo(root._homeCoord)
+        }
+        return 0
+    }
+
+    readonly property bool _isBeyondRthRadius: {
+        return root._hasVehicle && root._isArmed && root._hasHomeCoord && root._hasValidCoord && root._rthMaxRadiusMeters > 0 && (_distToHomeMeters > root._rthMaxRadiusMeters)
+    }
+
     property bool followVehicle:             true
 
     clip: true
@@ -153,6 +185,37 @@ Item {
                 }
             }
         }
+
+        // --------------------------------------------------------------------
+        // Smart Return-to-Home Battery Range Ring
+        // Dynamic circular range boundary based on live battery discharge & endurance
+        // --------------------------------------------------------------------
+        MapCircle {
+            id: rthBatteryRangeRing
+            center: root._hasHomeCoord ? root._homeCoord : (root._hasValidCoord ? root._vehicleCoord : QtPositioning.coordinate())
+            radius: root._rthMaxRadiusMeters
+            visible: root._hasVehicle && (root._hasHomeCoord || root._hasValidCoord) && root._rthMaxRadiusMeters > 0
+            color: {
+                if (root._isBeyondRthRadius || CompanyTelemetry.isCriticalEndurance) {
+                    return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.12)
+                }
+                if (CompanyTelemetry.isLowEndurance) {
+                    return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.08)
+                }
+                return Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.05)
+            }
+            border.color: {
+                if (root._isBeyondRthRadius || CompanyTelemetry.isCriticalEndurance) {
+                    return CompanyTheme.danger
+                }
+                if (CompanyTelemetry.isLowEndurance) {
+                    return CompanyTheme.warning
+                }
+                return CompanyTheme.primary
+            }
+            border.width: 1.5
+            opacity: 0.85
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -278,6 +341,74 @@ Item {
                     font.bold: true
                 }
             }
+
+            // Row 3: RTK / GNSS Fix & Safe RTH Battery Range
+            RowLayout {
+                spacing: 8
+                visible: root._hasVehicle
+
+                Text {
+                    text: CompanyTelemetry.gpsFixType + " (" + CompanyTelemetry.gpsSatellites + "s)"
+                    color: CompanyTelemetry.isRtkFixed ? CompanyTheme.info : (CompanyTelemetry.gpsLock >= 3 ? CompanyTheme.textSecondary : CompanyTheme.warning)
+                    font.pointSize: CompanyTheme.fontTiny
+                    font.family: CompanyTheme.fontMono
+                    font.bold: true
+                }
+
+                Text {
+                    visible: root._rthMaxRadiusMeters > 0
+                    text: "•"
+                    color: CompanyTheme.textMuted
+                    font.pointSize: CompanyTheme.fontTiny
+                }
+
+                Text {
+                    visible: root._rthMaxRadiusMeters > 0
+                    text: "RTH R: " + (root._rthMaxRadiusMeters >= 1000 ? (root._rthMaxRadiusMeters / 1000.0).toFixed(1) + "km" : Math.round(root._rthMaxRadiusMeters) + "m")
+                    color: root._isBeyondRthRadius ? CompanyTheme.danger : (CompanyTelemetry.isLowEndurance ? CompanyTheme.warning : CompanyTheme.primary)
+                    font.pointSize: CompanyTheme.fontTiny
+                    font.family: CompanyTheme.fontMono
+                    font.bold: true
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // RTH Battery Boundary Breach Alert Pill
+    // ------------------------------------------------------------------------
+    Rectangle {
+        id: rthBreachWarning
+        anchors.top: telemetryCard.bottom
+        anchors.left: parent.left
+        anchors.leftMargin: CompanyTheme.spacingMd
+        anchors.topMargin: 6
+        z: 11
+        visible: root._isBeyondRthRadius
+        radius: CompanyTheme.radiusSm
+        color: CompanyTheme.bgOverlayDark
+        border.color: CompanyTheme.danger
+        border.width: 1.5
+        implicitWidth: rthBreachLayout.implicitWidth + 24
+        implicitHeight: 32
+
+        RowLayout {
+            id: rthBreachLayout
+            anchors.centerIn: parent
+            spacing: 8
+
+            IconVector {
+                name: "alert-triangle"
+                size: 14
+                color: CompanyTheme.danger
+            }
+
+            Text {
+                text: qsTr("RTH WARNING: Outside Safe Battery Return Radius! Return Home Now.")
+                color: CompanyTheme.danger
+                font.pointSize: CompanyTheme.fontTiny
+                font.bold: true
+            }
         }
     }
 
@@ -286,7 +417,7 @@ Item {
     // ------------------------------------------------------------------------
     Rectangle {
         id: connectionStatusNotification
-        anchors.top: telemetryCard.bottom
+        anchors.top: root._isBeyondRthRadius ? rthBreachWarning.bottom : telemetryCard.bottom
         anchors.left: parent.left
         anchors.leftMargin: CompanyTheme.spacingMd
         anchors.topMargin: 6

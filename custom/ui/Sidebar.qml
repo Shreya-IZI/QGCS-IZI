@@ -20,6 +20,7 @@ Rectangle {
     signal flightActionRequested(string actionType)
     signal toolSelected(int tabIndex)
     signal vehicleItemSelected(int tabIndex)
+    signal safetyDashboardRequested()
     signal closeRequested()
 
     readonly property bool _hasVehicle:         CompanyTelemetry.hasVehicle
@@ -555,6 +556,124 @@ Rectangle {
                         if (!root._isArmed) return qsTr("Vehicle is disarmed")
                         return qsTr("Land Vehicle (Requires Confirmation)")
                     }
+                }
+
+                // Control 5: EMERGENCY MOTOR STOP (E-STOP)
+                Rectangle {
+                    id: estopCtrl
+                    readonly property bool isActionAvailable: root._hasVehicle && root._isArmed
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 32
+                    implicitHeight: 32
+                    radius: CompanyTheme.radiusSm
+                    color: {
+                        if (estopMouseArea.containsMouse && isActionAvailable) return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.25)
+                        return isActionAvailable ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.12) : "transparent"
+                    }
+                    border.color: isActionAvailable ? CompanyTheme.danger : "transparent"
+                    border.width: 1
+                    opacity: isActionAvailable ? 1.0 : 0.35
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: root.isExpanded ? CompanyTheme.spacingSm : 0
+                        anchors.rightMargin: root.isExpanded ? CompanyTheme.spacingSm : 0
+                        spacing: CompanyTheme.spacingSm
+
+                        Item {
+                            Layout.preferredWidth: root.isExpanded ? 20 : parent.width
+                            Layout.fillHeight: true
+
+                            IconVector {
+                                anchors.centerIn: parent
+                                name: "alert-triangle"
+                                size: 15
+                                color: estopCtrl.isActionAvailable ? CompanyTheme.danger : CompanyTheme.textMuted
+                            }
+                        }
+
+                        Text {
+                            visible: root.isExpanded
+                            text: qsTr("E-STOP")
+                            color: estopCtrl.isActionAvailable ? CompanyTheme.danger : CompanyTheme.textMuted
+                            font.pointSize: CompanyTheme.fontSmall
+                            font.bold: true
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    MouseArea {
+                        id: estopMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: estopCtrl.isActionAvailable
+                        cursorShape: estopCtrl.isActionAvailable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: {
+                            if (estopCtrl.isActionAvailable) {
+                                root.flightActionRequested("EMERGENCY_STOP")
+                            }
+                        }
+                    }
+
+                    ToolTip.visible: estopMouseArea.containsMouse && (!root.isExpanded || !estopCtrl.isActionAvailable)
+                    ToolTip.delay: 300
+                    ToolTip.text: {
+                        if (!root._hasVehicle) return qsTr("No vehicle connected")
+                        if (!root._isArmed) return qsTr("Vehicle is disarmed")
+                        return qsTr("EMERGENCY MOTOR KILL: Immediately cut motor power (Requires confirmation)")
+                    }
+                }
+
+                // Control 6: SAFETY FAILSAFES DASHBOARD
+                Rectangle {
+                    id: safetyDashboardLauncher
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 32
+                    implicitHeight: 32
+                    radius: CompanyTheme.radiusSm
+                    color: safetyLauncherMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent"
+                    border.color: safetyLauncherMouse.containsMouse ? CompanyTheme.borderActive : "transparent"
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: root.isExpanded ? CompanyTheme.spacingSm : 0
+                        anchors.rightMargin: root.isExpanded ? CompanyTheme.spacingSm : 0
+                        spacing: CompanyTheme.spacingSm
+
+                        Item {
+                            Layout.preferredWidth: root.isExpanded ? 20 : parent.width
+                            Layout.fillHeight: true
+
+                            IconVector {
+                                anchors.centerIn: parent
+                                name: "shield"
+                                size: 15
+                                color: CompanyTheme.info
+                            }
+                        }
+
+                        Text {
+                            visible: root.isExpanded
+                            text: qsTr("SAFETY")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: CompanyTheme.fontSmall
+                            font.bold: true
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    MouseArea {
+                        id: safetyLauncherMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.safetyDashboardRequested()
+                    }
+
+                    ToolTip.visible: safetyLauncherMouse.containsMouse && !root.isExpanded
+                    ToolTip.delay: 300
+                    ToolTip.text: qsTr("Flight Safety & Failsafes Dashboard")
                 }
 
                 // Section Divider

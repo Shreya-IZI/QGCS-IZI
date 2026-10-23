@@ -1,4 +1,4 @@
-pragma ComponentBehavior: Bound
+// qmllint disable unqualified
 
 import QtQuick
 import QtQuick.Controls
@@ -264,7 +264,7 @@ Item {
                 fillMode: QGroundControl.settingsManager.videoSettings.videoFit.rawValue === 2
                           ? VideoOutput.PreserveAspectCrop
                           : VideoOutput.PreserveAspectFit
-                visible: root._isRgbActive
+                visible: true // Keep VideoOutput mounted in scene graph so QVideoSink receives frames
             }
 
             // Optical Center Reticle (RGB)
@@ -306,8 +306,8 @@ Item {
                 id: rgbWaitingCard
                 anchors.centerIn: parent
                 visible: !root._isRgbActive
-                width: 260
-                height: 140
+                width: 280
+                height: 180
 
                 ColumnLayout {
                     anchors.centerIn: parent
@@ -337,14 +337,59 @@ Item {
                         font.letterSpacing: 0.5
                     }
 
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: {
+                            var vs = QGroundControl.settingsManager.videoSettings
+                            if (!vs) return ""
+                            return (vs.videoSource.rawValue === "RTSP Video Stream")
+                                ? ("RTSP: " + vs.rtspUrl.rawValue)
+                                : ("UDP Port: " + vs.udpUrl.rawValue)
+                        }
+                        color: CompanyTheme.textMuted
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                    }
+
                     Item { Layout.preferredHeight: 4 }
 
-                    StatusBadge {
+                    Rectangle {
                         Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("STANDBY")
-                        badgeColor: CompanyTheme.warning
-                        showDot: true
-                        pulse: true
+                        Layout.preferredWidth: 160
+                        Layout.preferredHeight: 28
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.primaryDim
+                        border.color: CompanyTheme.borderActive
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            IconVector { name: "refresh"; size: 12; color: CompanyTheme.primary }
+                            Text {
+                                text: qsTr("CONNECT STREAM")
+                                color: CompanyTheme.primary
+                                font.pointSize: CompanyTheme.fontTiny
+                                font.bold: true
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                if (vs) {
+                                    if (!vs.streamEnabled.rawValue) vs.streamEnabled.rawValue = true
+                                    if (vs.videoSource.rawValue === "Video Stream Disabled" || vs.videoSource.rawValue === "") {
+                                        vs.videoSource.rawValue = "RTSP Video Stream"
+                                    }
+                                    QGroundControl.videoManager.stopVideo()
+                                    QGroundControl.videoManager.startVideo()
+                                }
+                                streamPopup.open()
+                            }
+                        }
                     }
                 }
             }
@@ -437,7 +482,7 @@ Item {
                 fillMode: QGroundControl.settingsManager.videoSettings.videoFit.rawValue === 2
                           ? VideoOutput.PreserveAspectCrop
                           : VideoOutput.PreserveAspectFit
-                visible: root._isThermalActive
+                visible: true // Keep VideoOutput mounted in scene graph
             }
 
             // Optical Center Reticle (Thermal)
@@ -664,6 +709,44 @@ Item {
                     Text {
                         text: "AMSL: " + CompanyTelemetry.altitudeAMSLStr
                         color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: "Monospace"
+                    }
+                }
+
+                // Row 4: Power & GPS Telemetry (Field Testing Requirements)
+                RowLayout {
+                    spacing: 8
+                    Text {
+                        text: {
+                            if (!CompanyTelemetry.hasBattery) return "BAT: --"
+                            var s = "BAT: " + CompanyTelemetry.batteryVoltageStr + " • " + CompanyTelemetry.batteryPercentStr
+                            if (CompanyTelemetry.hasBatteryConsumed) {
+                                s += " • " + CompanyTelemetry.batteryConsumedMahStr
+                            }
+                            if (CompanyTelemetry.hasBatteryTimeRemaining) {
+                                s += " (" + CompanyTelemetry.batteryEnduranceShortStr + ")"
+                            }
+                            return s
+                        }
+                        color: {
+                            if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isCriticalEndurance || CompanyTelemetry.batteryPercent <= 15) return CompanyTheme.danger
+                            if (CompanyTelemetry.isLowEndurance || CompanyTelemetry.batteryPercent <= 25) return CompanyTheme.warning
+                            return CompanyTheme.textPrimary
+                        }
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                        font.family: "Monospace"
+                    }
+                    Text {
+                        text: "•"
+                        color: CompanyTheme.borderCard
+                        font.pointSize: CompanyTheme.fontTiny
+                    }
+                    Text {
+                        text: "GPS: " + (CompanyTelemetry.hasVehicle ? (CompanyTelemetry.gpsSatellites + " Sats • " + (CompanyTelemetry.gpsLockString !== "" && CompanyTelemetry.gpsLockString !== "--" ? CompanyTelemetry.gpsLockString : "No Fix")) : "--")
+                        color: CompanyTelemetry.gpsLock >= 3 ? CompanyTheme.textPrimary : CompanyTheme.warning
                         font.pointSize: CompanyTheme.fontTiny
                         font.family: "Monospace"
                     }
@@ -921,12 +1004,18 @@ Item {
                         font.family: "Monospace"
                     }
                     Text {
-                        visible: (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.isSimulation)
+                        visible: CompanyTelemetry.isMavlinkLrf
+                        text: "[REAL-TIME MAVLINK]"
+                        color: CompanyTheme.success
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                    }
+                    Text {
+                        visible: !CompanyTelemetry.isMavlinkLrf && (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.isSimulation)
                         text: "[SIMULATION]"
                         color: CompanyTheme.warning
                         font.pointSize: CompanyTheme.fontTiny
                         font.bold: true
-                        font.family: "Monospace"
                     }
                 }
             }
@@ -1182,6 +1271,234 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.currentMode = modeBtn.modelData.id
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 1
+                Layout.fillHeight: true
+                color: CompanyTheme.borderCard
+            }
+
+            Rectangle {
+                id: streamBtn
+                Layout.preferredWidth: root._isNarrow ? 70 : 84
+                Layout.fillHeight: true
+                radius: CompanyTheme.radiusSm - 1
+                color: streamPopup.visible ? CompanyTheme.primaryDim : (streamMouseArea.containsMouse ? CompanyTheme.bgCardHover : "transparent")
+                border.color: streamPopup.visible ? CompanyTheme.borderActive : "transparent"
+                border.width: 1
+
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    Rectangle {
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: root._isRgbActive ? CompanyTheme.success : (QGroundControl.videoManager.hasVideo ? CompanyTheme.warning : CompanyTheme.danger)
+                    }
+
+                    Text {
+                        text: qsTr("STREAM")
+                        color: streamPopup.visible ? CompanyTheme.primary : CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                    }
+                }
+
+                MouseArea {
+                    id: streamMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (streamPopup.visible) {
+                            streamPopup.close()
+                        } else {
+                            streamPopup.open()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Quick Video Stream Configuration Popup
+    Popup {
+        id: streamPopup
+        x: modeToolbar.x + modeToolbar.width - width
+        y: modeToolbar.y + modeToolbar.height + 6
+        width: 320
+        padding: CompanyTheme.spacingMd
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: CompanyTheme.bgSidebar
+            radius: CompanyTheme.radiusMd
+            border.color: CompanyTheme.borderCard
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: CompanyTheme.spacingSm
+
+            RowLayout {
+                Layout.fillWidth: true
+                Text {
+                    text: qsTr("VIDEO STREAM CONFIG")
+                    color: CompanyTheme.textPrimary
+                    font.bold: true
+                    font.pointSize: CompanyTheme.fontSmall
+                    font.letterSpacing: 0.5
+                }
+                Item { Layout.fillWidth: true }
+                StatusBadge {
+                    text: root._isRgbActive ? qsTr("LIVE") : (QGroundControl.videoManager.hasVideo ? qsTr("CONNECTING") : qsTr("OFFLINE"))
+                    badgeColor: root._isRgbActive ? CompanyTheme.success : (QGroundControl.videoManager.hasVideo ? CompanyTheme.warning : CompanyTheme.danger)
+                }
+            }
+
+            Rectangle { Layout.fillWidth: true; height: 1; color: CompanyTheme.borderCard }
+
+            Text {
+                text: qsTr("Protocol / Source")
+                color: CompanyTheme.textSecondary
+                font.pointSize: CompanyTheme.fontTiny
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    model: [
+                        { label: "RTSP", val: "RTSP Video Stream" },
+                        { label: "UDP 264", val: "UDP h.264 Video Stream" },
+                        { label: "UDP 265", val: "UDP h.265 Video Stream" }
+                    ]
+                    delegate: Rectangle {
+                        required property var modelData
+                        readonly property bool isCur: QGroundControl.settingsManager.videoSettings.videoSource.rawValue === modelData.val
+                        Layout.fillWidth: true
+                        height: 26
+                        radius: CompanyTheme.radiusSm
+                        color: isCur ? CompanyTheme.primaryDim : CompanyTheme.bgInput
+                        border.color: isCur ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData.label
+                            color: isCur ? CompanyTheme.primary : CompanyTheme.textSecondary
+                            font.bold: isCur
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                vs.videoSource.rawValue = modelData.val
+                                if (!vs.streamEnabled.rawValue) vs.streamEnabled.rawValue = true
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
+                        }
+                    }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                visible: QGroundControl.settingsManager.videoSettings.videoSource.rawValue === "RTSP Video Stream"
+
+                Text { text: qsTr("RTSP Stream URL"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 30
+                    radius: CompanyTheme.radiusSm
+                    color: CompanyTheme.bgInput
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    TextInput {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: CompanyTheme.textPrimary
+                        font.family: CompanyTheme.fontMono
+                        font.pointSize: CompanyTheme.fontTiny
+                        text: QGroundControl.settingsManager.videoSettings.rtspUrl.rawValue
+                        onEditingFinished: {
+                            QGroundControl.settingsManager.videoSettings.rtspUrl.rawValue = text
+                        }
+                    }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                visible: QGroundControl.settingsManager.videoSettings.videoSource.rawValue !== "RTSP Video Stream"
+
+                Text { text: qsTr("UDP Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 30
+                    radius: CompanyTheme.radiusSm
+                    color: CompanyTheme.bgInput
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    TextInput {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: CompanyTheme.textPrimary
+                        font.family: CompanyTheme.fontMono
+                        font.pointSize: CompanyTheme.fontTiny
+                        text: QGroundControl.settingsManager.videoSettings.udpUrl.rawValue
+                        onEditingFinished: {
+                            QGroundControl.settingsManager.videoSettings.udpUrl.rawValue = text
+                        }
+                    }
+                }
+            }
+
+            Item { Layout.preferredHeight: 4 }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 32
+                radius: CompanyTheme.radiusSm
+                color: CompanyTheme.primary
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 6
+                    IconVector { name: "refresh"; size: 14; color: CompanyTheme.textDark }
+                    Text {
+                        text: qsTr("RECONNECT VIDEO STREAM")
+                        color: CompanyTheme.textDark
+                        font.bold: true
+                        font.pointSize: CompanyTheme.fontSmall
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        var vs = QGroundControl.settingsManager.videoSettings
+                        if (!vs.streamEnabled.rawValue) vs.streamEnabled.rawValue = true
+                        QGroundControl.videoManager.stopVideo()
+                        QGroundControl.videoManager.startVideo()
+                        toastText.text = qsTr("RECONNECTING VIDEO STREAM...")
+                        toastAnim.restart()
+                        streamPopup.close()
                     }
                 }
             }

@@ -1,4 +1,5 @@
 #include "CompanyPayloadInterface.h"
+#include "AudioOutput.h"
 #include "QGCLoggingCategory.h"
 
 QGC_LOGGING_CATEGORY(CompanyPayloadLog, "Company.Payload")
@@ -168,5 +169,14 @@ void CompanyPayloadInterface::notifyMediaScan(const QString &filePath)
         qCWarning(CompanyPayloadLog) << "MediaScannerConnection call exception for" << filePath;
     }
 #endif
+}
+
+void CompanyPayloadInterface::say(const QString &text)
+{
+    if (text.trimmed().isEmpty()) {
+        return;
+    }
+    qCDebug(CompanyPayloadLog) << "Voice Annunciator speaking:" << text;
+    AudioOutput::instance()->say(text);
 }
 

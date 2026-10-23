@@ -8,7 +8,9 @@
 #include "QGCLoggingCategory.h"
 #include "QGCMapEngineManager.h"
 #include "QGCPalette.h"
+#include "SettingsManager.h"
 #include "SimulatedPayloadAdapter.h"
+#include "VideoSettings.h"
 
 #include <QtCore/QApplicationStatic>
 #include <QtGui/QGuiApplication>
@@ -112,6 +114,22 @@ void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
     qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyDataOutput"), CompanyDataOutput::instance());
     qmlEngine->rootContext()->setContextProperty(QStringLiteral("companyPayload"), CompanyPayloadInterface::instance());
 
+    // Ensure video stream source is initialized and configured if currently disabled
+    VideoSettings *videoSettings = SettingsManager::instance()->videoSettings();
+    if (videoSettings) {
+        Fact *videoSourceFact = videoSettings->videoSource();
+        if (videoSourceFact) {
+            const QString currentSource = videoSourceFact->rawValue().toString();
+            if (currentSource.isEmpty() || currentSource == QStringLiteral("videoDisabled") || currentSource == VideoSettings::videoDisabled) {
+                videoSourceFact->setRawValue(QStringLiteral("RTSP Video Stream"));
+            }
+        }
+        Fact *streamEnabledFact = videoSettings->streamEnabled();
+        if (streamEnabledFact && !streamEnabledFact->rawValue().toBool()) {
+            streamEnabledFact->setRawValue(true);
+        }
+    }
+
     QGuiApplication::setApplicationDisplayName(QStringLiteral("IZI GCS"));
     qmlEngine->load(QUrl(QStringLiteral("qrc:/qml/Company/UI/MainWindow.qml")));
 
@@ -123,12 +141,17 @@ void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
     appIcon.addFile(QStringLiteral(":/res/izi_icon.svg"));
     if (!appIcon.isNull()) {
         QGuiApplication::setWindowIcon(appIcon);
-        const auto rootObjects = qmlEngine->rootObjects();
-        for (QObject *obj : rootObjects) {
-            auto *window = qobject_cast<QQuickWindow*>(obj);
-            if (window) {
+    }
+
+    const auto rootObjects = qmlEngine->rootObjects();
+    for (QObject *obj : rootObjects) {
+        auto *window = qobject_cast<QQuickWindow*>(obj);
+        if (window) {
+            if (!appIcon.isNull()) {
                 window->setIcon(appIcon);
             }
+            // Register root window as context property so all nested loaders and views can access mainWindow
+            qmlEngine->rootContext()->setContextProperty(QStringLiteral("mainWindow"), window);
         }
     }
 }

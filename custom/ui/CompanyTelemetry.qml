@@ -6,8 +6,9 @@ import QtQuick
 import QGroundControl
 import Company.UI
 
-QtObject {
+Item {
     id: root
+    visible: false
 
     // ========================================================================
     // 1. Authoritative Vehicle Reference
@@ -44,6 +45,52 @@ QtObject {
     readonly property string batteryVoltageStr:  !isNaN(batteryVoltage) ? (batteryVoltage.toFixed(1) + "V") : "--"
     readonly property real   batteryCurrent:     (_battery && _battery.current && !isNaN(_battery.current.value)) ? _battery.current.value : NaN
     readonly property string batteryCurrentStr:  !isNaN(batteryCurrent) ? (batteryCurrent.toFixed(1) + "A") : "--"
+    readonly property bool   hasBatteryConsumed: (_battery && _battery.mahConsumed && !isNaN(_battery.mahConsumed.rawValue) && _battery.mahConsumed.rawValue >= 0)
+    readonly property real   batteryConsumedMah: hasBatteryConsumed ? Number(_battery.mahConsumed.rawValue) : NaN
+    readonly property string batteryConsumedMahStr: hasBatteryConsumed ? (Math.round(batteryConsumedMah) + " mAh") : "-- mAh"
+
+    // Battery Pack Temperature
+    readonly property real   batteryTemperature: (_battery && _battery.temperature && !isNaN(_battery.temperature.value)) ? _battery.temperature.value : NaN
+    readonly property bool   hasBatteryTemperature: !isNaN(batteryTemperature) && batteryTemperature > -40 && batteryTemperature < 120
+    readonly property string batteryTemperatureStr: hasBatteryTemperature ? (Math.round(batteryTemperature) + "°C") : "--°C"
+
+    // Real-Time Estimated Flight Time Remaining (Endurance)
+    readonly property real   batteryTimeRemainingSec: {
+        if (_battery && _battery.timeRemaining && !isNaN(_battery.timeRemaining.rawValue) && _battery.timeRemaining.rawValue > 0) {
+            return Number(_battery.timeRemaining.rawValue)
+        }
+        if (hasBattery && !isNaN(batteryCurrent) && batteryCurrent > 0.5 && !isNaN(batteryPercent) && batteryPercent > 0) {
+            if (hasBatteryConsumed && batteryConsumedMah > 20 && batteryPercent < 98) {
+                var estTotalMah = batteryConsumedMah / (1.0 - (batteryPercent / 100.0))
+                var estRemainingMah = estTotalMah * (batteryPercent / 100.0)
+                var estSec = (estRemainingMah / (batteryCurrent * 1000.0)) * 3600.0
+                if (estSec > 0 && estSec < 86400) {
+                    return estSec
+                }
+            }
+        }
+        return NaN
+    }
+    readonly property bool   hasBatteryTimeRemaining: !isNaN(batteryTimeRemainingSec) && batteryTimeRemainingSec > 0
+    readonly property string batteryTimeRemainingStr: {
+        if (!hasBatteryTimeRemaining) return "--:--"
+        var totalSec = Math.round(batteryTimeRemainingSec)
+        var m = Math.floor(totalSec / 60)
+        var s = totalSec % 60
+        if (m >= 60) {
+            var h = Math.floor(m / 60)
+            m = m % 60
+            return h + "h " + m + "m"
+        }
+        return m + "m " + (s < 10 ? "0" : "") + s + "s"
+    }
+    readonly property string batteryEnduranceShortStr: {
+        if (!hasBatteryTimeRemaining) return ""
+        var mins = Math.round(batteryTimeRemainingSec / 60)
+        return mins + " min"
+    }
+    readonly property bool   isLowEndurance: hasBatteryTimeRemaining && batteryTimeRemainingSec <= 300
+    readonly property bool   isCriticalEndurance: hasBatteryTimeRemaining && batteryTimeRemainingSec <= 120
 
     // ========================================================================
     // 4. GPS & Positioning Telemetry
@@ -52,6 +99,36 @@ QtObject {
     readonly property string gpsLockString:      (_gps && _gps.lock && _gps.lock.enumStringValue !== "") ? _gps.lock.enumStringValue : (hasVehicle ? "No Fix" : "--")
     readonly property int    gpsSatellites:      (_gps && _gps.count && !isNaN(_gps.count.rawValue) && _gps.count.rawValue >= 0) ? Number(_gps.count.rawValue) : 0
     readonly property string gpsCountStr:        (hasVehicle && _gps && _gps.count && !isNaN(_gps.count.value) && _gps.count.value >= 0) ? (_gps.count.valueString + " Sats") : "-- Sats"
+
+    readonly property bool   isRtkFixed:         gpsLock === 6
+    readonly property bool   isRtkFloat:         gpsLock === 5
+    readonly property bool   isRtkActive:        isRtkFixed || isRtkFloat
+    readonly property bool   isDgps:             gpsLock === 4
+    readonly property bool   is3DFix:            gpsLock >= 3
+
+    readonly property string gpsFixType: {
+        if (!hasVehicle) return "--"
+        if (isRtkFixed) return "RTK FIXED"
+        if (isRtkFloat) return "RTK FLOAT"
+        if (isDgps) return "DGPS"
+        if (gpsLock === 3) return "3D FIX"
+        if (gpsLock === 2) return "2D FIX"
+        return "NO FIX"
+    }
+
+    readonly property real   gpsHdop:            (_gps && _gps.hdop && !isNaN(_gps.hdop.value)) ? _gps.hdop.value : NaN
+    readonly property string gpsHdopStr:         !isNaN(gpsHdop) ? gpsHdop.toFixed(2) : "--"
+    readonly property real   gpsVdop:            (_gps && _gps.vdop && !isNaN(_gps.vdop.value)) ? _gps.vdop.value : NaN
+    readonly property string gpsVdopStr:         !isNaN(gpsVdop) ? gpsVdop.toFixed(2) : "--"
+
+    // Ground Station RTK Base Receiver Facts (QGroundControl.gpsRtk)
+    readonly property var    _gpsRtk:            QGroundControl.gpsRtk
+    readonly property bool   hasRtkBase:         _gpsRtk !== null && _gpsRtk.connected && _gpsRtk.connected.value === true
+    readonly property bool   isRtkBaseSurveying: _gpsRtk !== null && _gpsRtk.active && _gpsRtk.active.value === true
+    readonly property bool   isRtkBaseValid:     _gpsRtk !== null && _gpsRtk.valid && _gpsRtk.valid.value === true
+    readonly property real   rtkBaseAccuracy:    (_gpsRtk && _gpsRtk.currentAccuracy && !isNaN(_gpsRtk.currentAccuracy.value)) ? _gpsRtk.currentAccuracy.value : NaN
+    readonly property string rtkBaseAccuracyStr: !isNaN(rtkBaseAccuracy) ? (rtkBaseAccuracy.toFixed(2) + " m") : "--"
+    readonly property int    rtkBaseDuration:    (_gpsRtk && _gpsRtk.currentDuration && !isNaN(_gpsRtk.currentDuration.value)) ? Math.round(_gpsRtk.currentDuration.value) : 0
 
     readonly property var    coordinate:         (hasVehicle && activeVehicle.coordinate && activeVehicle.coordinate.isValid) ? activeVehicle.coordinate : null
     readonly property bool   hasValidCoord:      coordinate !== null && !isNaN(coordinate.latitude) && !isNaN(coordinate.longitude) && (coordinate.latitude !== 0 || coordinate.longitude !== 0)
@@ -109,6 +186,28 @@ QtObject {
     readonly property bool   communicationLost:     hasVehicle && _linkMgr ? _linkMgr.communicationLost : false
     readonly property bool   communicationValid:    hasVehicle && _linkMgr ? !_linkMgr.communicationLost : false
 
+    // Radio & RSSI Telemetry (SiK / RFD / Microhard / RC)
+    readonly property var    _radioStatus:          (hasVehicle && activeVehicle.radioStatus) ? activeVehicle.radioStatus : null
+    readonly property bool   hasRadioStatus:        _radioStatus !== null && _radioStatus.lrssi && _radioStatus.lrssi.rawValue !== 0
+    readonly property real   radioLrssi:            hasRadioStatus ? Number(_radioStatus.lrssi.rawValue) : NaN
+    readonly property real   radioRrssi:            (hasRadioStatus && _radioStatus.rrssi) ? Number(_radioStatus.rrssi.rawValue) : NaN
+    readonly property string radioLrssiStr:         !isNaN(radioLrssi) ? (radioLrssi + " dBm") : "-- dBm"
+    readonly property string radioRrssiStr:         !isNaN(radioRrssi) ? (radioRrssi + " dBm") : "-- dBm"
+
+    readonly property bool   hasRcRSSI:             hasVehicle && activeVehicle.rcRSSI && !isNaN(activeVehicle.rcRSSI.rawValue) && activeVehicle.rcRSSI.rawValue > 0 && activeVehicle.rcRSSI.rawValue <= 100
+    readonly property real   rcRSSI:                hasRcRSSI ? Number(activeVehicle.rcRSSI.rawValue) : NaN
+    readonly property string rcRSSIStr:             hasRcRSSI ? (Math.round(rcRSSI) + "%") : "--%"
+
+    readonly property string rssiDisplayStr: {
+        if (hasRadioStatus) return radioLrssiStr
+        if (hasRcRSSI) return rcRSSIStr
+        if (hasVehicle) return linkQualityPercent + "%"
+        return "--"
+    }
+
+    readonly property bool   isSignalWeak:          (hasRadioStatus && radioLrssi < -95) || (hasRcRSSI && rcRSSI < 25) || (hasVehicle && linkQualityPercent < 60)
+    readonly property bool   isSignalCritical:      communicationLost || (hasRadioStatus && radioLrssi < -105) || (hasRcRSSI && rcRSSI < 15) || (hasVehicle && linkQualityPercent < 30)
+
     // ========================================================================
     // ========================================================================
     // 9. Gimbal Telemetry (Pitch / Yaw / Roll)
@@ -142,7 +241,19 @@ QtObject {
     // ========================================================================
     // 10B. Laser Rangefinder (LRF) Telemetry
     // ========================================================================
-    readonly property real   lrfDistance:           (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.lrfValid) ? CompanyPayloadInterface.lrfDistance : ((typeof companyPayload !== "undefined" && companyPayload && companyPayload.lrfValid) ? companyPayload.lrfDistance : NaN)
+    readonly property var    _distSensors:          (hasVehicle && activeVehicle.distanceSensors) ? activeVehicle.distanceSensors : null
+    readonly property real   _mavlinkLrfDist: {
+        if (!_distSensors) return NaN
+        if (_distSensors.rotationNone && !isNaN(_distSensors.rotationNone.rawValue) && _distSensors.rotationNone.rawValue > 0.05) {
+            return _distSensors.rotationNone.rawValue
+        }
+        if (_distSensors.rotationPitch270 && !isNaN(_distSensors.rotationPitch270.rawValue) && _distSensors.rotationPitch270.rawValue > 0.05) {
+            return _distSensors.rotationPitch270.rawValue
+        }
+        return NaN
+    }
+    readonly property bool   isMavlinkLrf:          !isNaN(_mavlinkLrfDist)
+    readonly property real   lrfDistance:           isMavlinkLrf ? _mavlinkLrfDist : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.lrfValid) ? CompanyPayloadInterface.lrfDistance : NaN)
     readonly property bool   hasLrfDistance:        !isNaN(lrfDistance) && lrfDistance > 0.01
     readonly property string lrfDistanceStr:        hasLrfDistance ? (lrfDistance.toFixed(1) + " m") : "N/A"
 
@@ -156,4 +267,119 @@ QtObject {
     readonly property real   currentDroneTimeMs:    (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.currentDroneTimeMs : Date.now()
     readonly property string droneTimestampHmsMs:   (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.formattedHmsMs : ""
     readonly property string droneTimestampFull:    (typeof CompanyCsvLogger !== "undefined" && CompanyCsvLogger !== null) ? CompanyCsvLogger.droneUtcTimestamp : ""
+
+    // ========================================================================
+    // 12. Voice & Audio Annunciator (Speech Synthesis)
+    // ========================================================================
+    property bool voiceMuted: (QGroundControl.settingsManager && QGroundControl.settingsManager.appSettings && QGroundControl.settingsManager.appSettings.audioMuted) ? QGroundControl.settingsManager.appSettings.audioMuted.rawValue : false
+
+    function toggleVoiceMute() {
+        if (QGroundControl.settingsManager && QGroundControl.settingsManager.appSettings && QGroundControl.settingsManager.appSettings.audioMuted) {
+            var newVal = !QGroundControl.settingsManager.appSettings.audioMuted.rawValue
+            QGroundControl.settingsManager.appSettings.audioMuted.rawValue = newVal
+            voiceMuted = newVal
+        } else {
+            voiceMuted = !voiceMuted
+        }
+    }
+
+    function say(text) {
+        if (voiceMuted) return
+        if (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.say) {
+            CompanyPayloadInterface.say(text)
+        }
+    }
+
+    // Startup settling timer to avoid spurious announcements during application launch
+    property bool _systemInitialized: false
+    Timer {
+        id: startupTimer
+        interval: 3500
+        running: true
+        repeat: false
+        onTriggered: root._systemInitialized = true
+    }
+
+    // 1. Armed State Announcements
+    property bool _prevArmed: false
+    onArmedChanged: {
+        if (_systemInitialized && hasVehicle) {
+            if (armed && !_prevArmed) {
+                say("Vehicle armed")
+            } else if (!armed && _prevArmed) {
+                say("Vehicle disarmed")
+            }
+        }
+        _prevArmed = armed
+    }
+
+    // 2. Flight Mode Announcements
+    property string _prevFlightMode: ""
+    onFlightModeChanged: {
+        if (_systemInitialized && hasVehicle && flightMode !== "" && flightMode !== _prevFlightMode) {
+            say("Flight mode, " + flightMode)
+        }
+        _prevFlightMode = flightMode
+    }
+
+    // 3. Battery Percentage Threshold Announcements
+    property int _lastAnnouncedBatThresh: 100
+    onBatteryPercentChanged: {
+        if (!_systemInitialized || !hasBattery || isNaN(batteryPercent)) return
+        if (batteryPercent <= 10 && _lastAnnouncedBatThresh > 10) {
+            _lastAnnouncedBatThresh = 10
+            say("Emergency, battery 10 percent, land immediately")
+        } else if (batteryPercent <= 15 && _lastAnnouncedBatThresh > 15) {
+            _lastAnnouncedBatThresh = 15
+            say("Alert, battery critical, 15 percent")
+        } else if (batteryPercent <= 25 && _lastAnnouncedBatThresh > 25) {
+            _lastAnnouncedBatThresh = 25
+            say("Warning, battery 25 percent")
+        } else if (batteryPercent > 30) {
+            _lastAnnouncedBatThresh = 100
+        }
+    }
+
+    // 4. Battery Endurance Time Remaining Announcements
+    property int _lastAnnouncedEnduranceThresh: 9999
+    onBatteryTimeRemainingSecChanged: {
+        if (!_systemInitialized || !hasBatteryTimeRemaining || isNaN(batteryTimeRemainingSec)) return
+        if (batteryTimeRemainingSec <= 120 && _lastAnnouncedEnduranceThresh > 120) {
+            _lastAnnouncedEnduranceThresh = 120
+            say("Alert, 2 minutes flight time remaining")
+        } else if (batteryTimeRemainingSec <= 300 && _lastAnnouncedEnduranceThresh > 300) {
+            _lastAnnouncedEnduranceThresh = 300
+            say("Warning, 5 minutes flight time remaining")
+        } else if (batteryTimeRemainingSec > 360) {
+            _lastAnnouncedEnduranceThresh = 9999
+        }
+    }
+
+    // 5. GPS 3D Fix & RTK Acquisition Announcements
+    property int _prevGpsLock: 0
+    onGpsLockChanged: {
+        if (_systemInitialized && hasVehicle) {
+            if (gpsLock === 6 && _prevGpsLock !== 6) {
+                say("RTK Fixed lock acquired, sub-centimeter precision")
+            } else if (gpsLock === 5 && _prevGpsLock < 5) {
+                say("RTK Float precision active")
+            } else if (gpsLock >= 3 && _prevGpsLock < 3) {
+                say("GPS 3D Fix acquired, " + gpsSatellites + " satellites")
+            }
+        }
+        _prevGpsLock = gpsLock
+    }
+
+    // 6. Telemetry Link Lost / Restored Announcements
+    property bool _prevCommLost: false
+    onCommunicationLostChanged: {
+        if (_systemInitialized && hasVehicle) {
+            if (communicationLost && !_prevCommLost) {
+                say("Warning, telemetry link lost")
+            } else if (!communicationLost && _prevCommLost) {
+                say("Telemetry link restored")
+            }
+        }
+        _prevCommLost = communicationLost
+    }
 }

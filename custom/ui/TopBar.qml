@@ -22,6 +22,8 @@ Rectangle {
     signal tabRequested(int tabIndex)
     signal toggleDrawerRequested()
     signal showUserGuideRequested()
+    signal flightActionRequested(string actionType)
+    signal safetyModalRequested()
 
     // Bottom border separator line
     Rectangle {
@@ -468,7 +470,7 @@ Rectangle {
             spacing: CompanyTheme.spacingSm
 
             ColumnLayout {
-                spacing: 1
+                spacing: 2
 
                 Text {
                     visible: !root._isNarrow
@@ -483,9 +485,9 @@ Rectangle {
                     spacing: 6
 
                     Rectangle {
-                        Layout.preferredWidth: 6
-                        Layout.preferredHeight: 6
-                        radius: 3
+                        Layout.preferredWidth: 8
+                        Layout.preferredHeight: 8
+                        radius: 4
                         color: {
                             if (!root._hasVehicle) return CompanyTheme.warning
                             if (root._isArmed) return CompanyTheme.danger
@@ -499,15 +501,63 @@ Rectangle {
                             var idStr = qsTr("UAS #%1").arg(CompanyTelemetry.vehicleId)
                             var armStr = root._isArmed ? qsTr("ARMED") : qsTr("DISARMED")
                             var modeStr = root._flightMode !== "" ? root._flightMode.toUpperCase() : "HOLD"
-                            return idStr + " • " + armStr + " • " + modeStr
+                            var result = idStr + " • " + armStr + " • " + modeStr
+                            if (CompanyTelemetry.altitudeRelativeStr !== "--") {
+                                result += " • ALT " + CompanyTelemetry.altitudeRelativeStr
+                            }
+                            return result
                         }
                         color: CompanyTheme.textPrimary
-                        font.pointSize: CompanyTheme.fontSmall
+                        font.pointSize: 11
                         font.family: CompanyTheme.fontMono
                         font.bold: true
                     }
                 }
             }
+        }
+
+        // Emergency Motor Kill (E-STOP) Button — Prominently visible when vehicle is Armed
+        Rectangle {
+            id: topBarEstopBtn
+            visible: root._hasVehicle && root._isArmed
+            Layout.preferredHeight: 28
+            implicitWidth: estopRow.implicitWidth + 18
+            radius: CompanyTheme.radiusSm
+            color: topBarEstopMouse.containsMouse ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.35) : Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.18)
+            border.color: CompanyTheme.danger
+            border.width: 1.5
+
+            RowLayout {
+                id: estopRow
+                anchors.centerIn: parent
+                spacing: 5
+
+                IconVector {
+                    name: "alert-triangle"
+                    size: 13
+                    color: CompanyTheme.danger
+                }
+
+                Text {
+                    text: qsTr("E-STOP")
+                    color: CompanyTheme.danger
+                    font.pointSize: 10
+                    font.bold: true
+                    font.letterSpacing: 0.8
+                }
+            }
+
+            MouseArea {
+                id: topBarEstopMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.flightActionRequested("EMERGENCY_STOP")
+            }
+
+            ToolTip.visible: topBarEstopMouse.containsMouse
+            ToolTip.delay: 200
+            ToolTip.text: qsTr("CRITICAL SAFETY: Click to trigger Emergency Motor Kill for UAS #%1 (Requires confirmation)").arg(CompanyTelemetry.vehicleId)
         }
 
         // Expanding spacer
@@ -516,14 +566,329 @@ Rectangle {
         }
 
         // --------------------------------------------------------------------
-        // 3. Operational Indicators: UTC, Battery, GPS, Link (Compact Right Strip)
+        // 3. Operational Indicators: GPS, Battery (mAh), RSSI/Link, UTC
         // --------------------------------------------------------------------
         RowLayout {
-            spacing: root._isNarrow ? CompanyTheme.spacingSm : CompanyTheme.spacingMd
+            spacing: root._isNarrow ? CompanyTheme.spacingXs : CompanyTheme.spacingSm
+
+            // 3A. GPS Satellite, RTK & Precision Chip
+            Rectangle {
+                id: gpsChip
+                Layout.preferredHeight: 28
+                implicitWidth: gpsChipRow.implicitWidth + 16
+                radius: CompanyTheme.radiusSm
+                color: CompanyTelemetry.isRtkFixed ? Qt.rgba(CompanyTheme.info.r, CompanyTheme.info.g, CompanyTheme.info.b, 0.15) : CompanyTheme.bgCardSecondary
+                border.color: {
+                    if (!root._hasVehicle) return CompanyTheme.borderCard
+                    if (CompanyTelemetry.isRtkFixed) return CompanyTheme.info
+                    if (CompanyTelemetry.isRtkFloat) return CompanyTheme.primary
+                    if (CompanyTelemetry.gpsLock >= 3) return CompanyTheme.borderCard
+                    if (CompanyTelemetry.gpsLock >= 2) return CompanyTheme.warning
+                    return CompanyTheme.danger
+                }
+                border.width: CompanyTelemetry.isRtkActive ? 1.5 : 1
+
+                RowLayout {
+                    id: gpsChipRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    IconVector {
+                        name: "satellite"
+                        size: 14
+                        color: {
+                            if (!root._hasVehicle) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isRtkFixed) return CompanyTheme.info
+                            if (CompanyTelemetry.isRtkFloat) return CompanyTheme.primary
+                            if (CompanyTelemetry.gpsLock >= 3) return CompanyTheme.success
+                            if (CompanyTelemetry.gpsLock >= 2) return CompanyTheme.warning
+                            return CompanyTheme.danger
+                        }
+                    }
+
+                    Text {
+                        text: {
+                            if (!root._hasVehicle) return qsTr("GPS --")
+                            var sats = CompanyTelemetry.gpsSatellites + " Sats"
+                            var lock = CompanyTelemetry.gpsFixType
+                            if (CompanyTelemetry.isRtkFixed) return sats + " • RTK FIX"
+                            if (CompanyTelemetry.isRtkFloat) return sats + " • RTK FLT"
+                            if (CompanyTelemetry.gpsHdopStr !== "--" && !root._isNarrow) {
+                                return sats + " • " + lock + " (H:" + CompanyTelemetry.gpsHdopStr + ")"
+                            }
+                            return sats + " • " + lock
+                        }
+                        color: {
+                            if (!root._hasVehicle) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isRtkFixed) return CompanyTheme.info
+                            if (CompanyTelemetry.isRtkFloat) return CompanyTheme.primary
+                            if (CompanyTelemetry.gpsLock >= 3) return CompanyTheme.textPrimary
+                            if (CompanyTelemetry.gpsLock >= 2) return CompanyTheme.warning
+                            return CompanyTheme.danger
+                        }
+                        font.pointSize: 11
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+                }
+
+                ToolTip.visible: gpsMouseArea.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: {
+                    if (!root._hasVehicle) return qsTr("GPS: Disconnected")
+                    var info = [
+                        qsTr("GNSS Positioning: %1").arg(CompanyTelemetry.gpsFixType),
+                        qsTr("Satellites Tracked: %1").arg(CompanyTelemetry.gpsSatellites)
+                    ]
+                    if (CompanyTelemetry.gpsHdopStr !== "--") {
+                        info.push(qsTr("Precision: HDOP %1 • VDOP %2").arg(CompanyTelemetry.gpsHdopStr).arg(CompanyTelemetry.gpsVdopStr))
+                    }
+                    if (CompanyTelemetry.hasRtkBase) {
+                        info.push(qsTr("RTK Base Station: CONNECTED"))
+                        if (CompanyTelemetry.isRtkBaseSurveying) {
+                            info.push(qsTr("Base Survey-In: Active (%1s • Acc: %2)").arg(CompanyTelemetry.rtkBaseDuration).arg(CompanyTelemetry.rtkBaseAccuracyStr))
+                        } else if (CompanyTelemetry.isRtkBaseValid) {
+                            info.push(qsTr("Base Survey-In: VALID (Acc: %1)").arg(CompanyTelemetry.rtkBaseAccuracyStr))
+                        }
+                    }
+                    info.push(qsTr("Aircraft Position: %1").arg(CompanyTelemetry.coordString))
+                    return info.join("\n")
+                }
+
+                MouseArea {
+                    id: gpsMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+            }
+
+            // 3B. Battery & Power Monitoring Chip (V, %, A, mAh consumed)
+            Rectangle {
+                id: batChip
+                Layout.preferredHeight: 28
+                implicitWidth: batChipRow.implicitWidth + 16
+                radius: CompanyTheme.radiusSm
+                color: CompanyTheme.bgCardSecondary
+                border.color: {
+                    if (!CompanyTelemetry.hasBattery) return CompanyTheme.borderCard
+                    if (CompanyTelemetry.isCriticalEndurance) return CompanyTheme.danger
+                    if (CompanyTelemetry.isLowEndurance) return CompanyTheme.warning
+                    var pct = CompanyTelemetry.batteryPercent
+                    if (pct <= 15) return CompanyTheme.danger
+                    if (pct <= 25) return CompanyTheme.warning
+                    return CompanyTheme.borderCard
+                }
+                border.width: 1
+
+                RowLayout {
+                    id: batChipRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    IconVector {
+                        name: "battery"
+                        size: 14
+                        color: {
+                            if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isCriticalEndurance) return CompanyTheme.danger
+                            if (CompanyTelemetry.isLowEndurance) return CompanyTheme.warning
+                            var pct = CompanyTelemetry.batteryPercent
+                            if (pct > 25) return CompanyTheme.success
+                            if (pct > 15) return CompanyTheme.warning
+                            return CompanyTheme.danger
+                        }
+                    }
+
+                    // Remaining percentage
+                    Text {
+                        text: CompanyTelemetry.batteryPercentStr
+                        color: {
+                            if (!CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isCriticalEndurance) return CompanyTheme.danger
+                            if (CompanyTelemetry.isLowEndurance) return CompanyTheme.warning
+                            var pct = CompanyTelemetry.batteryPercent
+                            if (pct > 25) return CompanyTheme.success
+                            if (pct > 15) return CompanyTheme.warning
+                            return CompanyTheme.danger
+                        }
+                        font.pointSize: 11
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    // Voltage
+                    Text {
+                        visible: !isNaN(CompanyTelemetry.batteryVoltage)
+                        text: "• " + CompanyTelemetry.batteryVoltageStr
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: 11
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    // Current draw (amps)
+                    Text {
+                        visible: !root._isNarrow && !isNaN(CompanyTelemetry.batteryCurrent) && CompanyTelemetry.batteryCurrent > 0.05
+                        text: "• " + CompanyTelemetry.batteryCurrentStr
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: 10
+                        font.family: CompanyTheme.fontMono
+                    }
+
+                    // Consumed Capacity (mAh)
+                    Text {
+                        visible: !root._isNarrow && CompanyTelemetry.hasBatteryConsumed
+                        text: "• " + CompanyTelemetry.batteryConsumedMahStr
+                        color: CompanyTheme.info
+                        font.pointSize: 10
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    // Remaining Flight Time (Endurance)
+                    Text {
+                        visible: !root._isNarrow && CompanyTelemetry.hasBatteryTimeRemaining
+                        text: "• " + CompanyTelemetry.batteryEnduranceShortStr
+                        color: CompanyTelemetry.isCriticalEndurance ? CompanyTheme.danger : (CompanyTelemetry.isLowEndurance ? CompanyTheme.warning : CompanyTheme.success)
+                        font.pointSize: 10
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+                }
+
+                ToolTip.visible: batMouseArea.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: {
+                    if (!CompanyTelemetry.hasBattery) return qsTr("Battery: No Telemetry")
+                    var lines = [
+                        qsTr("Remaining: %1").arg(CompanyTelemetry.batteryPercentStr),
+                        qsTr("Voltage: %1").arg(CompanyTelemetry.batteryVoltageStr),
+                        qsTr("Current Draw: %1").arg(!isNaN(CompanyTelemetry.batteryCurrent) ? CompanyTelemetry.batteryCurrentStr : "N/A"),
+                        qsTr("Consumed: %1").arg(CompanyTelemetry.hasBatteryConsumed ? CompanyTelemetry.batteryConsumedMahStr : "N/A"),
+                        qsTr("Estimated Endurance: %1").arg(CompanyTelemetry.hasBatteryTimeRemaining ? CompanyTelemetry.batteryTimeRemainingStr : "Calculating..."),
+                        qsTr("Pack Temperature: %1").arg(CompanyTelemetry.hasBatteryTemperature ? CompanyTelemetry.batteryTemperatureStr : "N/A")
+                    ]
+                    return lines.join("\n")
+                }
+
+                MouseArea {
+                    id: batMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+            }
+
+            // 3C. RSSI & Communication Link Chip
+            Rectangle {
+                id: rssiChip
+                Layout.preferredHeight: 28
+                implicitWidth: rssiChipRow.implicitWidth + 16
+                radius: CompanyTheme.radiusSm
+                color: {
+                    if (CompanyTelemetry.communicationLost) return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.2)
+                    return CompanyTheme.bgCardSecondary
+                }
+                border.color: {
+                    if (!root._hasVehicle) return CompanyTheme.borderCard
+                    if (CompanyTelemetry.isSignalCritical) return CompanyTheme.danger
+                    if (CompanyTelemetry.isSignalWeak) return CompanyTheme.warning
+                    return CompanyTheme.borderCard
+                }
+                border.width: 1
+
+                RowLayout {
+                    id: rssiChipRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    IconVector {
+                        name: "signal"
+                        size: 14
+                        color: {
+                            if (!root._hasVehicle) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isSignalCritical) return CompanyTheme.danger
+                            if (CompanyTelemetry.isSignalWeak) return CompanyTheme.warning
+                            return CompanyTheme.success
+                        }
+                    }
+
+                    // Main readout: "RSSI -68 dBm" or "LINK LOST" or "LINK 100%"
+                    Text {
+                        text: {
+                            if (!root._hasVehicle) return qsTr("LINK --")
+                            if (CompanyTelemetry.communicationLost) return qsTr("LINK LOST")
+                            if (CompanyTelemetry.hasRadioStatus) {
+                                return qsTr("RSSI %1").arg(CompanyTelemetry.radioLrssiStr)
+                            }
+                            if (CompanyTelemetry.hasRcRSSI) {
+                                return qsTr("RC %1").arg(CompanyTelemetry.rcRSSIStr)
+                            }
+                            return qsTr("LINK %1%").arg(CompanyTelemetry.linkQualityPercent)
+                        }
+                        color: {
+                            if (!root._hasVehicle) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.isSignalCritical) return CompanyTheme.danger
+                            if (CompanyTelemetry.isSignalWeak) return CompanyTheme.warning
+                            return CompanyTheme.textPrimary
+                        }
+                        font.pointSize: 11
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    // Secondary Link Quality readout when RSSI is showing
+                    Text {
+                        visible: !root._isNarrow && root._hasVehicle && !CompanyTelemetry.communicationLost && CompanyTelemetry.hasRadioStatus
+                        text: "• " + CompanyTelemetry.linkQualityPercent + "%"
+                        color: CompanyTelemetry.linkQualityPercent > 80 ? CompanyTheme.success : (CompanyTelemetry.linkQualityPercent > 50 ? CompanyTheme.warning : CompanyTheme.danger)
+                        font.pointSize: 10
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+                }
+
+                ToolTip.visible: rssiMouseArea.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: {
+                    if (!root._hasVehicle) return qsTr("Communication Link: Disconnected")
+                    if (CompanyTelemetry.communicationLost) return qsTr("WARNING: MAVLink Telemetry Link Lost!")
+                    var info = [
+                        qsTr("Link Quality: %1%").arg(CompanyTelemetry.linkQualityPercent),
+                        qsTr("Loss Rate: %1%").arg(Math.round(CompanyTelemetry.mavlinkLossPercent))
+                    ]
+                    if (CompanyTelemetry.hasRadioStatus) {
+                        info.push(qsTr("Local Radio RSSI: %1").arg(CompanyTelemetry.radioLrssiStr))
+                        if (!isNaN(CompanyTelemetry.radioRrssi)) {
+                            info.push(qsTr("Remote Radio RSSI: %1").arg(CompanyTelemetry.radioRrssiStr))
+                        }
+                    }
+                    if (CompanyTelemetry.hasRcRSSI) {
+                        info.push(qsTr("RC Controller RSSI: %1").arg(CompanyTelemetry.rcRSSIStr))
+                    }
+                    if (root._linkMgr && root._linkMgr.primaryLinkName) {
+                        info.push(qsTr("Primary Link: %1").arg(root._linkMgr.primaryLinkName))
+                    }
+                    return info.join("\n")
+                }
+
+                MouseArea {
+                    id: rssiMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+            }
+
+            // Divider
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 16
+                color: CompanyTheme.borderCard
+            }
 
             // UTC Clock
             RowLayout {
                 spacing: 4
+                visible: !root._isNarrow
                 Text {
                     text: "UTC"
                     color: CompanyTheme.textMuted
@@ -533,7 +898,7 @@ Rectangle {
                 Text {
                     id: clockText
                     color: CompanyTheme.textPrimary
-                    font.pointSize: CompanyTheme.fontSmall
+                    font.pointSize: 10
                     font.bold: true
                     font.family: CompanyTheme.fontMono
 
@@ -550,80 +915,64 @@ Rectangle {
                 }
             }
 
-            // Divider
+            // Voice Annunciator Audio Mute Toggle Button
             Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: 16
-                color: CompanyTheme.borderCard
+                id: audioMuteBtn
+                Layout.preferredHeight: 28
+                implicitWidth: 32
+                radius: CompanyTheme.radiusSm
+                color: CompanyTelemetry.voiceMuted ? Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.15) : CompanyTheme.bgCardSecondary
+                border.color: CompanyTelemetry.voiceMuted ? CompanyTheme.warning : CompanyTheme.borderCard
+                border.width: 1
+
+                IconVector {
+                    anchors.centerIn: parent
+                    name: CompanyTelemetry.voiceMuted ? "volume-x" : "volume-2"
+                    size: 14
+                    color: CompanyTelemetry.voiceMuted ? CompanyTheme.warning : CompanyTheme.textPrimary
+                }
+
+                MouseArea {
+                    id: audioMuteMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: CompanyTelemetry.toggleVoiceMute()
+                }
+
+                ToolTip.visible: audioMuteMouse.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: CompanyTelemetry.voiceMuted ? qsTr("Voice Annunciator: MUTED\nClick to unmute spoken alerts") : qsTr("Voice Annunciator: ACTIVE\nClick to mute spoken alerts")
             }
 
-            // Status Icons Group (Link, Signal, Wifi, RC)
-            RowLayout {
-                spacing: 12
-                visible: !root._isNarrow
+            // Safety Failsafes Dashboard Button
+            Rectangle {
+                id: safetyDashboardBtn
+                Layout.preferredHeight: 28
+                implicitWidth: 32
+                radius: CompanyTheme.radiusSm
+                color: safetyHover.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary
+                border.color: CompanyTheme.borderCard
+                border.width: 1
 
                 IconVector {
-                    name: "link"
-                    size: 13
-                    color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.textMuted
-                    ToolTip.visible: linkHover.containsMouse
-                    ToolTip.delay: 300
-                    ToolTip.text: root._hasVehicle ? (root._linkMgr ? root._linkMgr.primaryLinkName : qsTr("Link Connected")) : qsTr("No MAVLink Link")
-
-                    MouseArea {
-                        id: linkHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                    }
+                    anchors.centerIn: parent
+                    name: "shield"
+                    size: 14
+                    color: CompanyTheme.info
                 }
 
-                IconVector {
-                    name: "signal"
-                    size: 13
-                    color: {
-                        if (!root._hasVehicle) return CompanyTheme.textMuted
-                        return CompanyTelemetry.communicationLost ? CompanyTheme.danger : CompanyTheme.success
-                    }
-                    ToolTip.visible: signalHover.containsMouse
-                    ToolTip.delay: 300
-                    ToolTip.text: root._hasVehicle ? (qsTr("Telemetry Signal: ") + CompanyTelemetry.linkQualityPercent + "%") : qsTr("No Signal")
-
-                    MouseArea {
-                        id: signalHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                    }
+                MouseArea {
+                    id: safetyHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.safetyModalRequested()
                 }
 
-                IconVector {
-                    name: "wifi"
-                    size: 13
-                    color: root._hasVehicle ? CompanyTheme.info : CompanyTheme.textMuted
-                    ToolTip.visible: wifiHover.containsMouse
-                    ToolTip.delay: 300
-                    ToolTip.text: qsTr("Network Communication Link")
-
-                    MouseArea {
-                        id: wifiHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                    }
-                }
-
-                IconVector {
-                    name: "rc"
-                    size: 13
-                    color: root._hasVehicle ? CompanyTheme.warning : CompanyTheme.textMuted
-                    ToolTip.visible: rcHover.containsMouse
-                    ToolTip.delay: 300
-                    ToolTip.text: root._hasVehicle ? qsTr("RC Controller Online") : qsTr("RC Disconnected")
-
-                    MouseArea {
-                        id: rcHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                    }
-                }
+                ToolTip.visible: safetyHover.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: qsTr("Flight Safety & Failsafes Dashboard\nClick to inspect RC, Telemetry, Battery, and Geofence failsafes")
             }
 
             // Connection Action Button

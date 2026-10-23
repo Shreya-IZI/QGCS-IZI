@@ -97,6 +97,7 @@ public:
     Q_INVOKABLE virtual void toggleRecording();
     Q_INVOKABLE virtual QString photoSaveDirectory();
     Q_INVOKABLE virtual void notifyMediaScan(const QString &filePath);
+    Q_INVOKABLE void say(const QString &text);
 
     // --- Thermal Interface ---
     virtual bool thermalAvailable() const = 0;
