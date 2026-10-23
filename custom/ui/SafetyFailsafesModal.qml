@@ -174,6 +174,13 @@ Item {
         return qsTr("DISABLED (Configured via Flight Controller)")
     }
 
+    function isGeofenceEnabled() {
+        if (factFenceEnable && factFenceEnable.value !== undefined) {
+            return factFenceEnable.value > 0
+        }
+        return false
+    }
+
     function getRtlAltitudeSummary() {
         if (factRtlAltM && factRtlAltM.value !== undefined) {
             return factRtlAltM.value > 0 ? (factRtlAltM.value + " m AGL") : qsTr("Current Flight Altitude")
@@ -358,6 +365,7 @@ Item {
                                 color: CompanyTheme.textPrimary
                                 font.pointSize: 11
                                 font.bold: true
+                                elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
 
@@ -435,6 +443,7 @@ Item {
                                 color: CompanyTheme.textPrimary
                                 font.pointSize: 11
                                 font.bold: true
+                                elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
 
@@ -512,6 +521,7 @@ Item {
                                 color: CompanyTheme.textPrimary
                                 font.pointSize: 11
                                 font.bold: true
+                                elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
 
@@ -589,26 +599,29 @@ Item {
                             }
 
                             Text {
-                                text: qsTr("GEOFENCE & RTL PROFILE")
+                                text: qsTr("GEOFENCE & RTL")
                                 color: CompanyTheme.textPrimary
                                 font.pointSize: 11
                                 font.bold: true
+                                elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
 
                             Rectangle {
                                 Layout.preferredHeight: 20
-                                implicitWidth: gfStatusText.implicitWidth + 12
+                                implicitWidth: gfStatusText.implicitWidth + 14
                                 radius: 10
-                                color: Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.15)
-                                border.color: CompanyTheme.primary
+                                color: root.isGeofenceEnabled() ?
+                                    Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.15) :
+                                    Qt.rgba(CompanyTheme.textSecondary.r, CompanyTheme.textSecondary.g, CompanyTheme.textSecondary.b, 0.15)
+                                border.color: root.isGeofenceEnabled() ? CompanyTheme.success : CompanyTheme.borderCard
                                 border.width: 1
 
                                 Text {
                                     id: gfStatusText
                                     anchors.centerIn: parent
-                                    text: qsTr("RTL: %1").arg(root.getRtlAltitudeSummary())
-                                    color: CompanyTheme.primary
+                                    text: root.isGeofenceEnabled() ? qsTr("ACTIVE") : qsTr("STANDBY")
+                                    color: root.isGeofenceEnabled() ? CompanyTheme.success : CompanyTheme.textSecondary
                                     font.pointSize: 9
                                     font.bold: true
                                     font.family: CompanyTheme.fontMono
