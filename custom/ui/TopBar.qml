@@ -1121,7 +1121,13 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: mainWindow.close()
+                        onClicked: {
+                            if (typeof mainWindow !== "undefined" && mainWindow.attemptWindowClose) {
+                                mainWindow.attemptWindowClose()
+                            } else if (typeof mainWindow !== "undefined") {
+                                mainWindow.close()
+                            }
+                        }
                     }
                 }
             }

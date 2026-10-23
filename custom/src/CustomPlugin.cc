@@ -13,6 +13,7 @@
 #include "VideoSettings.h"
 
 #include <QtCore/QApplicationStatic>
+#include <QtCore/QCoreApplication>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QIcon>
 #include <QtQml/QQmlApplicationEngine>
@@ -152,6 +153,28 @@ void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
             }
             // Register root window as context property so all nested loaders and views can access mainWindow
             qmlEngine->rootContext()->setContextProperty(QStringLiteral("mainWindow"), window);
+
+            // Connect QML engine quit and last window closed signals to guarantee the application event
+            // loop terminates properly across all platforms (preventing background zombie instances on Windows).
+            (void) QObject::connect(qmlEngine, &QQmlEngine::quit, qGuiApp, [window]() {
+                if (window) {
+                    window->setProperty("_forceClose", true);
+                }
+                QCoreApplication::quit();
+            });
+
+            (void) QObject::connect(qGuiApp, &QGuiApplication::lastWindowClosed, qGuiApp, [window]() {
+                if (window) {
+                    window->setProperty("_forceClose", true);
+                }
+                QCoreApplication::quit();
+            });
+
+            (void) QObject::connect(window, &QQuickWindow::closing, qGuiApp, [window]() {
+                if (window->property("_forceClose").toBool()) {
+                    QCoreApplication::quit();
+                }
+            });
         }
     }
 }

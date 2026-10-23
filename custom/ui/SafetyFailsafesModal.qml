@@ -8,7 +8,6 @@ import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FactControls
 import Company.UI
-import "controls"
 
 // ============================================================================
 // Enterprise Safety & Failsafes Dashboard Modal
@@ -554,11 +553,10 @@ Item {
                         Item { Layout.fillHeight: true }
 
                         Text {
-                            text: qsTr("Pack: %1 • Endurance: %2 • Temp: %3").arg(
-                                CompanyTelemetry.batteryVoltageStr,
-                                CompanyTelemetry.batteryEnduranceShortStr,
-                                CompanyTelemetry.batteryTemperature > 0 ? (CompanyTelemetry.batteryTemperature.toFixed(0) + "°C") : "NORM"
-                            )
+                            text: qsTr("Pack: %1 • Endurance: %2 • Temp: %3")
+                                .arg(CompanyTelemetry.batteryVoltageStr)
+                                .arg(CompanyTelemetry.batteryEnduranceShortStr)
+                                .arg(CompanyTelemetry.batteryTemperature > 0 ? (CompanyTelemetry.batteryTemperature.toFixed(0) + "°C") : "NORM")
                             color: CompanyTheme.textSecondary
                             font.pointSize: 9
                             font.family: CompanyTheme.fontMono

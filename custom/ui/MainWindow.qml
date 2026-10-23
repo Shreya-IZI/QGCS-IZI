@@ -100,6 +100,70 @@ ApplicationWindow {
     }
 
     // ------------------------------------------------------------------------
+    // Window Closing & Application Shutdown Lifecycle
+    // ------------------------------------------------------------------------
+    property bool _forceClose: false
+    property bool _reentrantCloseGuard: false
+
+    function attemptWindowClose() {
+        if (!_forceClose) {
+            performCloseChecks()
+        }
+    }
+
+    function checkForActiveConnections() {
+        if (QGroundControl.multiVehicleManager && QGroundControl.multiVehicleManager.activeVehicle) {
+            var activeVeh = QGroundControl.multiVehicleManager.activeVehicle
+            if (activeVeh.armed) {
+                _reentrantCloseGuard = true
+                _showMessageDialogWorker(mainWindow, qsTr("Vehicle Armed"),
+                    qsTr("A vehicle is currently ARMED! Are you sure you want to exit IZI GCS?"),
+                    Dialog.Yes | Dialog.No,
+                    function() {
+                        _reentrantCloseGuard = false
+                        finishCloseProcess()
+                    },
+                    function() {
+                        _reentrantCloseGuard = false
+                    },
+                    true)
+                return false
+            }
+        }
+        return true
+    }
+
+    function performCloseChecks() {
+        if (!checkForActiveConnections()) {
+            return false
+        }
+        finishCloseProcess()
+        return true
+    }
+
+    function finishCloseProcess() {
+        _forceClose = true
+        if (QGroundControl.linkManager) {
+            QGroundControl.linkManager.shutdown()
+        }
+        if (QGroundControl.videoManager) {
+            QGroundControl.videoManager.stopVideo()
+        }
+        mainWindow.close()
+        Qt.quit()
+    }
+
+    onClosing: (close) => {
+        if (!_forceClose) {
+            if (_reentrantCloseGuard) {
+                close.accepted = false
+                return
+            }
+            close.accepted = performCloseChecks()
+        }
+    }
+
+    // ------------------------------------------------------------------------
     // Mission Control Top Status Header
     // ------------------------------------------------------------------------
     TopBar {

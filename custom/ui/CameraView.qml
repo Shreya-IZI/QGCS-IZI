@@ -1480,10 +1480,10 @@ Item {
                 RowLayout {
                     anchors.centerIn: parent
                     spacing: 6
-                    IconVector { name: "refresh"; size: 14; color: CompanyTheme.textDark }
+                    IconVector { name: "refresh"; size: 14; color: CompanyTheme.textLight }
                     Text {
                         text: qsTr("RECONNECT VIDEO STREAM")
-                        color: CompanyTheme.textDark
+                        color: CompanyTheme.textLight
                         font.bold: true
                         font.pointSize: CompanyTheme.fontSmall
                     }
