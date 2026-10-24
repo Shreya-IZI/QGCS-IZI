@@ -12,9 +12,10 @@ Item {
     id: root
 
     // Supported Modes: "RGB_ONLY", "THERMAL_ONLY", "SIDE_BY_SIDE", "PIP"
-    property string currentMode: "SIDE_BY_SIDE"
+    property string currentMode: "RGB_ONLY"
 
     readonly property bool _isNarrow: width < 1024 || ScreenTools.isMobile
+    readonly property var _netSettings: (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : (typeof companyNetworkSettings !== "undefined" ? companyNetworkSettings : null)
 
     readonly property bool _isRgbActive: QGroundControl.videoManager.decoding
     readonly property bool _isThermalActive: QGroundControl.videoManager.hasThermal && QGroundControl.videoManager.decoding
@@ -530,6 +531,7 @@ Item {
                 ColumnLayout {
                     anchors.centerIn: parent
                     spacing: root.currentMode === "PIP" ? 4 : CompanyTheme.spacingSm
+                    width: Math.min(parent.width - 20, 340)
 
                     IconVector {
                         Layout.alignment: Qt.AlignHCenter
@@ -540,7 +542,7 @@ Item {
 
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("THERMAL IR")
+                        text: qsTr("THERMAL IR FEED")
                         color: CompanyTheme.textPrimary
                         font.pointSize: root.currentMode === "PIP" ? CompanyTheme.fontSmall : CompanyTheme.fontH2
                         font.bold: true
@@ -549,24 +551,73 @@ Item {
 
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("WAITING FOR STREAM")
+                        text: qsTr("NO SECONDARY STREAM DETECTED")
                         color: CompanyTheme.textSecondary
                         font.pointSize: root.currentMode === "PIP" ? CompanyTheme.fontTiny : CompanyTheme.fontSmall
                         font.letterSpacing: 0.5
                     }
 
-                    Item {
-                        Layout.preferredHeight: 2
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: qsTr("Primary camera feed is active. Dual-sensor split requires an active secondary stream or URL swap.")
+                        color: CompanyTheme.textMuted
+                        font.pointSize: CompanyTheme.fontTiny
                         visible: root.currentMode !== "PIP"
                     }
 
-                    StatusBadge {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("STANDBY")
-                        badgeColor: CompanyTheme.warning
-                        showDot: true
-                        pulse: true
+                    Item {
+                        Layout.preferredHeight: 4
                         visible: root.currentMode !== "PIP"
+                    }
+
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 8
+                        visible: root.currentMode !== "PIP"
+
+                        Rectangle {
+                            height: 28
+                            implicitWidth: fullRgbBtnText.implicitWidth + 20
+                            radius: CompanyTheme.radiusSm
+                            color: CompanyTheme.primary
+                            Text {
+                                id: fullRgbBtnText
+                                anchors.centerIn: parent
+                                text: qsTr("FULL SCREEN RGB")
+                                color: CompanyTheme.textLight
+                                font.bold: true
+                                font.pointSize: CompanyTheme.fontTiny
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.currentMode = "RGB_ONLY"
+                            }
+                        }
+
+                        Rectangle {
+                            height: 28
+                            implicitWidth: cfgStreamBtnText.implicitWidth + 20
+                            radius: CompanyTheme.radiusSm
+                            color: CompanyTheme.bgCardSecondary
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            Text {
+                                id: cfgStreamBtnText
+                                anchors.centerIn: parent
+                                text: qsTr("STREAM SETTINGS")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontTiny
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: streamPopup.open()
+                            }
+                        }
                     }
                 }
             }
@@ -1437,6 +1488,75 @@ Item {
                         text: QGroundControl.settingsManager.videoSettings.rtspUrl.rawValue
                         onEditingFinished: {
                             QGroundControl.settingsManager.videoSettings.rtspUrl.rawValue = text
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 24
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Swap to Main (RGB)")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                var cur = vs.rtspUrl.rawValue
+                                if (cur.indexOf("sub") !== -1) {
+                                    vs.rtspUrl.rawValue = cur.replace(/sub/g, "main")
+                                } else if (cur.indexOf("ch1") !== -1) {
+                                    vs.rtspUrl.rawValue = cur.replace(/ch1/g, "ch0")
+                                }
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 24
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Swap to Sub (IR)")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                var cur = vs.rtspUrl.rawValue
+                                if (cur.indexOf("main") !== -1) {
+                                    vs.rtspUrl.rawValue = cur.replace(/main/g, "sub")
+                                } else if (cur.indexOf("ch0") !== -1) {
+                                    vs.rtspUrl.rawValue = cur.replace(/ch0/g, "ch1")
+                                } else if (root._netSettings && root._netSettings.thermalVideoUrl && root._netSettings.thermalVideoUrl !== "") {
+                                    vs.rtspUrl.rawValue = root._netSettings.thermalVideoUrl
+                                }
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
                         }
                     }
                 }

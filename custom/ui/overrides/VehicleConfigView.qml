@@ -180,17 +180,8 @@ Rectangle {
         _selectedSectionIndex = sectionIndex
 
         var autopilotPlugin = _activeVehicle.autopilotPlugin
-        var prereq = autopilotPlugin.prerequisiteSetup(vehicleComponent)
-        // If there's a prerequisite, only show prerequisite message if it's not Motors, Radio, or Joystick
-        if (prereq !== "" && vehicleComponent.name !== "Motors" && vehicleComponent.name !== "Motor Test" && vehicleComponent.name !== "Radio" && vehicleComponent.name !== "Joystick") {
-            _selectedComponentIndex = compIndex
-            _showingPrereqMessage = true
-            _messagePanelText = qsTr("%1 setup must be completed prior to %2 setup.").arg(prereq).arg(vehicleComponent.name)
-            panelLoader.setSourceComponent(messagePanelComponent)
-            return
-        }
 
-        if (_selectedComponentIndex !== compIndex || _showingPrereqMessage) {
+        if (_selectedComponentIndex !== compIndex || _showingPrereqMessage || panelLoader.source.toString() !== vehicleComponent.setupSource.toString()) {
             _selectedComponentIndex = compIndex
             _showingPrereqMessage = false
             panelLoader.setSource(vehicleComponent.setupSource, vehicleComponent)
@@ -203,7 +194,7 @@ Rectangle {
     }
 
     function showParametersPanel() {
-        showPanel("parameters", "qrc:/qml/QGroundControl/VehicleSetup/SetupParameterEditor.qml")
+        showPanel("parameters", "qrc:/qml/Company/UI/ParametersView.qml")
     }
 
     function showVehicleComponentPanel(vehicleComponent) {
@@ -570,7 +561,7 @@ Rectangle {
                     Layout.fillWidth:   true
                     icon.source:        "/qmlimages/subMenuButtonImage.png"
                     checked:            vehicleConfigView._selectedSpecial === "parameters"
-                    onClicked:          showPanel("parameters", "qrc:/qml/QGroundControl/VehicleSetup/SetupParameterEditor.qml")
+                    onClicked:          showParametersPanel()
                 }
 
                 ConfigButton {
