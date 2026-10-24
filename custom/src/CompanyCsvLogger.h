@@ -5,6 +5,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
+#include <QtCore/QPointer>
 #include <QtCore/QString>
 #include <QtCore/QTextStream>
 #include <QtCore/QTimer>
@@ -141,15 +142,17 @@ private:
     double      _lastGimbalYaw = 0.0;
     bool        _hasGimbalAttitude = false;
 
-    QFile       _csvFile;
-    QTextStream _csvStream;
-    QTimer      _timer;
+    QFile              _csvFile;
+    QTextStream        _csvStream;
+    QTimer             _timer;
 
-    Vehicle*    _currentVehicle = nullptr;
-    qint64      _recordStartTimeMs = 0;
+    QPointer<Vehicle>  _currentVehicle;
+    qint64             _recordStartTimeMs = 0;
 
     // Drone GPS master clock synchronization
-    uint64_t    _droneTimeUsec = 0;
-    qint64      _lastDroneTimeReceivedMs = 0;
-    bool        _hasDroneGpsTime = false;
+    uint64_t           _droneTimeUsec = 0;
+    qint64             _lastDroneTimeReceivedMs = 0;
+    qint64             _lastDroneTimeSignalEmittedMs = 0;
+    qint64             _lastSensorsSignalEmittedMs = 0;
+    bool               _hasDroneGpsTime = false;
 };

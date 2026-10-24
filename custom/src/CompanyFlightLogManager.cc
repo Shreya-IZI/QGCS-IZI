@@ -331,7 +331,10 @@ void CompanyFlightLogManager::_handleActiveVehicleChanged(Vehicle *vehicle)
 
     if (_vehicle) {
         qCDebug(CompanyFlightLogManagerLog) << "Vehicle Connected - System ID:" << _vehicle->id();
-        (void) connect(_vehicle, &Vehicle::armedChanged, this, &CompanyFlightLogManager::_handleArmedChanged);
+        (void) connect(_vehicle.data(), &Vehicle::armedChanged, this, &CompanyFlightLogManager::_handleArmedChanged);
+        (void) connect(_vehicle.data(), &QObject::destroyed, this, [this]() {
+            _handleActiveVehicleChanged(nullptr);
+        });
         VehicleLinkManager *const vlm = _vehicle->vehicleLinkManager();
         if (vlm) {
             (void) connect(vlm, &VehicleLinkManager::primaryLinkChanged, this, &CompanyFlightLogManager::_updateLinkTransport);
@@ -350,8 +353,6 @@ void CompanyFlightLogManager::_handleActiveVehicleChanged(Vehicle *vehicle)
         } else {
             _onboardSyncStatus = QStringLiteral("IDLE");
             emit onboardSyncStatusChanged();
-            // Automatically scan for existing onboard logs shortly after initial connect
-            _autoSyncDelayTimer->start(1500);
         }
     } else {
         qCDebug(CompanyFlightLogManagerLog) << "Vehicle Disconnected";
@@ -403,11 +404,8 @@ void CompanyFlightLogManager::_handleArmedChanged(bool armed)
         _currentFlightEnd = QDateTime::currentDateTime();
         qCDebug(CompanyFlightLogManagerLog) << "Aircraft DISARMED. Flight ended at:" << _currentFlightEnd;
 
-        _onboardSyncStatus = QStringLiteral("WAITING FOR FLIGHT END");
+        _onboardSyncStatus = QStringLiteral("IDLE");
         emit onboardSyncStatusChanged();
-
-        // Give the flight controller logger module 2.5s to flush its buffer to the SD card before listing
-        _autoSyncDelayTimer->start(kPostFlightSyncDelayMs);
     }
 }
 
@@ -423,9 +421,11 @@ void CompanyFlightLogManager::_checkTelemetryFileGrowth()
 
     if (!files.isEmpty()) {
         const QFileInfo &latest = files.first();
-        _groundTelemetryPath = latest.absoluteFilePath();
-        _groundTelemetryBytes = latest.size();
-        emit groundTelemetryChanged();
+        if (_groundTelemetryPath != latest.absoluteFilePath() || _groundTelemetryBytes != latest.size()) {
+            _groundTelemetryPath = latest.absoluteFilePath();
+            _groundTelemetryBytes = latest.size();
+            emit groundTelemetryChanged();
+        }
     }
 
     _monitorDownloadProgress();
@@ -561,7 +561,8 @@ void CompanyFlightLogManager::_syncWithOnboardController()
 
     if (!entriesToDownload.isEmpty()) {
         qCDebug(CompanyFlightLogManagerLog) << "Detected" << entriesToDownload.count() << "new flight logs for UAS" << uasId;
-        _triggerOnboardLogDownload(entriesToDownload);
+        _onboardSyncStatus = QStringLiteral("LOG DETECTED");
+        emit onboardSyncStatusChanged();
     } else {
         qCDebug(CompanyFlightLogManagerLog) << "All flight logs for UAS" << uasId << "are already saved locally";
         _onboardSyncStatus = QStringLiteral("ALREADY SAVED");

@@ -63,7 +63,15 @@ CompanyDataOutput::CompanyDataOutput(QObject *parent)
 
 void CompanyDataOutput::_onActiveVehicleChanged(Vehicle *vehicle)
 {
+    if (_activeVehicle) {
+        disconnect(_activeVehicle.data(), &QObject::destroyed, this, nullptr);
+    }
     _activeVehicle = vehicle;
+    if (_activeVehicle) {
+        connect(_activeVehicle.data(), &QObject::destroyed, this, [this]() {
+            _activeVehicle = nullptr;
+        });
+    }
     qCDebug(CompanyDataOutputLog) << "Active vehicle changed to:" << (vehicle ? vehicle->id() : 0);
 }
 

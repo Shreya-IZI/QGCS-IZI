@@ -264,6 +264,9 @@ void CompanyCsvLogger::_connectVehicle(Vehicle *vehicle)
     _currentVehicle = vehicle;
     connect(_currentVehicle, &Vehicle::mavlinkMessageReceived,
             this, &CompanyCsvLogger::_onMavlinkMessageReceived);
+    connect(_currentVehicle.data(), &QObject::destroyed, this, [this]() {
+        _disconnectVehicle();
+    });
 
     qCDebug(CompanyCsvLoggerLog) << "Connected to Vehicle ID:" << vehicle->id();
 }
@@ -293,7 +296,10 @@ void CompanyCsvLogger::_onMavlinkMessageReceived(const mavlink_message_t &messag
             _droneTimeUsec = st.time_unix_usec;
             _lastDroneTimeReceivedMs = QDateTime::currentMSecsSinceEpoch();
             _hasDroneGpsTime = true;
-            emit droneTimeChanged();
+            if (_lastDroneTimeReceivedMs - _lastDroneTimeSignalEmittedMs >= 100) {
+                _lastDroneTimeSignalEmittedMs = _lastDroneTimeReceivedMs;
+                emit droneTimeChanged();
+            }
         }
         break;
     }
@@ -304,7 +310,10 @@ void CompanyCsvLogger::_onMavlinkMessageReceived(const mavlink_message_t &messag
             _droneTimeUsec = gps.time_usec;
             _lastDroneTimeReceivedMs = QDateTime::currentMSecsSinceEpoch();
             _hasDroneGpsTime = true;
-            emit droneTimeChanged();
+            if (_lastDroneTimeReceivedMs - _lastDroneTimeSignalEmittedMs >= 100) {
+                _lastDroneTimeSignalEmittedMs = _lastDroneTimeReceivedMs;
+                emit droneTimeChanged();
+            }
         }
         break;
     }
@@ -386,7 +395,11 @@ void CompanyCsvLogger::_onMavlinkMessageReceived(const mavlink_message_t &messag
     }
 
     if (sensorUpdated) {
-        emit rawSensorsChanged();
+        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+        if (nowMs - _lastSensorsSignalEmittedMs >= 100) {
+            _lastSensorsSignalEmittedMs = nowMs;
+            emit rawSensorsChanged();
+        }
     }
 }
 

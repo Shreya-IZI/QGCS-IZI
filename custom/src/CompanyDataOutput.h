@@ -2,6 +2,7 @@
 
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
+#include <QtCore/QPointer>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
 #include <QtNetwork/QUdpSocket>
@@ -82,6 +83,6 @@ private:
     QString    _lastError;
     QString    _lastPacketSample;
 
-    Vehicle*   _activeVehicle = nullptr;
+    QPointer<Vehicle> _activeVehicle;
     CompanyNetworkSettings* _networkSettings = nullptr;
 };

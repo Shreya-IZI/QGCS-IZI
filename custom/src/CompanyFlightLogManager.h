@@ -7,6 +7,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
+#include <QtCore/QPointer>
 #include <QtCore/QSet>
 #include <QtCore/QSettings>
 #include <QtCore/QString>
@@ -217,7 +218,7 @@ private:
     void _updateLinkTransport();
     void _monitorDownloadProgress();
 
-    Vehicle*            _vehicle = nullptr;
+    QPointer<Vehicle>   _vehicle;
     QmlObjectListModel* _logEntriesModel = nullptr;
     QTimer*             _telemetryPollTimer = nullptr;
     QTimer*             _autoSyncDelayTimer = nullptr;

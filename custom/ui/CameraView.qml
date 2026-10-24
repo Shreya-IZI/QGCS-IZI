@@ -27,9 +27,15 @@ Item {
     property string hmsMsTimestampStr: ""
     property string utcDateStr: ""
 
+    function _padNumber(n, len) {
+        var s = String(n);
+        while (s.length < len) s = "0" + s;
+        return s;
+    }
+
     Timer {
         id: utcTimer
-        interval: 33 // ~30 FPS refresh for smooth millisecond video timestamping
+        interval: 100 // 10 Hz refresh to prevent GC pressure and event-loop lag
         running: root.visible
         repeat: true
         onTriggered: {
@@ -37,18 +43,13 @@ Item {
                 CompanyTelemetry.currentDroneTimeMs :
                 Date.now();
             var d = new Date(nowMs);
-            function pad(n, len) {
-                var s = String(n);
-                while (s.length < len) s = "0" + s;
-                return s;
-            }
             var y = d.getUTCFullYear();
-            var mo = pad(d.getUTCMonth() + 1, 2);
-            var day = pad(d.getUTCDate(), 2);
-            var h = pad(d.getUTCHours(), 2);
-            var m = pad(d.getUTCMinutes(), 2);
-            var s = pad(d.getUTCSeconds(), 2);
-            var ms = pad(d.getUTCMilliseconds(), 3);
+            var mo = _padNumber(d.getUTCMonth() + 1, 2);
+            var day = _padNumber(d.getUTCDate(), 2);
+            var h = _padNumber(d.getUTCHours(), 2);
+            var m = _padNumber(d.getUTCMinutes(), 2);
+            var s = _padNumber(d.getUTCSeconds(), 2);
+            var ms = _padNumber(d.getUTCMilliseconds(), 3);
 
             root.hmsMsTimestampStr = h + ":" + m + ":" + s + ":" + ms;
             root.utcDateStr = y + "-" + mo + "-" + day;
