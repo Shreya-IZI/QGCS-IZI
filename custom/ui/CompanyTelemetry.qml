@@ -183,8 +183,36 @@ Item {
     // ========================================================================
     readonly property real   mavlinkLossPercent:    (hasVehicle && !isNaN(activeVehicle.mavlinkLossPercent)) ? activeVehicle.mavlinkLossPercent : 0
     readonly property int    linkQualityPercent:    hasVehicle ? Math.max(0, Math.min(100, Math.round(100 - mavlinkLossPercent))) : 0
-    readonly property bool   communicationLost:     hasVehicle && _linkMgr ? _linkMgr.communicationLost : false
-    readonly property bool   communicationValid:    hasVehicle && _linkMgr ? !_linkMgr.communicationLost : false
+
+    // Network jitter buffer (Ethernet UDP resilience against transient drops during video streaming)
+    property bool _commGraceActive: false
+    Timer {
+        id: commGraceTimer
+        interval: 3000 // 3.0s grace window before declaring hard communication loss
+        repeat: false
+        onTriggered: {
+            root._commGraceActive = false
+        }
+    }
+
+    onHasVehicleChanged: {
+        _commGraceActive = false
+        commGraceTimer.stop()
+    }
+
+    readonly property bool _rawCommLost: hasVehicle && _linkMgr ? _linkMgr.communicationLost : false
+    on_RawCommLostChanged: {
+        if (_rawCommLost) {
+            _commGraceActive = true
+            commGraceTimer.restart()
+        } else {
+            _commGraceActive = false
+            commGraceTimer.stop()
+        }
+    }
+
+    readonly property bool   communicationLost:     hasVehicle ? (_rawCommLost && !_commGraceActive) : false
+    readonly property bool   communicationValid:    hasVehicle ? (!_rawCommLost || _commGraceActive) : false
 
     // Radio & RSSI Telemetry (SiK / RFD / Microhard / RC)
     readonly property var    _radioStatus:          (hasVehicle && activeVehicle.radioStatus) ? activeVehicle.radioStatus : null
@@ -209,8 +237,7 @@ Item {
     readonly property bool   isSignalCritical:      communicationLost || (hasRadioStatus && radioLrssi < -105) || (hasRcRSSI && rcRSSI < 15) || (hasVehicle && linkQualityPercent < 30)
 
     // ========================================================================
-    // ========================================================================
-    // 9. Gimbal Telemetry (Pitch / Yaw / Roll)
+    // 9. Gimbal Telemetry (Pitch / Yaw / Roll) & Movement Controls
     // ========================================================================
     readonly property bool   hasGimbal:             _activeGimbal !== null || (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface !== null)
     readonly property real   gimbalPitch:           (_activeGimbal && _activeGimbal.absolutePitch && !isNaN(_activeGimbal.absolutePitch.rawValue)) ? _activeGimbal.absolutePitch.rawValue : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.pitch : NaN)
@@ -219,6 +246,40 @@ Item {
     readonly property string gimbalYawStr:          !isNaN(gimbalYaw) ? (gimbalYaw.toFixed(1) + "°") : "--"
     readonly property real   gimbalRoll:            (_activeGimbal && _activeGimbal.absoluteRoll && !isNaN(_activeGimbal.absoluteRoll.rawValue)) ? _activeGimbal.absoluteRoll.rawValue : ((typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface) ? CompanyPayloadInterface.roll : NaN)
     readonly property string gimbalRollStr:         !isNaN(gimbalRoll) ? (gimbalRoll.toFixed(1) + "°") : "--"
+
+    // Detailed Gimbal Movement & State
+    readonly property real   gimbalBodyYaw:         (_activeGimbal && _activeGimbal.bodyYaw && !isNaN(_activeGimbal.bodyYaw.rawValue)) ? _activeGimbal.bodyYaw.rawValue : 0.0
+    readonly property string gimbalBodyYawStr:      gimbalBodyYaw.toFixed(1) + "°"
+    readonly property real   gimbalPitchRate:       _activeGimbal ? _activeGimbal.pitchRate : 0.0
+    readonly property real   gimbalYawRate:         _activeGimbal ? _activeGimbal.yawRate : 0.0
+    readonly property bool   gimbalYawLock:         _activeGimbal ? _activeGimbal.yawLock : false
+    readonly property bool   gimbalRetracted:       _activeGimbal ? _activeGimbal.retracted : false
+    readonly property bool   gimbalHaveControl:     _activeGimbal ? _activeGimbal.gimbalHaveControl : false
+    readonly property string gimbalMotionState: {
+        if (!_activeGimbal) return "OFFLINE"
+        if (_activeGimbal.retracted) return "RETRACTED"
+        if (Math.abs(_activeGimbal.pitchRate) > 0.5 || Math.abs(_activeGimbal.yawRate) > 0.5) return "SLEWING"
+        if (_activeGimbal.yawLock) return "YAW LOCK"
+        return "STABILIZED"
+    }
+
+    function centerGimbal() {
+        if (_gimbalMgr && _gimbalMgr.centerGimbal) {
+            _gimbalMgr.centerGimbal()
+        }
+    }
+
+    function pointGimbalNadir() {
+        if (_gimbalMgr && _gimbalMgr.sendPitchBodyYaw) {
+            _gimbalMgr.sendPitchBodyYaw(-90.0, 0.0)
+        }
+    }
+
+    function pointGimbalHorizon() {
+        if (_gimbalMgr && _gimbalMgr.sendPitchBodyYaw) {
+            _gimbalMgr.sendPitchBodyYaw(0.0, 0.0)
+        }
+    }
 
     // ========================================================================
     // 10. Camera & Sensor FOV Telemetry
@@ -381,5 +442,57 @@ Item {
             }
         }
         _prevCommLost = communicationLost
+    }
+
+    // ========================================================================
+    // 12. Warning Messages & System StatusText Alerts
+    // ========================================================================
+    readonly property bool   messageTypeWarning:    hasVehicle && activeVehicle.messageTypeWarning
+    readonly property bool   messageTypeError:      hasVehicle && activeVehicle.messageTypeError
+    readonly property bool   messageTypeNormal:     hasVehicle && activeVehicle.messageTypeNormal
+    readonly property string formattedMessages:     hasVehicle ? activeVehicle.formattedMessages : ""
+
+    property string latestWarningText: ""
+    property string latestWarningSeverity: "" // "ERROR", "WARNING", "INFO"
+    property int warningCount: 0
+    property int errorCount: 0
+    property var messageHistory: []
+
+    function resetMessages() {
+        if (hasVehicle && activeVehicle.resetAllMessages) {
+            activeVehicle.resetAllMessages()
+        }
+        warningCount = 0
+        errorCount = 0
+    }
+
+    Connections {
+        target: root.activeVehicle
+        ignoreUnknownSignals: true
+        function onNewFormattedMessage(formattedMessage) {
+            var plain = formattedMessage.replace(/<[^>]*>/g, "").trim()
+            if (plain.length > 0) {
+                root.latestWarningText = plain
+                var isErr = root.activeVehicle ? root.activeVehicle.messageTypeError : false
+                var isWarn = root.activeVehicle ? root.activeVehicle.messageTypeWarning : false
+                if (isErr) {
+                    root.latestWarningSeverity = "ERROR"
+                    root.errorCount++
+                } else if (isWarn) {
+                    root.latestWarningSeverity = "WARNING"
+                    root.warningCount++
+                } else {
+                    root.latestWarningSeverity = "INFO"
+                }
+
+                var list = root.messageHistory.slice(0, 49)
+                list.unshift({
+                    text: plain,
+                    timestamp: Qt.formatDateTime(new Date(), "hh:mm:ss"),
+                    severity: root.latestWarningSeverity
+                })
+                root.messageHistory = list
+            }
+        }
     }
 }

@@ -975,6 +975,91 @@ Rectangle {
                 ToolTip.text: qsTr("Flight Safety & Failsafes Dashboard\nClick to inspect RC, Telemetry, Battery, and Geofence failsafes")
             }
 
+            // Vehicle Warning & Messages Indicator Button
+            Rectangle {
+                id: warningMsgBtn
+                Layout.preferredHeight: 28
+                implicitWidth: warningMsgRow.implicitWidth + 14
+                radius: CompanyTheme.radiusSm
+                color: {
+                    if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                        return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.25)
+                    }
+                    if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                        return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.2)
+                    }
+                    return warningMsgHover.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary
+                }
+                border.color: {
+                    if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                        return CompanyTheme.danger
+                    }
+                    if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                        return CompanyTheme.warning
+                    }
+                    return CompanyTheme.borderCard
+                }
+                border.width: (CompanyTelemetry.errorCount > 0 || CompanyTelemetry.warningCount > 0) ? 1.5 : 1
+
+                RowLayout {
+                    id: warningMsgRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    IconVector {
+                        name: "alert-triangle"
+                        size: 13
+                        color: {
+                            if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                                return CompanyTheme.danger
+                            }
+                            if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                                return CompanyTheme.warning
+                            }
+                            return CompanyTheme.textSecondary
+                        }
+                    }
+
+                    Text {
+                        text: {
+                            var total = CompanyTelemetry.errorCount + CompanyTelemetry.warningCount
+                            if (total > 0) return qsTr("ALERTS (%1)").arg(total)
+                            return qsTr("MESSAGES")
+                        }
+                        color: {
+                            if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                                return CompanyTheme.danger
+                            }
+                            if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                                return CompanyTheme.warning
+                            }
+                            return CompanyTheme.textSecondary
+                        }
+                        font.pointSize: 10
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+                }
+
+                MouseArea {
+                    id: warningMsgHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (messagesPopup.visible) {
+                            messagesPopup.close()
+                        } else {
+                            messagesPopup.open()
+                        }
+                    }
+                }
+
+                ToolTip.visible: warningMsgHover.containsMouse && !messagesPopup.visible
+                ToolTip.delay: 300
+                ToolTip.text: qsTr("Vehicle Alerts & MAVLink Warning Messages\nClick to inspect message history")
+            }
+
             // Connection Action Button
             Button {
                 id: connectBtn
@@ -1130,6 +1215,272 @@ Rectangle {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Autopilot Message History & Warning Popup
+    // ========================================================================
+    Popup {
+        id: messagesPopup
+        x: Math.max(10, Math.min(root.width - width - 10, warningMsgBtn.mapToItem(root, 0, 0).x - width + warningMsgBtn.width))
+        y: root.height + 4
+        width: 460
+        height: 340
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: CompanyTheme.bgSidebar
+            radius: CompanyTheme.radiusMd
+            border.color: CompanyTheme.borderCard
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 8
+
+            // Header
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                IconVector {
+                    name: "alert-triangle"
+                    size: 15
+                    color: CompanyTelemetry.errorCount > 0 ? CompanyTheme.danger : (CompanyTelemetry.warningCount > 0 ? CompanyTheme.warning : CompanyTheme.info)
+                }
+
+                Text {
+                    text: qsTr("VEHICLE MESSAGES & WARNINGS")
+                    color: CompanyTheme.textPrimary
+                    font.pointSize: CompanyTheme.fontSmall
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+
+                Button {
+                    text: qsTr("Clear")
+                    contentItem: Text {
+                        text: parent.text
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: 8
+                        font.bold: true
+                    }
+                    background: Rectangle {
+                        radius: 3
+                        color: parent.hovered ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: CompanyTheme.borderCard
+                    }
+                    onClicked: CompanyTelemetry.resetMessages()
+                }
+
+                Button {
+                    text: "✕"
+                    contentItem: Text {
+                        text: parent.text
+                        color: CompanyTheme.textMuted
+                        font.pointSize: 9
+                    }
+                    background: Rectangle {
+                        color: "transparent"
+                    }
+                    onClicked: messagesPopup.close()
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: CompanyTheme.borderCard
+            }
+
+            // Messages ListView
+            ListView {
+                id: msgListView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: 6
+                model: CompanyTelemetry.messageHistory
+
+                delegate: Rectangle {
+                    id: msgDelegate
+                    required property var modelData
+                    width: msgListView.width
+                    implicitHeight: msgCol.implicitHeight + 12
+                    radius: CompanyTheme.radiusSm
+                    color: {
+                        if (msgDelegate.modelData.severity === "ERROR") return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.15)
+                        if (msgDelegate.modelData.severity === "WARNING") return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.12)
+                        return CompanyTheme.bgCard
+                    }
+                    border.color: {
+                        if (msgDelegate.modelData.severity === "ERROR") return CompanyTheme.danger
+                        if (msgDelegate.modelData.severity === "WARNING") return CompanyTheme.warning
+                        return CompanyTheme.borderCard
+                    }
+                    border.width: 1
+
+                    ColumnLayout {
+                        id: msgCol
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 3
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Rectangle {
+                                radius: 2
+                                height: 14
+                                implicitWidth: sevText.implicitWidth + 6
+                                color: msgDelegate.modelData.severity === "ERROR" ? CompanyTheme.danger : (msgDelegate.modelData.severity === "WARNING" ? CompanyTheme.warning : CompanyTheme.info)
+
+                                Text {
+                                    id: sevText
+                                    anchors.centerIn: parent
+                                    text: msgDelegate.modelData.severity
+                                    color: CompanyTheme.textLight
+                                    font.pointSize: 6.5
+                                    font.bold: true
+                                }
+                            }
+
+                            Text {
+                                text: msgDelegate.modelData.timestamp
+                                color: CompanyTheme.textMuted
+                                font.pointSize: 7.5
+                                font.family: CompanyTheme.fontMono
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: msgDelegate.modelData.text
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: 8.5
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                }
+
+                // Empty State
+                Text {
+                    anchors.centerIn: parent
+                    visible: CompanyTelemetry.messageHistory.length === 0
+                    text: qsTr("No alerts or warning messages received.")
+                    color: CompanyTheme.textMuted
+                    font.pointSize: CompanyTheme.fontSmall
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Slide-Down Warning & Alert Toast Banner
+    // ========================================================================
+    Rectangle {
+        id: toastBanner
+        anchors.top: root.bottom
+        anchors.topMargin: 4
+        anchors.horizontalCenter: parent.horizontalCenter
+        z: 9999
+        visible: false
+        opacity: visible ? 1.0 : 0.0
+        implicitWidth: toastRow.implicitWidth + 24
+        implicitHeight: 34
+        radius: CompanyTheme.radiusSm
+        color: {
+            if (CompanyTelemetry.latestWarningSeverity === "ERROR") return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.95)
+            if (CompanyTelemetry.latestWarningSeverity === "WARNING") return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.95)
+            return Qt.rgba(CompanyTheme.bgSidebar.r, CompanyTheme.bgSidebar.g, CompanyTheme.bgSidebar.b, 0.95)
+        }
+        border.color: CompanyTelemetry.latestWarningSeverity === "ERROR" ? CompanyTheme.danger : CompanyTheme.warning
+        border.width: 1
+
+        Behavior on opacity {
+            NumberAnimation { duration: 180 }
+        }
+
+        RowLayout {
+            id: toastRow
+            anchors.centerIn: parent
+            spacing: 8
+
+            IconVector {
+                name: "alert-triangle"
+                size: 14
+                color: CompanyTelemetry.latestWarningSeverity === "ERROR" ? CompanyTheme.textLight : (CompanyTelemetry.latestWarningSeverity === "WARNING" ? CompanyTheme.bgSidebar : CompanyTheme.textPrimary)
+            }
+
+            Text {
+                text: "[" + CompanyTelemetry.latestWarningSeverity + "] " + CompanyTelemetry.latestWarningText
+                color: CompanyTelemetry.latestWarningSeverity === "ERROR" ? CompanyTheme.textLight : (CompanyTelemetry.latestWarningSeverity === "WARNING" ? CompanyTheme.bgSidebar : CompanyTheme.textPrimary)
+                font.pointSize: 8.5
+                font.bold: true
+                elide: Text.ElideRight
+                Layout.maximumWidth: 500
+            }
+
+            Text {
+                text: qsTr("(Click to view)")
+                color: CompanyTelemetry.latestWarningSeverity === "ERROR" ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(0, 0, 0, 0.6)
+                font.pointSize: 7.5
+            }
+
+            Rectangle {
+                width: 16
+                height: 16
+                radius: 8
+                color: Qt.rgba(0, 0, 0, 0.2)
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "✕"
+                    color: CompanyTelemetry.latestWarningSeverity === "ERROR" ? CompanyTheme.textLight : (CompanyTelemetry.latestWarningSeverity === "WARNING" ? CompanyTheme.bgSidebar : CompanyTheme.textPrimary)
+                    font.pointSize: 7.5
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        toastTimer.stop()
+                        toastBanner.visible = false
+                    }
+                }
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                toastTimer.stop()
+                toastBanner.visible = false
+                messagesPopup.open()
+            }
+        }
+
+        Timer {
+            id: toastTimer
+            interval: 6000
+            repeat: false
+            onTriggered: toastBanner.visible = false
+        }
+    }
+
+    Connections {
+        target: CompanyTelemetry
+        function onLatestWarningTextChanged() {
+            if (CompanyTelemetry.latestWarningText !== "") {
+                toastBanner.visible = true
+                toastTimer.restart()
             }
         }
     }

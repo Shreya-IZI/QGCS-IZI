@@ -11,7 +11,7 @@ import Company.UI
 Item {
     id: root
 
-    property string currentSubView: "SYSTEM" // "MAP", "PFD", "CAM", "SYSTEM"
+    property string currentSubView: "SYSTEM" // "MAP", "PFD", "RGB_CAM", "IR_CAM", "SYSTEM"
     signal navigateToTab(int tabIndex)
 
     readonly property bool _hasVehicle:         CompanyTelemetry.hasVehicle
@@ -313,10 +313,20 @@ Item {
             visible: root.currentSubView === "SYSTEM"
         }
 
-        // Viewport 4: Dual-Camera Surveillance Workspace (RGB & Thermal)
+        // Viewport 4: Dedicated Daylight Camera Workspace (RGB)
         CameraView {
+            id: daylightCameraView
             anchors.fill: parent
-            visible: root.currentSubView === "CAM"
+            currentMode: "RGB_ONLY"
+            visible: root.currentSubView === "RGB_CAM" || root.currentSubView === "CAM"
+        }
+
+        // Viewport 5: Dedicated Thermal IR Camera Workspace (Thermal)
+        CameraView {
+            id: thermalCameraView
+            anchors.fill: parent
+            currentMode: "THERMAL_ONLY"
+            visible: root.currentSubView === "IR_CAM"
         }
     }
 
@@ -345,10 +355,11 @@ Item {
 
             Repeater {
                 model: [
-                    { id: "MAP",    label: qsTr("MAP"),    icon: "flight" },
-                    { id: "PFD",    label: qsTr("PFD"),    icon: "dashboard" },
-                    { id: "CAM",    label: qsTr("CAM"),    icon: "video" },
-                    { id: "SYSTEM", label: qsTr("SYSTEM"), icon: "settings" }
+                    { id: "MAP",     label: qsTr("MAP"),     icon: "flight" },
+                    { id: "PFD",     label: qsTr("PFD"),     icon: "dashboard" },
+                    { id: "RGB_CAM", label: qsTr("DAY CAM"), icon: "video" },
+                    { id: "IR_CAM",  label: qsTr("IR CAM"),  icon: "video" },
+                    { id: "SYSTEM",  label: qsTr("SYSTEM"),  icon: "settings" }
                 ]
 
                 delegate: Rectangle {

@@ -10,7 +10,7 @@ Rectangle {
 
     property int    currentTab: 1 // Backward-compatible tab index (0/1: Dashboard, 2: Missions, 3: Fleet, 4: Logs, 5: Settings, 6: Parameters, 7: Vehicle Setup)
     property string activeSection: "OPERATIONS" // "OPERATIONS", "VEHICLE", "TOOLS"
-    property string activeSubView: "SYSTEM"     // "MAP", "PFD", "CAM", "SYSTEM"
+    property string activeSubView: "SYSTEM"     // "MAP", "PFD", "RGB_CAM", "IR_CAM", "SYSTEM"
     property int    activeTool: -1              // 2: Missions, 3: Fleet, 4: Logs, 5: Settings
     property int    activeVehicleItem: -1       // 6: Parameters, 7: Vehicle Setup
     property bool   isExpanded: true
@@ -171,14 +171,15 @@ Rectangle {
                 spacing: 3
 
                 // ============================================================
-                // 1. NAVIGATION ITEMS (MAP, PFD, CAM, SYSTEM)
+                // 1. NAVIGATION ITEMS (MAP, PFD, RGB_CAM, IR_CAM, SYSTEM)
                 // ============================================================
                 Repeater {
                     model: [
-                        { id: "MAP",    title: qsTr("Map View"), icon: "flight" },
-                        { id: "PFD",    title: qsTr("PFD HUD"),  icon: "dashboard" },
-                        { id: "CAM",    title: qsTr("Camera"),   icon: "video" },
-                        { id: "SYSTEM", title: qsTr("System"),   icon: "settings" }
+                        { id: "MAP",     title: qsTr("Map View"),      icon: "flight" },
+                        { id: "PFD",     title: qsTr("PFD HUD"),       icon: "dashboard" },
+                        { id: "RGB_CAM", title: qsTr("Daylight Cam"),  icon: "video" },
+                        { id: "IR_CAM",  title: qsTr("Thermal IR"),    icon: "video" },
+                        { id: "SYSTEM",  title: qsTr("System"),        icon: "settings" }
                     ]
 
                     delegate: Rectangle {

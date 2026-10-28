@@ -990,34 +990,199 @@ Item {
             ColumnLayout {
                 id: osdBottomLeftLayout
                 anchors.centerIn: parent
-                spacing: 4
+                spacing: 5
 
-                // Row 1: Gimbal Attitude (Pitch / Yaw / Roll)
+                // Row 1: Gimbal Movement Header, Status Pill & Presets
                 RowLayout {
-                    spacing: 10
+                    spacing: 8
+                    Layout.fillWidth: true
+
+                    // Mini Direction Indicator Dial (Drone nose up, gimbal body yaw needle)
+                    Rectangle {
+                        width: 24
+                        height: 24
+                        radius: 12
+                        color: CompanyTheme.bgCard
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        // Drone nose reference tick (top)
+                        Rectangle {
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: 2
+                            height: 4
+                            color: CompanyTheme.textSecondary
+                        }
+
+                        // Gimbal relative azimuth pointer needle
+                        Item {
+                            anchors.centerIn: parent
+                            width: 20
+                            height: 20
+                            rotation: CompanyTelemetry.gimbalBodyYaw
+
+                            Rectangle {
+                                anchors.top: parent.top
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: 2.5
+                                height: 8
+                                radius: 1
+                                color: CompanyTheme.primary
+                            }
+                        }
+                    }
+
                     Text {
-                        text: "GMB PITCH: " + CompanyTelemetry.gimbalPitchStr
+                        text: qsTr("GIMBAL MOVEMENT")
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                        font.letterSpacing: 0.5
+                    }
+
+                    // Motion State Pill (STABILIZED, SLEWING, YAW LOCK, RETRACTED)
+                    Rectangle {
+                        radius: CompanyTheme.radiusSm - 1
+                        height: 18
+                        implicitWidth: gmbStateText.implicitWidth + 8
+                        color: {
+                            var st = CompanyTelemetry.gimbalMotionState
+                            if (st === "SLEWING") return CompanyTheme.warningDim
+                            if (st === "STABILIZED") return CompanyTheme.successDim
+                            if (st === "YAW LOCK") return CompanyTheme.primaryDim
+                            return CompanyTheme.bgCard
+                        }
+                        border.color: {
+                            var st = CompanyTelemetry.gimbalMotionState
+                            if (st === "SLEWING") return CompanyTheme.warning
+                            if (st === "STABILIZED") return CompanyTheme.success
+                            if (st === "YAW LOCK") return CompanyTheme.primary
+                            return CompanyTheme.borderCard
+                        }
+                        border.width: 1
+
+                        Text {
+                            id: gmbStateText
+                            anchors.centerIn: parent
+                            text: CompanyTelemetry.gimbalMotionState
+                            color: {
+                                var st = CompanyTelemetry.gimbalMotionState
+                                if (st === "SLEWING") return CompanyTheme.warning
+                                if (st === "STABILIZED") return CompanyTheme.success
+                                if (st === "YAW LOCK") return CompanyTheme.primary
+                                return CompanyTheme.textMuted
+                            }
+                            font.pointSize: 7.5
+                            font.bold: true
+                        }
+                    }
+
+                    // Gimbal Center Preset Action
+                    Rectangle {
+                        height: 18
+                        implicitWidth: gmbCenterText.implicitWidth + 8
+                        radius: CompanyTheme.radiusSm - 1
+                        color: gmbCenterMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: gmbCenterMouse.containsMouse ? CompanyTheme.borderActive : CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            id: gmbCenterText
+                            anchors.centerIn: parent
+                            text: qsTr("CENTER")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: 7.5
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: gmbCenterMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: CompanyTelemetry.centerGimbal()
+                        }
+                    }
+
+                    // Nadir (-90°) Preset Action
+                    Rectangle {
+                        height: 18
+                        implicitWidth: gmbNadirText.implicitWidth + 8
+                        radius: CompanyTheme.radiusSm - 1
+                        color: gmbNadirMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: gmbNadirMouse.containsMouse ? CompanyTheme.borderActive : CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            id: gmbNadirText
+                            anchors.centerIn: parent
+                            text: qsTr("NADIR -90°")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: 7.5
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: gmbNadirMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: CompanyTelemetry.pointGimbalNadir()
+                        }
+                    }
+                }
+
+                // Row 2: Comprehensive Angles (Pitch, Body Yaw, World Yaw, Roll)
+                RowLayout {
+                    spacing: 12
+                    Text {
+                        text: "PITCH: " + CompanyTelemetry.gimbalPitchStr + (!isNaN(CompanyTelemetry.gimbalPitch) && CompanyTelemetry.gimbalPitch <= -85 ? " (NADIR)" : (!isNaN(CompanyTelemetry.gimbalPitch) && Math.abs(CompanyTelemetry.gimbalPitch) <= 5 ? " (LEVEL)" : ""))
                         color: CompanyTheme.textPrimary
                         font.pointSize: CompanyTheme.fontTiny
                         font.bold: true
                         font.family: "Monospace"
                     }
                     Text {
-                        text: "GMB YAW: " + CompanyTelemetry.gimbalYawStr
-                        color: CompanyTheme.textPrimary
+                        text: "REL YAW: " + CompanyTelemetry.gimbalBodyYawStr
+                        color: CompanyTheme.primary
                         font.pointSize: CompanyTheme.fontTiny
                         font.bold: true
+                        font.family: "Monospace"
+                    }
+                    Text {
+                        text: "WORLD YAW: " + CompanyTelemetry.gimbalYawStr
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
                         font.family: "Monospace"
                     }
                     Text {
                         text: "ROLL: " + CompanyTelemetry.gimbalRollStr
-                        color: CompanyTheme.textSecondary
+                        color: CompanyTheme.textMuted
                         font.pointSize: CompanyTheme.fontTiny
                         font.family: "Monospace"
                     }
                 }
 
-                // Row 2: Mode-Aware Sensor HFOV
+                // Row 3: Motion Rates (Degrees/sec)
+                RowLayout {
+                    spacing: 12
+                    visible: CompanyTelemetry.hasGimbal
+                    Text {
+                        text: "RATE PITCH: " + (CompanyTelemetry.gimbalPitchRate !== 0 ? CompanyTelemetry.gimbalPitchRate.toFixed(1) : "0.0") + "°/s"
+                        color: Math.abs(CompanyTelemetry.gimbalPitchRate) > 0.5 ? CompanyTheme.warning : CompanyTheme.textMuted
+                        font.pointSize: 7.5
+                        font.family: "Monospace"
+                    }
+                    Text {
+                        text: "RATE YAW: " + (CompanyTelemetry.gimbalYawRate !== 0 ? CompanyTelemetry.gimbalYawRate.toFixed(1) : "0.0") + "°/s"
+                        color: Math.abs(CompanyTelemetry.gimbalYawRate) > 0.5 ? CompanyTheme.warning : CompanyTheme.textMuted
+                        font.pointSize: 7.5
+                        font.family: "Monospace"
+                    }
+                }
+
+                // Row 4: Mode-Aware Sensor HFOV
                 RowLayout {
                     spacing: 10
                     Text {
@@ -1044,7 +1209,7 @@ Item {
                     }
                 }
 
-                // Row 3: Laser Rangefinder (LRF) & Payload Status
+                // Row 5: Laser Rangefinder (LRF) & Payload Status
                 RowLayout {
                     spacing: 10
                     visible: CompanyTelemetry.hasLrfDistance || (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.isSimulation)

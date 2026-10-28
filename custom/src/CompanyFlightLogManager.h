@@ -226,6 +226,7 @@ private:
 
     bool    _groundTelemetryRecording = false;
     QString _groundTelemetryPath;
+    QString _cachedTelemetryFile;
     qint64  _groundTelemetryBytes = 0;
     QString _groundTelemetryStatus = QStringLiteral("IDLE");
 

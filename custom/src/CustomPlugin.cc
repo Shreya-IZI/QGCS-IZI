@@ -154,16 +154,11 @@ void CustomPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
             // Register root window as context property so all nested loaders and views can access mainWindow
             qmlEngine->rootContext()->setContextProperty(QStringLiteral("mainWindow"), window);
 
-            // Connect QML engine quit and last window closed signals to guarantee the application event
-            // loop terminates properly across all platforms (preventing background zombie instances on Windows).
+            // Connect QML engine quit and main window closing signals to guarantee the application event
+            // loop terminates properly when user exits (preventing background zombie instances on Windows).
+            // NOTE: We do NOT connect to QGuiApplication::lastWindowClosed because on Windows 11, display sleep/lock
+            // or transient child modal closures trigger lastWindowClosed, causing premature termination at 12-15 minutes.
             (void) QObject::connect(qmlEngine, &QQmlEngine::quit, qGuiApp, [window]() {
-                if (window) {
-                    window->setProperty("_forceClose", true);
-                }
-                QCoreApplication::quit();
-            });
-
-            (void) QObject::connect(qGuiApp, &QGuiApplication::lastWindowClosed, qGuiApp, [window]() {
                 if (window) {
                     window->setProperty("_forceClose", true);
                 }

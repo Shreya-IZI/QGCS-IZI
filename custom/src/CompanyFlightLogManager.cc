@@ -315,8 +315,9 @@ QString CompanyFlightLogManager::onboardLogSavePath() const
 
 void CompanyFlightLogManager::_handleActiveVehicleChanged(Vehicle *vehicle)
 {
-    if (_vehicle) {
-        (void) disconnect(_vehicle, &Vehicle::armedChanged, this, &CompanyFlightLogManager::_handleArmedChanged);
+    if (_vehicle && _vehicle != vehicle) {
+        (void) disconnect(_vehicle.data(), &Vehicle::armedChanged, this, &CompanyFlightLogManager::_handleArmedChanged);
+        (void) disconnect(_vehicle.data(), &QObject::destroyed, this, nullptr);
         VehicleLinkManager *const oldVlm = _vehicle->vehicleLinkManager();
         if (oldVlm) {
             (void) disconnect(oldVlm, &VehicleLinkManager::primaryLinkChanged, this, &CompanyFlightLogManager::_updateLinkTransport);
@@ -324,6 +325,7 @@ void CompanyFlightLogManager::_handleActiveVehicleChanged(Vehicle *vehicle)
     }
 
     _vehicle = vehicle;
+    _cachedTelemetryFile.clear();
 
     emit hasVehicleChanged();
     emit activeUasIdChanged();
@@ -333,6 +335,8 @@ void CompanyFlightLogManager::_handleActiveVehicleChanged(Vehicle *vehicle)
         qCDebug(CompanyFlightLogManagerLog) << "Vehicle Connected - System ID:" << _vehicle->id();
         (void) connect(_vehicle.data(), &Vehicle::armedChanged, this, &CompanyFlightLogManager::_handleArmedChanged);
         (void) connect(_vehicle.data(), &QObject::destroyed, this, [this]() {
+            _vehicle = nullptr;
+            _cachedTelemetryFile.clear();
             _handleActiveVehicleChanged(nullptr);
         });
         VehicleLinkManager *const vlm = _vehicle->vehicleLinkManager();
@@ -415,16 +419,32 @@ void CompanyFlightLogManager::_handleFlightTimeChanged()
 
 void CompanyFlightLogManager::_checkTelemetryFileGrowth()
 {
-    const QString telDir = telemetrySavePath();
-    const QDir dir(telDir);
-    const QFileInfoList files = dir.entryInfoList(QStringList() << QStringLiteral("*.tlog"), QDir::Files, QDir::Time);
+    bool fileFound = false;
+    if (!_cachedTelemetryFile.isEmpty()) {
+        const QFileInfo fi(_cachedTelemetryFile);
+        if (fi.exists()) {
+            fileFound = true;
+            if (_groundTelemetryPath != fi.absoluteFilePath() || _groundTelemetryBytes != fi.size()) {
+                _groundTelemetryPath = fi.absoluteFilePath();
+                _groundTelemetryBytes = fi.size();
+                emit groundTelemetryChanged();
+            }
+        }
+    }
 
-    if (!files.isEmpty()) {
-        const QFileInfo &latest = files.first();
-        if (_groundTelemetryPath != latest.absoluteFilePath() || _groundTelemetryBytes != latest.size()) {
-            _groundTelemetryPath = latest.absoluteFilePath();
-            _groundTelemetryBytes = latest.size();
-            emit groundTelemetryChanged();
+    if (!fileFound) {
+        const QString telDir = telemetrySavePath();
+        const QDir dir(telDir);
+        const QFileInfoList files = dir.entryInfoList(QStringList() << QStringLiteral("*.tlog"), QDir::Files, QDir::Time);
+
+        if (!files.isEmpty()) {
+            const QFileInfo &latest = files.first();
+            _cachedTelemetryFile = latest.absoluteFilePath();
+            if (_groundTelemetryPath != latest.absoluteFilePath() || _groundTelemetryBytes != latest.size()) {
+                _groundTelemetryPath = latest.absoluteFilePath();
+                _groundTelemetryBytes = latest.size();
+                emit groundTelemetryChanged();
+            }
         }
     }
 
