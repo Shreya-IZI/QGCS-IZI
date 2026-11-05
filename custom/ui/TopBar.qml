@@ -778,6 +778,95 @@ Rectangle {
                 }
             }
 
+            // 3T. SAFE-T Tether Power & Tension Chip (Tethered GCS Mode Only)
+            Rectangle {
+                id: tetherChip
+                readonly property var _tether: (typeof SafeTManager !== "undefined" && SafeTManager) ? SafeTManager : (typeof safeTManager !== "undefined" ? safeTManager : null)
+                visible: _tether !== null && _tether.isConnected
+                Layout.preferredHeight: 28
+                implicitWidth: tetherChipRow.implicitWidth + 16
+                radius: CompanyTheme.radiusSm
+                color: CompanyTheme.bgCardSecondary
+                border.color: {
+                    if (!_tether) return CompanyTheme.borderCard
+                    if (_tether.highTensionAlarm || _tether.powerCutoffAlarm) return CompanyTheme.danger
+                    if (_tether.isStale || _tether.lengthLimitAlarm) return CompanyTheme.warning
+                    return CompanyTheme.borderCard
+                }
+                border.width: (_tether && (_tether.highTensionAlarm || _tether.powerCutoffAlarm || _tether.isStale)) ? 1.5 : 1
+
+                RowLayout {
+                    id: tetherChipRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    IconVector {
+                        name: "activity"
+                        size: 13
+                        color: {
+                            if (!tetherChip._tether) return CompanyTheme.textMuted
+                            if (tetherChip._tether.highTensionAlarm || tetherChip._tether.powerCutoffAlarm) return CompanyTheme.danger
+                            if (tetherChip._tether.isStale) return CompanyTheme.warning
+                            return CompanyTheme.primary
+                        }
+                    }
+
+                    Text {
+                        text: qsTr("TETHER")
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: 9
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: tetherChip._tether ? (tetherChip._tether.tensionN.toFixed(1) + " N") : "-- N"
+                        color: (tetherChip._tether && tetherChip._tether.highTensionAlarm) ? CompanyTheme.danger : CompanyTheme.textPrimary
+                        font.pointSize: 10
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+
+                    Text {
+                        visible: !root._isNarrow && tetherChip._tether
+                        text: "• " + (tetherChip._tether ? (tetherChip._tether.tetherLengthM.toFixed(0) + "m") : "")
+                        color: CompanyTheme.primary
+                        font.pointSize: 10
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+
+                    Text {
+                        visible: !root._isNarrow && tetherChip._tether
+                        text: "• " + (tetherChip._tether ? (tetherChip._tether.stationVoltageV.toFixed(0) + "V") : "")
+                        color: (tetherChip._tether && tetherChip._tether.powerCutoffAlarm) ? CompanyTheme.danger : CompanyTheme.textPrimary
+                        font.pointSize: 10
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+                }
+
+                ToolTip.visible: tetherMouseArea.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: {
+                    if (!_tether) return qsTr("Tether: Disconnected")
+                    var lines = [
+                        qsTr("Tether Station: %1").arg(_tether.connectionStatus),
+                        qsTr("Line Tension: %1 N").arg(_tether.tensionN.toFixed(1)),
+                        qsTr("Deployed Length: %1 m").arg(_tether.tetherLengthM.toFixed(1)),
+                        qsTr("Station Bus: %1 V • %2 A").arg(_tether.stationVoltageV.toFixed(1)).arg(_tether.stationCurrentA.toFixed(1)),
+                        qsTr("Drum Temp: %1 °C").arg(_tether.drumTempC.toFixed(1)),
+                        qsTr("Winch State: %1").arg(_tether.winchStatus)
+                    ]
+                    return lines.join("\n")
+                }
+
+                MouseArea {
+                    id: tetherMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+            }
+
             // 3C. RSSI & Communication Link Chip
             Rectangle {
                 id: rssiChip
@@ -978,28 +1067,30 @@ Rectangle {
             // Vehicle Warning & Messages Indicator Button
             Rectangle {
                 id: warningMsgBtn
+                readonly property bool _hasTetherCritical: tetherChip._tether && (tetherChip._tether.highTensionAlarm || tetherChip._tether.powerCutoffAlarm)
+                readonly property bool _hasTetherWarning: tetherChip._tether && tetherChip._tether.lengthLimitAlarm
                 Layout.preferredHeight: 28
                 implicitWidth: warningMsgRow.implicitWidth + 14
                 radius: CompanyTheme.radiusSm
                 color: {
-                    if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                    if (_hasTetherCritical || CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
                         return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.25)
                     }
-                    if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                    if (_hasTetherWarning || CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
                         return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.2)
                     }
                     return warningMsgHover.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary
                 }
                 border.color: {
-                    if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                    if (_hasTetherCritical || CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
                         return CompanyTheme.danger
                     }
-                    if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                    if (_hasTetherWarning || CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
                         return CompanyTheme.warning
                     }
                     return CompanyTheme.borderCard
                 }
-                border.width: (CompanyTelemetry.errorCount > 0 || CompanyTelemetry.warningCount > 0) ? 1.5 : 1
+                border.width: (_hasTetherCritical || _hasTetherWarning || CompanyTelemetry.errorCount > 0 || CompanyTelemetry.warningCount > 0) ? 1.5 : 1
 
                 RowLayout {
                     id: warningMsgRow
@@ -1010,10 +1101,10 @@ Rectangle {
                         name: "alert-triangle"
                         size: 13
                         color: {
-                            if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                            if (warningMsgBtn._hasTetherCritical || CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
                                 return CompanyTheme.danger
                             }
-                            if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                            if (warningMsgBtn._hasTetherWarning || CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
                                 return CompanyTheme.warning
                             }
                             return CompanyTheme.textSecondary
@@ -1022,15 +1113,16 @@ Rectangle {
 
                     Text {
                         text: {
-                            var total = CompanyTelemetry.errorCount + CompanyTelemetry.warningCount
+                            var tetherAlertCount = (warningMsgBtn._hasTetherCritical || warningMsgBtn._hasTetherWarning) ? 1 : 0
+                            var total = CompanyTelemetry.errorCount + CompanyTelemetry.warningCount + tetherAlertCount
                             if (total > 0) return qsTr("ALERTS (%1)").arg(total)
                             return qsTr("MESSAGES")
                         }
                         color: {
-                            if (CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
+                            if (warningMsgBtn._hasTetherCritical || CompanyTelemetry.errorCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeError)) {
                                 return CompanyTheme.danger
                             }
-                            if (CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
+                            if (warningMsgBtn._hasTetherWarning || CompanyTelemetry.warningCount > 0 || (CompanyTelemetry.hasVehicle && CompanyTelemetry.activeVehicle.messageTypeWarning)) {
                                 return CompanyTheme.warning
                             }
                             return CompanyTheme.textSecondary
@@ -1295,6 +1387,41 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
                 color: CompanyTheme.borderCard
+            }
+
+            // Active Tether Alert Banner (Tethered Drone GCS)
+            Rectangle {
+                id: tetherAlertBanner
+                readonly property var _tether: tetherChip._tether
+                visible: _tether !== null && (_tether.highTensionAlarm || _tether.powerCutoffAlarm || _tether.lengthLimitAlarm)
+                Layout.fillWidth: true
+                Layout.preferredHeight: visible ? 34 : 0
+                radius: CompanyTheme.radiusSm
+                color: (_tether && (_tether.highTensionAlarm || _tether.powerCutoffAlarm)) ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.25) : Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.25)
+                border.color: (_tether && (_tether.highTensionAlarm || _tether.powerCutoffAlarm)) ? CompanyTheme.danger : CompanyTheme.warning
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 8
+
+                    IconVector {
+                        name: "alert-triangle"
+                        size: 14
+                        color: tetherAlertBanner.border.color
+                    }
+
+                    Text {
+                        text: tetherAlertBanner._tether ? tetherAlertBanner._tether.activeAlertMessage : ""
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: 9
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                    }
+                }
             }
 
             // Messages ListView

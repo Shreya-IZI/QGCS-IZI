@@ -17,6 +17,9 @@
 #include "MavlinkSettings.h"
 #include "MultiVehicleManager.h"
 #include "CompanyPayloadInterface.h"
+#ifdef IZI_PRODUCT_TETHERED
+#include "SafeTManager.h"
+#endif
 #include "QGCLoggingCategory.h"
 #include "SettingsManager.h"
 #include "Vehicle.h"
@@ -417,7 +420,11 @@ void CompanyCsvLogger::_initializeTelemetryCsv()
 
     const QString nowStr = QDateTime::currentDateTimeUtc().toString("yyyy-MM-dd_HH-mm-ss");
     const int sysId = _currentVehicle ? _currentVehicle->id() : 1;
+#ifdef IZI_PRODUCT_TETHERED
+    _currentLogFileName = QStringLiteral("%1_vehicle%2_tether_telemetry.csv").arg(nowStr).arg(sysId);
+#else
     _currentLogFileName = QStringLiteral("%1_vehicle%2_chandipur_telemetry.csv").arg(nowStr).arg(sysId);
+#endif
 
     _csvFile.setFileName(dir.absoluteFilePath(_currentLogFileName));
     if (!_csvFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append)) {
@@ -471,6 +478,14 @@ void CompanyCsvLogger::_writeHeader()
                << "MagY_mG,"
                << "MagZ_mG,"
                << "FOV_deg,"
+#ifdef IZI_PRODUCT_TETHERED
+               << "TetherTension_N,"
+               << "TetherLength_m,"
+               << "StationVoltage_V,"
+               << "StationCurrent_A,"
+               << "DrumTemp_C,"
+               << "WinchStatus,"
+#endif
                << "EventDetails\n";
     _csvStream.flush();
 }
@@ -613,8 +628,26 @@ void CompanyCsvLogger::_writeTelemetryRow()
                << magXStr << ","
                << magYStr << ","
                << magZStr << ","
-               << fovStr << ","
-               << modeStr << "\n";
+               << fovStr << ",";
+
+#ifdef IZI_PRODUCT_TETHERED
+    SafeTManager *safeT = SafeTManager::instance();
+    const QString tensionStr = safeT ? QString::number(safeT->tensionN(), 'f', 1) : QStringLiteral("0.0");
+    const QString lengthStr  = safeT ? QString::number(safeT->tetherLengthM(), 'f', 1) : QStringLiteral("0.0");
+    const QString voltStr    = safeT ? QString::number(safeT->stationVoltageV(), 'f', 1) : QStringLiteral("0.0");
+    const QString currStr    = safeT ? QString::number(safeT->stationCurrentA(), 'f', 2) : QStringLiteral("0.0");
+    const QString tempStr    = safeT ? QString::number(safeT->drumTempC(), 'f', 1) : QStringLiteral("0.0");
+    const QString winchStr   = safeT ? safeT->winchStatus() : QStringLiteral("N/A");
+
+    _csvStream << tensionStr << ","
+               << lengthStr << ","
+               << voltStr << ","
+               << currStr << ","
+               << tempStr << ","
+               << winchStr << ",";
+#endif
+
+    _csvStream << modeStr << "\n";
     _csvStream.flush();
 
     _samplesLogged++;
@@ -665,6 +698,9 @@ void CompanyCsvLogger::logSnapshotEvent(const QString &fileName,
                    << (_hasMag ? QString::number(_lastMagY, 'f', 1) : "N/A") << ","
                    << (_hasMag ? QString::number(_lastMagZ, 'f', 1) : "N/A") << ","
                    << fovStr << ","
+#ifdef IZI_PRODUCT_TETHERED
+                   << ",,,,,," // empty tether fields
+#endif
                    << fileName << "\n";
         _csvStream.flush();
     }
@@ -715,7 +751,11 @@ void CompanyCsvLogger::logRecordStartEvent(const QString &fileName)
     if (_csvFile.isOpen()) {
         _csvStream << nowIso << ","
                    << "RECORD_START,"
+#ifdef IZI_PRODUCT_TETHERED
+                   << ",,,,,,,,,,,,,,,,,,,,,," // empty sensor + tether fields
+#else
                    << ",,,,,,,,,,,,,,,," // empty sensor fields
+#endif
                    << "START: " << fileName << "\n";
         _csvStream.flush();
     }
@@ -732,7 +772,11 @@ void CompanyCsvLogger::logRecordStopEvent(const QString &fileName, int durationS
     if (_csvFile.isOpen()) {
         _csvStream << nowIso << ","
                    << "RECORD_STOP,"
+#ifdef IZI_PRODUCT_TETHERED
+                   << ",,,,,,,,,,,,,,,,,,,,,," // empty sensor + tether fields
+#else
                    << ",,,,,,,,,,,,,,,," // empty sensor fields
+#endif
                    << "STOP: " << fileName << " (duration: " << durationSec << "s)\n";
         _csvStream.flush();
     }

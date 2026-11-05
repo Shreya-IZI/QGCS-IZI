@@ -25,7 +25,11 @@ class SafeTManager : public QObject
     Q_PROPERTY(float   stationCurrentA  READ stationCurrentA  NOTIFY telemetryUpdated)
     Q_PROPERTY(float   drumTempC        READ drumTempC        NOTIFY telemetryUpdated)
     Q_PROPERTY(QString winchStatus      READ winchStatus      NOTIFY telemetryUpdated)
-    Q_PROPERTY(bool    highTensionAlarm READ highTensionAlarm NOTIFY alarmsChanged)
+    Q_PROPERTY(bool    highTensionAlarm   READ highTensionAlarm   NOTIFY alarmsChanged)
+    Q_PROPERTY(bool    powerCutoffAlarm   READ powerCutoffAlarm   NOTIFY alarmsChanged)
+    Q_PROPERTY(bool    lengthLimitAlarm   READ lengthLimitAlarm   NOTIFY alarmsChanged)
+    Q_PROPERTY(QString activeAlertMessage READ activeAlertMessage NOTIFY alarmsChanged)
+    Q_PROPERTY(int     alertSeverity      READ alertSeverity      NOTIFY alarmsChanged)
 
 public:
     explicit SafeTManager(QObject *parent = nullptr);
@@ -44,7 +48,12 @@ public:
     float   stationCurrentA() const  { return _stationCurrentA; }
     float   drumTempC() const        { return _drumTempC; }
     QString winchStatus() const      { return _winchStatus; }
-    bool    highTensionAlarm() const { return _highTensionAlarm; }
+
+    bool    highTensionAlarm() const   { return _highTensionAlarm; }
+    bool    powerCutoffAlarm() const   { return _powerCutoffAlarm; }
+    bool    lengthLimitAlarm() const   { return _lengthLimitAlarm; }
+    QString activeAlertMessage() const { return _activeAlertMessage; }
+    int     alertSeverity() const      { return _alertSeverity; }
 
     Q_INVOKABLE void connectLink(const QString &hostOrPort, int port = 0);
     Q_INVOKABLE void disconnectLink();
@@ -75,6 +84,10 @@ private:
     float   _drumTempC = 0.0f;
     QString _winchStatus = QStringLiteral("IDLE");
     bool    _highTensionAlarm = false;
+    bool    _powerCutoffAlarm = false;
+    bool    _lengthLimitAlarm = false;
+    QString _activeAlertMessage;
+    int     _alertSeverity = 0; // 0: None, 1: Warning, 2: Critical
 
     qint64  _lastPacketMs = 0;
     QTimer  _simTimer;

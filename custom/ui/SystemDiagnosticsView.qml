@@ -322,6 +322,18 @@ Item {
                 rowSpacing: CompanyTheme.spacingMd
 
                 // ============================================================
+                // CARD 0: Tether Ground Station & Winch Telemetry (Tethered Only)
+                // ============================================================
+                TetherMonitorCard {
+                    id: tetherCard
+                    readonly property bool _isTetherActive: ((typeof SafeTManager !== "undefined" && SafeTManager) || (typeof safeTManager !== "undefined" && safeTManager))
+                    visible: _isTetherActive
+                    Layout.fillWidth: true
+                    Layout.columnSpan: diagGrid.columns
+                    Layout.preferredHeight: visible ? implicitHeight : 0
+                }
+
+                // ============================================================
                 // CARD 1: Vehicle Identity & Firmware
                 // ============================================================
                 CompanyCard {

@@ -85,10 +85,31 @@ void SafeTManager::_onSimulationTick()
     // Motion state
     _winchStatus = (std::abs(std::sin(_simPhase)) > 0.85f) ? QStringLiteral("PAYING OUT") : QStringLiteral("TENSION HOLD");
 
-    // Dynamic high tension alarm threshold (e.g. > 75 N during excessive gust)
-    const bool prevAlarm = _highTensionAlarm;
-    _highTensionAlarm = (_tensionN > 75.0f);
-    if (prevAlarm != _highTensionAlarm) {
+    // Threshold Alarms:
+    // 1. High Tension: > 75 N is Critical, > 62 N is Warning
+    const bool prevHighTension = _highTensionAlarm;
+    const bool prevPowerCutoff = _powerCutoffAlarm;
+    const bool prevLengthLimit = _lengthLimitAlarm;
+
+    _highTensionAlarm = (_tensionN > 70.0f);
+    _powerCutoffAlarm = (_stationVoltageV < 320.0f);
+    _lengthLimitAlarm = (_tetherLengthM >= 105.0f);
+
+    if (_highTensionAlarm) {
+        _alertSeverity = 2;
+        _activeAlertMessage = QStringLiteral("CRITICAL: HIGH TETHER LINE TENSION (%1 N)").arg(_tensionN, 0, 'f', 1);
+    } else if (_powerCutoffAlarm) {
+        _alertSeverity = 2;
+        _activeAlertMessage = QStringLiteral("CRITICAL: TETHER POWER VOLTAGE DROP (%1 V)").arg(_stationVoltageV, 0, 'f', 0);
+    } else if (_lengthLimitAlarm) {
+        _alertSeverity = 1;
+        _activeAlertMessage = QStringLiteral("WARNING: TETHER MAX LENGTH REACHED (%1 m)").arg(_tetherLengthM, 0, 'f', 1);
+    } else {
+        _alertSeverity = 0;
+        _activeAlertMessage.clear();
+    }
+
+    if (prevHighTension != _highTensionAlarm || prevPowerCutoff != _powerCutoffAlarm || prevLengthLimit != _lengthLimitAlarm) {
         emit alarmsChanged();
     }
 
