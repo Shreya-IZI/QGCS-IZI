@@ -4,6 +4,19 @@
 
 message(STATUS "QGC: Adding Company Custom Plugin & UI Overlay")
 
+# ============================================================================
+# Product Build Configuration: Chandipur (Default) vs Tethered Drone GCS
+# ============================================================================
+option(IZI_BUILD_TETHERED "Build IZI Tethered Drone GCS instead of Chandipur GCS" OFF)
+
+if(IZI_BUILD_TETHERED)
+    message(STATUS "QGC: Configuring IZI TETHERED DRONE Product")
+    add_compile_definitions(IZI_PRODUCT_TETHERED)
+else()
+    message(STATUS "QGC: Configuring IZI CHANDIPUR Product (Default)")
+    add_compile_definitions(IZI_PRODUCT_CHANDIPUR)
+endif()
+
 # ----------------------------------------------------------------------------
 # Custom QML Module
 # ----------------------------------------------------------------------------
@@ -36,6 +49,7 @@ set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/IconVector.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/DroneGraphic.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/IziLogo.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/tether/TetherMonitorCard.qml
 )
 
 # Set resource aliases to filename so they are cleanly accessible in QML and C++
@@ -121,27 +135,56 @@ qt_add_resources(${CMAKE_PROJECT_NAME} custom_qml_core_overrides
 )
 
 # ----------------------------------------------------------------------------
-# Custom Plugin Sources & Configuration
+# Custom Plugin Sources & Configuration (Switchable by IZI_BUILD_TETHERED)
 # ----------------------------------------------------------------------------
-set(CUSTOM_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomPlugin.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomPlugin.h
+set(CUSTOM_COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomOptions.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomOptions.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyCsvLogger.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyCsvLogger.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyNetworkSettings.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyNetworkSettings.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyDataOutput.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyDataOutput.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyPayloadInterface.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyPayloadInterface.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/SimulatedPayloadAdapter.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/SimulatedPayloadAdapter.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyFlightLogManager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyFlightLogManager.h
-    PARENT_SCOPE
 )
+
+if(IZI_BUILD_TETHERED)
+    set(CUSTOM_SOURCES
+        ${CUSTOM_COMMON_SOURCES}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/TetherPlugin.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/TetherPlugin.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/TetherOptions.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/TetherOptions.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/SafeTManager.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/SafeTManager.h
+        PARENT_SCOPE
+    )
+    set(CUSTOM_DEFINITIONS
+        QGC_CUSTOM_BUILD
+        CUSTOMHEADER="tether/TetherPlugin.h"
+        CUSTOMCLASS=TetherPlugin
+        PARENT_SCOPE
+    )
+else()
+    set(CUSTOM_SOURCES
+        ${CUSTOM_COMMON_SOURCES}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomPlugin.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomPlugin.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyDataOutput.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/CompanyDataOutput.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/SimulatedPayloadAdapter.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/SimulatedPayloadAdapter.h
+        PARENT_SCOPE
+    )
+    set(CUSTOM_DEFINITIONS
+        QGC_CUSTOM_BUILD
+        CUSTOMHEADER="CustomPlugin.h"
+        CUSTOMCLASS=CustomPlugin
+        PARENT_SCOPE
+    )
+endif()
 
 set(CUSTOM_LIBRARIES
     CompanyUIModule
@@ -150,13 +193,7 @@ set(CUSTOM_LIBRARIES
 
 set(CUSTOM_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    PARENT_SCOPE
-)
-
-set(CUSTOM_DEFINITIONS
-    QGC_CUSTOM_BUILD
-    CUSTOMHEADER="CustomPlugin.h"
-    CUSTOMCLASS=CustomPlugin
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tether
     PARENT_SCOPE
 )
 
