@@ -1726,6 +1726,63 @@ Item {
                         }
                     }
                 }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 24
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Skydroid RTSP (192.168.144.108)")
+                            color: CompanyTheme.primary
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                vs.rtspUrl.rawValue = "rtsp://192.168.144.108:554/stream=0"
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 24
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Ethernet RTSP (127.0.0.1)")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                vs.rtspUrl.rawValue = "rtsp://127.0.0.1:8554/live"
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
+                        }
+                    }
+                }
             }
 
             ColumnLayout {
@@ -1733,7 +1790,7 @@ Item {
                 spacing: 4
                 visible: QGroundControl.settingsManager.videoSettings.videoSource.rawValue !== "RTSP Video Stream"
 
-                Text { text: qsTr("UDP Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
+                Text { text: qsTr("UDP Port (Skydroid G30 / Wireless Video)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
                 Rectangle {
                     Layout.fillWidth: true
                     height: 30
@@ -1751,6 +1808,63 @@ Item {
                         text: QGroundControl.settingsManager.videoSettings.udpUrl.rawValue
                         onEditingFinished: {
                             QGroundControl.settingsManager.videoSettings.udpUrl.rawValue = text
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 24
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Skydroid G30 (Port 5600)")
+                            color: CompanyTheme.primary
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                vs.udpUrl.rawValue = "5600"
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 24
+                        radius: CompanyTheme.radiusSm
+                        color: CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Aux Port (5601)")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                vs.udpUrl.rawValue = "5601"
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
                         }
                     }
                 }

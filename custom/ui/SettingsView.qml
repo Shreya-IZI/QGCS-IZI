@@ -1510,6 +1510,106 @@ Item {
                             }
                         }
 
+                        // Quick Presets Row for Field Testing (Skydroid G30 / Ethernet)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Text {
+                                text: qsTr("Quick Presets:")
+                                color: CompanyTheme.textSecondary
+                                font.pointSize: CompanyTheme.fontTiny
+                                font.bold: true
+                            }
+
+                            Rectangle {
+                                implicitWidth: skyUdpText.implicitWidth + 16
+                                height: 26
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+                                border.width: 1
+                                Text {
+                                    id: skyUdpText
+                                    anchors.centerIn: parent
+                                    text: qsTr("Skydroid G30 (UDP 5600)")
+                                    color: CompanyTheme.primary
+                                    font.pointSize: CompanyTheme.fontTiny
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (root._videoSettings) {
+                                            root._videoSettings.videoSource.rawValue = "UDP h.264 Video Stream"
+                                            root._videoSettings.udpUrl.rawValue = "5600"
+                                            root._videoSettings.streamEnabled.rawValue = true
+                                            QGroundControl.videoManager.stopVideo()
+                                            QGroundControl.videoManager.startVideo()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                implicitWidth: skyRtspText.implicitWidth + 16
+                                height: 26
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+                                border.width: 1
+                                Text {
+                                    id: skyRtspText
+                                    anchors.centerIn: parent
+                                    text: qsTr("Skydroid Air Unit (RTSP 192.168.144.108)")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontTiny
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (root._videoSettings) {
+                                            root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                            root._videoSettings.rtspUrl.rawValue = "rtsp://192.168.144.108:554/stream=0"
+                                            root._videoSettings.streamEnabled.rawValue = true
+                                            QGroundControl.videoManager.stopVideo()
+                                            QGroundControl.videoManager.startVideo()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                implicitWidth: ethRtspText.implicitWidth + 16
+                                height: 26
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+                                border.width: 1
+                                Text {
+                                    id: ethRtspText
+                                    anchors.centerIn: parent
+                                    text: qsTr("Ethernet pMDDL (RTSP 127.0.0.1)")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontTiny
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (root._videoSettings) {
+                                            root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                            root._videoSettings.rtspUrl.rawValue = "rtsp://127.0.0.1:8554/live"
+                                            root._videoSettings.streamEnabled.rawValue = true
+                                            QGroundControl.videoManager.stopVideo()
+                                            QGroundControl.videoManager.startVideo()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: CompanyTheme.spacingMd
