@@ -121,6 +121,24 @@ Rectangle {
                             font.bold: true
                             font.letterSpacing: 1.0
                         }
+                        Rectangle {
+                            readonly property bool isTether: (typeof SafeTManager !== "undefined" && SafeTManager) || (typeof safeTManager !== "undefined" && safeTManager)
+                            visible: isTether
+                            height: 16
+                            implicitWidth: tetherBadgeText.implicitWidth + 8
+                            radius: 3
+                            color: CompanyTheme.primaryDim
+                            border.color: CompanyTheme.primary
+                            border.width: 1
+                            Text {
+                                id: tetherBadgeText
+                                anchors.centerIn: parent
+                                text: "TETHERED"
+                                color: CompanyTheme.primary
+                                font.pointSize: 7
+                                font.bold: true
+                            }
+                        }
                         IconVector {
                             name: "chevron_down"
                             size: 8
@@ -129,8 +147,8 @@ Rectangle {
                     }
                     Text {
                         visible: !root._isNarrow
-                        text: "FLIGHT CONTROL SYSTEM"
-                        color: CompanyTheme.textSecondary
+                        text: ((typeof SafeTManager !== "undefined" && SafeTManager) || (typeof safeTManager !== "undefined" && safeTManager)) ? "TETHERED v0.1.0-alpha" : "FLIGHT CONTROL SYSTEM"
+                        color: ((typeof SafeTManager !== "undefined" && SafeTManager) || (typeof safeTManager !== "undefined" && safeTManager)) ? CompanyTheme.primary : CompanyTheme.textSecondary
                         font.pointSize: 7
                         font.bold: true
                         font.letterSpacing: 1.2

@@ -131,7 +131,7 @@ void TetherPlugin::createRootWindow(QQmlApplicationEngine *qmlEngine)
         }
     }
 
-    QGuiApplication::setApplicationDisplayName(QStringLiteral("IZI GCS - Tethered"));
+    QGuiApplication::setApplicationDisplayName(QStringLiteral("IZI GCS - Tethered v0.1.0-alpha"));
     qmlEngine->load(QUrl(QStringLiteral("qrc:/qml/Company/UI/MainWindow.qml")));
 
     QIcon appIcon;
