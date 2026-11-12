@@ -288,6 +288,41 @@ Item {
                         }
                     }
                 }
+
+                // SUB-TAB D: TETHER STATION (Tethered Drone Product Only)
+                Rectangle {
+                    id: subTabTetherBtn
+                    readonly property var _tether: (typeof SafeTManager !== "undefined" && SafeTManager) ? SafeTManager : (typeof safeTManager !== "undefined" ? safeTManager : null)
+                    visible: _tether !== null
+                    implicitWidth: Math.max(140, subTabTetherRow.implicitWidth + 24)
+                    implicitHeight: 30
+                    radius: CompanyTheme.radiusSm
+                    color: root.activeSubTab === "TETHER" ? CompanyTheme.primary : CompanyTheme.bgCardSecondary
+                    border.color: root.activeSubTab === "TETHER" ? CompanyTheme.primary : CompanyTheme.borderCard
+                    border.width: 1
+
+                    RowLayout {
+                        id: subTabTetherRow
+                        anchors.centerIn: parent
+                        spacing: 6
+                        IconVector {
+                            name: "activity"
+                            size: 14
+                            color: root.activeSubTab === "TETHER" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                        }
+                        Text {
+                            text: qsTr("TETHER STATION")
+                            color: root.activeSubTab === "TETHER" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontSmall
+                            font.bold: root.activeSubTab === "TETHER"
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.activeSubTab = "TETHER"
+                    }
+                }
             }
 
             ScrollBar.horizontal: ScrollBar {
@@ -3110,6 +3145,717 @@ Item {
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ================================================================
+                    // SUB-TAB D: TETHER STATION CONFIGURATION & PILOT CONTROLS
+                    // ================================================================
+                    ColumnLayout {
+                        id: tetherSettingsCol
+                        Layout.fillWidth: true
+                        spacing: CompanyTheme.spacingMd
+                        visible: root.activeSubTab === "TETHER"
+
+                        readonly property var _tether: (typeof SafeTManager !== "undefined" && SafeTManager) ? SafeTManager : (typeof safeTManager !== "undefined" ? safeTManager : null)
+
+                        // 1. HARDWARE LINK & PROTOCOL CONFIGURATION
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: CompanyTheme.radiusMd
+                            color: CompanyTheme.bgCard
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            implicitHeight: tetherLinkCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                            ColumnLayout {
+                                id: tetherLinkCol
+                                anchors.fill: parent
+                                anchors.margins: CompanyTheme.spacingLg
+                                spacing: CompanyTheme.spacingMd
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingSm
+
+                                    IconVector { name: "activity"; size: 18; color: CompanyTheme.primary }
+                                    Text {
+                                        text: qsTr("SAFE-T TETHER STATION TRANSPORT INTERFACE")
+                                        color: CompanyTheme.textPrimary
+                                        font.bold: true
+                                        font.pointSize: CompanyTheme.fontH3
+                                    }
+                                    Item { Layout.fillWidth: true }
+
+                                    Rectangle {
+                                        height: 22
+                                        implicitWidth: linkStatusText.implicitWidth + 12
+                                        radius: CompanyTheme.radiusSm
+                                        color: tetherSettingsCol._tether && tetherSettingsCol._tether.isConnected ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                                        border.color: tetherSettingsCol._tether && tetherSettingsCol._tether.isConnected ? CompanyTheme.primary : CompanyTheme.borderCard
+                                        border.width: 1
+                                        Text {
+                                            id: linkStatusText
+                                            anchors.centerIn: parent
+                                            text: tetherSettingsCol._tether ? tetherSettingsCol._tether.connectionStatus : "OFFLINE"
+                                            color: tetherSettingsCol._tether && tetherSettingsCol._tether.isConnected ? CompanyTheme.primary : CompanyTheme.textSecondary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: qsTr("Configure communication link between IZI GCS and the physical/simulated Elistair SAFE-T station.")
+                                    color: CompanyTheme.textMuted
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+
+                                // Transport Type Selector
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+
+                                    Repeater {
+                                        model: [
+                                            { label: "Internal Simulator", modeId: 0, desc: "Synthetic 10 Hz test loop" },
+                                            { label: "Ethernet / UDP Socket", modeId: 1, desc: "Direct RJ45 LAN stream" },
+                                            { label: "Serial / RS-485 COM", modeId: 2, desc: "Virtual COM / FTDI cable" }
+                                        ]
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            readonly property bool isSelected: tetherSettingsCol._tether && tetherSettingsCol._tether.linkTransport.indexOf(modelData.label.split(" ")[0].toUpperCase()) !== -1
+                                            Layout.fillWidth: true
+                                            height: 48
+                                            radius: CompanyTheme.radiusSm
+                                            color: isSelected ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                                            border.color: isSelected ? CompanyTheme.primary : CompanyTheme.borderCard
+                                            border.width: isSelected ? 1.5 : 1
+
+                                            ColumnLayout {
+                                                anchors.centerIn: parent
+                                                spacing: 2
+                                                Text {
+                                                    text: modelData.label
+                                                    color: isSelected ? CompanyTheme.primary : CompanyTheme.textPrimary
+                                                    font.bold: isSelected
+                                                    font.pointSize: CompanyTheme.fontSmall
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                }
+                                                Text {
+                                                    text: modelData.desc
+                                                    color: CompanyTheme.textMuted
+                                                    font.pointSize: CompanyTheme.fontTiny
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (tetherSettingsCol._tether) {
+                                                        tetherSettingsCol._tether.setTransportType(modelData.modeId)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Connection Parameters
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: 2
+                                    columnSpacing: CompanyTheme.spacingMd
+                                    rowSpacing: CompanyTheme.spacingSm
+
+                                    ColumnLayout {
+                                        spacing: 4
+                                        Layout.fillWidth: true
+                                        Text { text: qsTr("Endpoint IP / Serial Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 34
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+                                            TextInput {
+                                                id: tetherEndpointInput
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.family: CompanyTheme.fontMono
+                                                font.pointSize: CompanyTheme.fontSmall
+                                                text: "192.168.1.150"
+                                            }
+                                        }
+                                    }
+
+                                    ColumnLayout {
+                                        spacing: 4
+                                        Layout.preferredWidth: 200
+                                        Text { text: qsTr("Port / Baud Rate"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 34
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+                                            TextInput {
+                                                id: tetherPortInput
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.family: CompanyTheme.fontMono
+                                                font.pointSize: CompanyTheme.fontSmall
+                                                text: "50000"
+                                            }
+                                        }
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+
+                                    CompanyButton {
+                                        text: qsTr("CONNECT TETHER LINK")
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.connectLink(tetherEndpointInput.text, parseInt(tetherPortInput.text))
+                                            }
+                                        }
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("DISCONNECT")
+                                        isOutline: true
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.disconnectLink()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. OPERATIONAL LIMITS & TACTICAL SETPOINTS
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: CompanyTheme.radiusMd
+                            color: CompanyTheme.bgCard
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            implicitHeight: tetherLimitsCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                            ColumnLayout {
+                                id: tetherLimitsCol
+                                anchors.fill: parent
+                                anchors.margins: CompanyTheme.spacingLg
+                                spacing: CompanyTheme.spacingMd
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingSm
+                                    IconVector { name: "sliders"; size: 18; color: CompanyTheme.warning }
+                                    Text {
+                                        text: qsTr("PILOT SAFETY THRESHOLDS & ALARM LIMITS")
+                                        color: CompanyTheme.textPrimary
+                                        font.bold: true
+                                        font.pointSize: CompanyTheme.fontH3
+                                    }
+                                }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: 3
+                                    columnSpacing: CompanyTheme.spacingMd
+                                    rowSpacing: CompanyTheme.spacingSm
+
+                                    // Target Hover Tension
+                                    ColumnLayout {
+                                        spacing: 4
+                                        Layout.fillWidth: true
+                                        Text { text: qsTr("Target Hover Tension (N)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 34
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+                                            TextInput {
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.family: CompanyTheme.fontMono
+                                                text: tetherSettingsCol._tether ? tetherSettingsCol._tether.targetTension.toFixed(0) : "45"
+                                                onEditingFinished: if (tetherSettingsCol._tether) tetherSettingsCol._tether.setTargetTension(parseFloat(text))
+                                            }
+                                        }
+                                    }
+
+                                    // Max Length Limit
+                                    ColumnLayout {
+                                        spacing: 4
+                                        Layout.fillWidth: true
+                                        Text { text: qsTr("Max Deployed Length (m)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 34
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+                                            TextInput {
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.family: CompanyTheme.fontMono
+                                                text: tetherSettingsCol._tether ? tetherSettingsCol._tether.maxTetherLength.toFixed(0) : "50"
+                                                onEditingFinished: if (tetherSettingsCol._tether) tetherSettingsCol._tether.setMaxTetherLength(parseFloat(text))
+                                            }
+                                        }
+                                    }
+
+                                    // Critical High Tension
+                                    ColumnLayout {
+                                        spacing: 4
+                                        Layout.fillWidth: true
+                                        Text { text: qsTr("Critical Tension Limit (N)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 34
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+                                            TextInput {
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.danger
+                                                font.family: CompanyTheme.fontMono
+                                                text: tetherSettingsCol._tether ? tetherSettingsCol._tether.highTensionLimit.toFixed(0) : "120"
+                                                onEditingFinished: if (tetherSettingsCol._tether) tetherSettingsCol._tether.setHighTensionLimit(parseFloat(text))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. GROUND WINCH CALIBRATION & PILOT COMMANDS
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: CompanyTheme.radiusMd
+                            color: CompanyTheme.bgCard
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            implicitHeight: tetherWinchCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                            ColumnLayout {
+                                id: tetherWinchCol
+                                anchors.fill: parent
+                                anchors.margins: CompanyTheme.spacingLg
+                                spacing: CompanyTheme.spacingMd
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingSm
+                                    IconVector { name: "terminal"; size: 18; color: CompanyTheme.primary }
+                                    Text {
+                                        text: qsTr("WINCH CONTROL, POWER & GROUND CALIBRATION")
+                                        color: CompanyTheme.textPrimary
+                                        font.bold: true
+                                        font.pointSize: CompanyTheme.fontH3
+                                    }
+                                    Item { Layout.fillWidth: true }
+
+                                    // Power Output Status Badge
+                                    Rectangle {
+                                        height: 22
+                                        implicitWidth: pwrStatusText.implicitWidth + 12
+                                        radius: CompanyTheme.radiusSm
+                                        color: tetherSettingsCol._tether && tetherSettingsCol._tether.powerOutputEnabled ? CompanyTheme.primaryDim : Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.2)
+                                        border.color: tetherSettingsCol._tether && tetherSettingsCol._tether.powerOutputEnabled ? CompanyTheme.primary : CompanyTheme.danger
+                                        border.width: 1
+                                        Text {
+                                            id: pwrStatusText
+                                            anchors.centerIn: parent
+                                            text: tetherSettingsCol._tether && tetherSettingsCol._tether.powerOutputEnabled ? qsTr("400V HVDC ACTIVE") : qsTr("HVDC DISCONNECTED")
+                                            color: tetherSettingsCol._tether && tetherSettingsCol._tether.powerOutputEnabled ? CompanyTheme.primary : CompanyTheme.danger
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+                                    }
+                                }
+
+                                // Winch Mode & Jog Action Buttons
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+
+                                    CompanyButton {
+                                        text: qsTr("ZERO CABLE LENGTH")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.zeroCableLength()
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("AUTO TENSION")
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.autoTension()
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("HOLD / BRAKE")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.holdTether()
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("REEL IN (DESCENT)")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.reelIn()
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("REEL OUT (CLIMB)")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.reelOut()
+                                    }
+
+                                    Item { Layout.fillWidth: true }
+
+                                    // Emergency Cutoff Button
+                                    Rectangle {
+                                        height: 32
+                                        implicitWidth: emergencyBtnText.implicitWidth + 24
+                                        radius: CompanyTheme.radiusSm
+                                        color: CompanyTheme.danger
+                                        Text {
+                                            id: emergencyBtnText
+                                            anchors.centerIn: parent
+                                            text: qsTr("EMERGENCY CUTOFF")
+                                            color: CompanyTheme.textLight
+                                            font.bold: true
+                                            font.pointSize: CompanyTheme.fontSmall
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.emergencyCutoff()
+                                        }
+                                    }
+                                }
+
+                                // Power Output & Torque Controls
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+
+                                    CompanyButton {
+                                        text: tetherSettingsCol._tether && tetherSettingsCol._tether.powerOutputEnabled ? qsTr("DISABLE HVDC POWER") : qsTr("ENABLE HVDC POWER")
+                                        isOutline: tetherSettingsCol._tether && tetherSettingsCol._tether.powerOutputEnabled
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.setPowerOutput(!tetherSettingsCol._tether.powerOutputEnabled)
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: qsTr("Motor Torque Setpoint:")
+                                        color: CompanyTheme.textSecondary
+                                        font.pointSize: CompanyTheme.fontSmall
+                                    }
+
+                                    Rectangle {
+                                        width: 80
+                                        height: 30
+                                        radius: CompanyTheme.radiusSm
+                                        color: CompanyTheme.bgInput
+                                        border.color: CompanyTheme.borderCard
+                                        border.width: 1
+                                        TextInput {
+                                            anchors.fill: parent
+                                            anchors.margins: 6
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            horizontalAlignment: TextInput.AlignHCenter
+                                            color: CompanyTheme.textPrimary
+                                            font.family: CompanyTheme.fontMono
+                                            text: tetherSettingsCol._tether ? tetherSettingsCol._tether.motorTorquePct.toFixed(0) + "%" : "100%"
+                                            onEditingFinished: {
+                                                if (tetherSettingsCol._tether) {
+                                                    var val = parseFloat(text.replace("%", ""))
+                                                    if (!isNaN(val)) tetherSettingsCol._tether.setMotorTorque(val)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. TETHER BLACKBOX FLIGHT RECORDER (CSV LOGGING)
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: CompanyTheme.radiusMd
+                            color: CompanyTheme.bgCard
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            implicitHeight: tetherLogCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                            ColumnLayout {
+                                id: tetherLogCol
+                                anchors.fill: parent
+                                anchors.margins: CompanyTheme.spacingLg
+                                spacing: CompanyTheme.spacingMd
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingSm
+                                    IconVector { name: "database"; size: 18; color: CompanyTheme.primary }
+                                    Text {
+                                        text: qsTr("TETHER BLACKBOX DATA RECORDER")
+                                        color: CompanyTheme.textPrimary
+                                        font.bold: true
+                                        font.pointSize: CompanyTheme.fontH3
+                                    }
+                                    Item { Layout.fillWidth: true }
+
+                                    Rectangle {
+                                        height: 22
+                                        implicitWidth: logBadgeText.implicitWidth + 12
+                                        radius: CompanyTheme.radiusSm
+                                        color: tetherSettingsCol._tether && tetherSettingsCol._tether.isLogging ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.25) : CompanyTheme.bgCardSecondary
+                                        border.color: tetherSettingsCol._tether && tetherSettingsCol._tether.isLogging ? CompanyTheme.danger : CompanyTheme.borderCard
+                                        border.width: 1
+                                        Text {
+                                            id: logBadgeText
+                                            anchors.centerIn: parent
+                                            text: tetherSettingsCol._tether && tetherSettingsCol._tether.isLogging ? qsTr("RECORDING (%1 RECS)").arg(tetherSettingsCol._tether.loggedRecordsCount) : qsTr("RECORDER IDLE")
+                                            color: tetherSettingsCol._tether && tetherSettingsCol._tether.isLogging ? CompanyTheme.danger : CompanyTheme.textMuted
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: qsTr("Log File: ") + (tetherSettingsCol._tether && tetherSettingsCol._tether.currentLogFile !== "" ? tetherSettingsCol._tether.currentLogFile : qsTr("None (Saved to Documents/QGroundControl/TetherLogs)"))
+                                    color: CompanyTheme.textMuted
+                                    font.pointSize: CompanyTheme.fontTiny
+                                    font.family: CompanyTheme.fontMono
+                                    elide: Text.ElideMiddle
+                                    Layout.fillWidth: true
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+
+                                    CompanyButton {
+                                        text: tetherSettingsCol._tether && tetherSettingsCol._tether.isLogging ? qsTr("STOP RECORDING") : qsTr("START BLACKBOX RECORDING")
+                                        isOutline: tetherSettingsCol._tether && tetherSettingsCol._tether.isLogging
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                if (tetherSettingsCol._tether.isLogging) {
+                                                    tetherSettingsCol._tether.stopLogging()
+                                                } else {
+                                                    tetherSettingsCol._tether.startLogging()
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    CompanyButton {
+                                        text: tetherSettingsCol._tether && tetherSettingsCol._tether.autoLogOnConnect ? qsTr("AUTO-LOG ON CONNECT: ENABLED") : qsTr("AUTO-LOG ON CONNECT: DISABLED")
+                                        isOutline: !(tetherSettingsCol._tether && tetherSettingsCol._tether.autoLogOnConnect)
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.setAutoLogOnConnect(!tetherSettingsCol._tether.autoLogOnConnect)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 5. TETHER PAYLOAD IP CAMERA (RTSP STREAM CONFIGURATION)
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: CompanyTheme.radiusMd
+                            color: CompanyTheme.bgCard
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            implicitHeight: tetherRtspCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                            ColumnLayout {
+                                id: tetherRtspCol
+                                anchors.fill: parent
+                                anchors.margins: CompanyTheme.spacingLg
+                                spacing: CompanyTheme.spacingMd
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingSm
+                                    IconVector { name: "video"; size: 18; color: CompanyTheme.primary }
+                                    Text {
+                                        text: qsTr("PAYLOAD IP CAMERA (RTSP STREAM CONFIGURATION)")
+                                        color: CompanyTheme.textPrimary
+                                        font.bold: true
+                                        font.pointSize: CompanyTheme.fontH3
+                                    }
+                                }
+
+                                Text {
+                                    text: qsTr("Configure high-definition RTSP video ingestion transmitted over the tether optical / Ethernet link.")
+                                    color: CompanyTheme.textMuted
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        height: 34
+                                        radius: CompanyTheme.radiusSm
+                                        color: CompanyTheme.bgInput
+                                        border.color: CompanyTheme.borderCard
+                                        border.width: 1
+                                        TextInput {
+                                            id: tetherRtspUrlInput
+                                            anchors.fill: parent
+                                            anchors.margins: 8
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            color: CompanyTheme.textPrimary
+                                            font.family: CompanyTheme.fontMono
+                                            font.pointSize: CompanyTheme.fontSmall
+                                            text: root._videoSettings ? root._videoSettings.rtspUrl.rawValue : "rtsp://192.168.1.108:554/live"
+                                        }
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("APPLY & CONNECT RTSP")
+                                        onClicked: {
+                                            if (root._videoSettings) {
+                                                root._videoSettings.rtspUrl.rawValue = tetherRtspUrlInput.text
+                                                root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 6. BENCH TESTING, SIMULATION & VOICE ANNUNCIATOR
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: CompanyTheme.radiusMd
+                            color: CompanyTheme.bgCard
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            implicitHeight: tetherBenchCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                            ColumnLayout {
+                                id: tetherBenchCol
+                                anchors.fill: parent
+                                anchors.margins: CompanyTheme.spacingLg
+                                spacing: CompanyTheme.spacingMd
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingSm
+                                    IconVector { name: "volume-2"; size: 18; color: CompanyTheme.warning }
+                                    Text {
+                                        text: qsTr("AUDIO ANNUNCIATOR & SIMULATION FAULT INJECTION")
+                                        color: CompanyTheme.textPrimary
+                                        font.bold: true
+                                        font.pointSize: CompanyTheme.fontH3
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+
+                                    CompanyButton {
+                                        text: tetherSettingsCol._tether && tetherSettingsCol._tether.voiceAlertsEnabled ? qsTr("VOICE ALERTS: ACTIVE") : qsTr("VOICE ALERTS: MUTED")
+                                        isOutline: !(tetherSettingsCol._tether && tetherSettingsCol._tether.voiceAlertsEnabled)
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.setVoiceAlertsEnabled(!tetherSettingsCol._tether.voiceAlertsEnabled)
+                                            }
+                                        }
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("TEST VOICE ALERT")
+                                        isOutline: true
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.testVoiceAlert()
+                                            }
+                                        }
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("RESET HOVER TIMER")
+                                        isOutline: true
+                                        onClicked: {
+                                            if (tetherSettingsCol._tether) {
+                                                tetherSettingsCol._tether.resetHoverTimer()
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: qsTr("Inject simulated field faults to verify pilot emergency procedures:")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+
+                                    CompanyButton {
+                                        text: qsTr("NORMAL FLIGHT")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.simulateFault("NORMAL")
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("SIMULATE HIGH TENSION (138 N)")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.simulateFault("HIGH_TENSION")
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("SIMULATE POWER SAG (280 V)")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.simulateFault("POWER_DROP")
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("SIMULATE CABLE SLACK (8 N)")
+                                        isOutline: true
+                                        onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.simulateFault("SLACK")
                                     }
                                 }
                             }

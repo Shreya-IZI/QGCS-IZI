@@ -13,6 +13,7 @@ Item {
 
     // Supported Modes: "RGB_ONLY", "THERMAL_ONLY", "SIDE_BY_SIDE", "PIP"
     property string currentMode: "RGB_ONLY"
+    property bool showGimbalPad: false
 
     readonly property bool _isNarrow: width < 1024 || ScreenTools.isMobile
     readonly property var _netSettings: (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : (typeof companyNetworkSettings !== "undefined" ? companyNetworkSettings : null)
@@ -1237,6 +1238,285 @@ Item {
                 }
             }
         }
+
+        // --------------------------------------------------------------------
+        // BOTTOM-RIGHT OSD: Tether Live Pilot HUD (Tethered GCS Mode Only)
+        // Offset above DashboardView bottom telemetry strip (bottomMargin: 62)
+        // --------------------------------------------------------------------
+        Rectangle {
+            id: osdTetherBottomRight
+            readonly property var _tether: (typeof SafeTManager !== "undefined" && SafeTManager) ? SafeTManager : (typeof safeTManager !== "undefined" ? safeTManager : null)
+            visible: _tether !== null && _tether.isConnected
+            anchors.bottom: parent.bottom
+            anchors.right: parent.right
+            anchors.bottomMargin: 62
+            anchors.rightMargin: CompanyTheme.spacingMd + (cameraControlToolbar.visible ? 48 : 0)
+            radius: CompanyTheme.radiusSm
+            color: CompanyTheme.bgOverlayDark
+            border.color: {
+                if (!_tether) return CompanyTheme.borderCard
+                if (_tether.highTensionAlarm) return CompanyTheme.danger
+                if (_tether.powerCutoffAlarm) return CompanyTheme.danger
+                if (_tether.lengthLimitAlarm) return CompanyTheme.warning
+                return CompanyTheme.borderCard
+            }
+            border.width: (_tether && (_tether.highTensionAlarm || _tether.powerCutoffAlarm || _tether.lengthLimitAlarm)) ? 1.5 : 1
+            implicitWidth: tetherOsdLayout.implicitWidth + 16
+            implicitHeight: tetherOsdLayout.implicitHeight + 12
+            z: 25
+
+            ColumnLayout {
+                id: tetherOsdLayout
+                anchors.centerIn: parent
+                spacing: 4
+
+                // Row 1: Tether Title, Winch Status & Tension Value
+                RowLayout {
+                    spacing: 8
+                    Layout.fillWidth: true
+
+                    IconVector {
+                        name: "activity"
+                        size: 13
+                        color: {
+                            if (!osdTetherBottomRight._tether) return CompanyTheme.textMuted
+                            if (osdTetherBottomRight._tether.highTensionAlarm) return CompanyTheme.danger
+                            if (osdTetherBottomRight._tether.lengthLimitAlarm) return CompanyTheme.warning
+                            return CompanyTheme.success
+                        }
+                    }
+
+                    Text {
+                        text: qsTr("SAFE-T TETHER")
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                        font.letterSpacing: 0.5
+                    }
+
+                    Rectangle {
+                        height: 16
+                        implicitWidth: tetherOsdModeText.implicitWidth + 8
+                        radius: 2
+                        color: {
+                            if (!osdTetherBottomRight._tether) return CompanyTheme.bgCardSecondary
+                            if (osdTetherBottomRight._tether.highTensionAlarm) return Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.3)
+                            return CompanyTheme.primaryDim
+                        }
+                        border.color: osdTetherBottomRight._tether && osdTetherBottomRight._tether.highTensionAlarm ? CompanyTheme.danger : CompanyTheme.primary
+                        border.width: 1
+
+                        Text {
+                            id: tetherOsdModeText
+                            anchors.centerIn: parent
+                            text: osdTetherBottomRight._tether ? osdTetherBottomRight._tether.winchStatus : "IDLE"
+                            color: osdTetherBottomRight._tether && osdTetherBottomRight._tether.highTensionAlarm ? CompanyTheme.danger : CompanyTheme.primary
+                            font.pointSize: 6.5
+                            font.bold: true
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Big Tension Display
+                    Text {
+                        text: osdTetherBottomRight._tether ? (osdTetherBottomRight._tether.tensionN.toFixed(1) + " N") : "-- N"
+                        color: {
+                            if (!osdTetherBottomRight._tether) return CompanyTheme.textPrimary
+                            if (osdTetherBottomRight._tether.highTensionAlarm) return CompanyTheme.danger
+                            if (osdTetherBottomRight._tether.tensionN < 25.0) return CompanyTheme.info
+                            return CompanyTheme.success
+                        }
+                        font.pointSize: 11
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+                }
+
+                // Row 2: Graphical Tension Bar (0 - 150 N)
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 5
+                    radius: 2.5
+                    color: CompanyTheme.bgInput
+
+                    Rectangle {
+                        height: parent.height
+                        radius: 2.5
+                        width: {
+                            if (!osdTetherBottomRight._tether) return 0
+                            var ratio = Math.min(1.0, Math.max(0.0, osdTetherBottomRight._tether.tensionN / 150.0))
+                            return parent.width * ratio
+                        }
+                        color: {
+                            if (!osdTetherBottomRight._tether) return CompanyTheme.primary
+                            if (osdTetherBottomRight._tether.highTensionAlarm) return CompanyTheme.danger
+                            if (osdTetherBottomRight._tether.tensionN > 80.0) return CompanyTheme.warning
+                            if (osdTetherBottomRight._tether.tensionN < 25.0) return CompanyTheme.info
+                            return CompanyTheme.success
+                        }
+                    }
+                }
+
+                // Row 3: Payout vs Altitude & Station Bus Power
+                RowLayout {
+                    spacing: 10
+                    Layout.fillWidth: true
+
+                    Text {
+                        text: "PAYOUT: " + (osdTetherBottomRight._tether ? (osdTetherBottomRight._tether.tetherLengthM.toFixed(1) + "m") : "--m")
+                        color: CompanyTheme.primary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "ALT: " + CompanyTelemetry.altitudeStr
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                    }
+
+                    Text {
+                        text: "BUS: " + (osdTetherBottomRight._tether ? (osdTetherBottomRight._tether.stationVoltageV.toFixed(0) + "V • " + osdTetherBottomRight._tether.stationCurrentA.toFixed(1) + "A") : "--V")
+                        color: osdTetherBottomRight._tether && osdTetherBottomRight._tether.powerCutoffAlarm ? CompanyTheme.danger : CompanyTheme.textPrimary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                        font.bold: osdTetherBottomRight._tether && osdTetherBottomRight._tether.powerCutoffAlarm
+                    }
+                }
+
+                // Row 3.5: Cable Speed, Station Power (kW), Hover Duration & Blackbox Log State
+                RowLayout {
+                    spacing: 10
+                    Layout.fillWidth: true
+
+                    Text {
+                        text: "SPD: " + (osdTetherBottomRight._tether ? ((osdTetherBottomRight._tether.cableSpeedMps >= 0 ? "+" : "") + osdTetherBottomRight._tether.cableSpeedMps.toFixed(1) + " m/s") : "0.0 m/s")
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                    }
+
+                    Text {
+                        text: "PWR: " + (osdTetherBottomRight._tether ? (osdTetherBottomRight._tether.stationPowerKW.toFixed(2) + " kW") : "-- kW")
+                        color: CompanyTheme.primary
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "HOVER: " + (osdTetherBottomRight._tether ? osdTetherBottomRight._tether.hoverDurationStr : "00:00:00")
+                        color: CompanyTheme.warning
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.family: CompanyTheme.fontMono
+                        font.bold: true
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Blackbox REC indicator
+                    RowLayout {
+                        spacing: 4
+                        visible: osdTetherBottomRight._tether && osdTetherBottomRight._tether.isLogging
+                        Rectangle {
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: CompanyTheme.danger
+                            SequentialAnimation on opacity {
+                                loops: Animation.Infinite
+                                PropertyAnimation { to: 0.2; duration: 600 }
+                                PropertyAnimation { to: 1.0; duration: 600 }
+                            }
+                        }
+                        Text {
+                            text: "LOG"
+                            color: CompanyTheme.danger
+                            font.pointSize: 6.5
+                            font.bold: true
+                        }
+                    }
+                }
+
+                // Row 4: Pilot Quick Tactical Action Buttons
+                RowLayout {
+                    spacing: 6
+                    Layout.fillWidth: true
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 20
+                        radius: 2
+                        color: autoHover.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("AUTO TENSION")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: 6.5
+                            font.bold: true
+                        }
+                        MouseArea {
+                            id: autoHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: if (osdTetherBottomRight._tether) osdTetherBottomRight._tether.setWinchMode("AUTO")
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 20
+                        radius: 2
+                        color: holdHover.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("HOLD")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: 6.5
+                            font.bold: true
+                        }
+                        MouseArea {
+                            id: holdHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: if (osdTetherBottomRight._tether) osdTetherBottomRight._tether.setWinchMode("HOLD")
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 20
+                        radius: 2
+                        color: zeroHover.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                        border.color: CompanyTheme.borderCard
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("ZERO")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: 6.5
+                            font.bold: true
+                        }
+                        MouseArea {
+                            id: zeroHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: if (osdTetherBottomRight._tether) osdTetherBottomRight._tether.zeroCableLength()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // ========================================================================
@@ -1407,6 +1687,237 @@ Item {
                 ToolTip.visible: zoomOutMouse.containsMouse
                 ToolTip.text: CompanyTelemetry.canZoom ? qsTr("Zoom Out") : qsTr("Zoom Unavailable")
                 ToolTip.delay: 400
+            }
+
+            // Divider
+            Rectangle {
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 1
+                Layout.alignment: Qt.AlignHCenter
+                color: CompanyTheme.borderCard
+            }
+
+            // 5. Tactical Gimbal Controller Toggle
+            Rectangle {
+                id: gimbalToggleBtn
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: CompanyTheme.radiusSm - 1
+                color: root.showGimbalPad ? CompanyTheme.primaryDim : (gimbalToggleMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent")
+                border.color: root.showGimbalPad ? CompanyTheme.primary : (gimbalToggleMouse.containsMouse ? CompanyTheme.borderActive : "transparent")
+                border.width: 1
+
+                IconVector {
+                    anchors.centerIn: parent
+                    name: "sliders"
+                    size: 16
+                    color: root.showGimbalPad ? CompanyTheme.primary : CompanyTheme.textPrimary
+                }
+
+                MouseArea {
+                    id: gimbalToggleMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.showGimbalPad = !root.showGimbalPad
+                }
+
+                ToolTip.visible: gimbalToggleMouse.containsMouse
+                ToolTip.text: qsTr("Gimbal Tactical Pad")
+                ToolTip.delay: 400
+            }
+        }
+    }
+
+    // ========================================================================
+    // TACTICAL GIMBAL CONTROLLER OVERLAY (Anchored next to camera controls)
+    // ========================================================================
+    Rectangle {
+        id: gimbalControlPanel
+        visible: root.showGimbalPad
+        anchors.right: cameraControlToolbar.left
+        anchors.rightMargin: 12
+        anchors.verticalCenter: cameraControlToolbar.verticalCenter
+        z: 36
+        width: 170
+        radius: CompanyTheme.radiusSm
+        color: CompanyTheme.bgOverlayDark
+        border.color: CompanyTheme.borderCard
+        border.width: 1
+        implicitHeight: gimbalPanelCol.implicitHeight + 16
+
+        readonly property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
+        readonly property var _gimbalController: _activeVehicle ? _activeVehicle.gimbalController : null
+        readonly property var _activeGimbal: _gimbalController ? _gimbalController.activeGimbal : null
+
+        ColumnLayout {
+            id: gimbalPanelCol
+            anchors.centerIn: parent
+            width: parent.width - 16
+            spacing: 8
+
+            // Header: Title & Close
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 4
+
+                IconVector { name: "sliders"; size: 12; color: CompanyTheme.primary }
+                Text {
+                    text: qsTr("GIMBAL CONTROL")
+                    color: CompanyTheme.textPrimary
+                    font.bold: true
+                    font.pointSize: CompanyTheme.fontTiny
+                    font.letterSpacing: 0.5
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: "✕"
+                    color: CompanyTheme.textMuted
+                    font.pointSize: 9
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.showGimbalPad = false
+                    }
+                }
+            }
+
+            // Attitude Readout
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Text {
+                    text: "P: " + (gimbalControlPanel._activeGimbal && gimbalControlPanel._activeGimbal.absolutePitch ? gimbalControlPanel._activeGimbal.absolutePitch.value.toFixed(1) + "°" : "0.0°")
+                    color: CompanyTheme.textSecondary
+                    font.pointSize: 7
+                    font.family: CompanyTheme.fontMono
+                }
+                Item { Layout.fillWidth: true }
+                Text {
+                    text: "Y: " + (gimbalControlPanel._activeGimbal && gimbalControlPanel._activeGimbal.bodyYaw ? gimbalControlPanel._activeGimbal.bodyYaw.value.toFixed(1) + "°" : "0.0°")
+                    color: CompanyTheme.textSecondary
+                    font.pointSize: 7
+                    font.family: CompanyTheme.fontMono
+                }
+            }
+
+            // D-Pad Cross
+            GridLayout {
+                Layout.alignment: Qt.AlignHCenter
+                columns: 3
+                rowSpacing: 4
+                columnSpacing: 4
+
+                Item { width: 34; height: 34 }
+
+                // Pitch Up
+                Rectangle {
+                    width: 34; height: 34; radius: 3
+                    color: upM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "▲"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    MouseArea {
+                        id: upM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(15, 0)
+                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                    }
+                }
+
+                Item { width: 34; height: 34 }
+
+                // Pan Left
+                Rectangle {
+                    width: 34; height: 34; radius: 3
+                    color: leftM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "◀"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    MouseArea {
+                        id: leftM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, -20)
+                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                    }
+                }
+
+                // Center
+                Rectangle {
+                    width: 34; height: 34; radius: 3
+                    color: centerM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.primary; border.width: 1
+                    Text { anchors.centerIn: parent; text: "●"; color: CompanyTheme.primary; font.pointSize: 8 }
+                    MouseArea {
+                        id: centerM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.centerGimbal()
+                    }
+                }
+
+                // Pan Right
+                Rectangle {
+                    width: 34; height: 34; radius: 3
+                    color: rightM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "▶"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    MouseArea {
+                        id: rightM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 20)
+                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                    }
+                }
+
+                Item { width: 34; height: 34 }
+
+                // Pitch Down
+                Rectangle {
+                    width: 34; height: 34; radius: 3
+                    color: downM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "▼"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    MouseArea {
+                        id: downM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(-15, 0)
+                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                    }
+                }
+
+                Item { width: 34; height: 34 }
+            }
+
+            // Presets Row
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 4
+
+                Rectangle {
+                    Layout.fillWidth: true; height: 22; radius: 2
+                    color: nadirM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "NADIR"; color: CompanyTheme.textPrimary; font.pointSize: 6.5; font.bold: true }
+                    MouseArea {
+                        id: nadirM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendPitchBodyYaw(-90, 0)
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; height: 22; radius: 2
+                    color: tactM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "-45°"; color: CompanyTheme.textPrimary; font.pointSize: 6.5; font.bold: true }
+                    MouseArea {
+                        id: tactM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendPitchBodyYaw(-45, 0)
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; height: 22; radius: 2
+                    color: horizM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "0°"; color: CompanyTheme.textPrimary; font.pointSize: 6.5; font.bold: true }
+                    MouseArea {
+                        id: horizM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendPitchBodyYaw(0, 0)
+                    }
+                }
             }
         }
     }

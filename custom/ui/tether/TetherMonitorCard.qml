@@ -152,7 +152,7 @@ Rectangle {
                 }
             }
 
-            // 3. Station Voltage (V) & Current (A)
+            // 3. Station Voltage (V) & Power (kW)
             Rectangle {
                 Layout.fillWidth: true
                 height: 38
@@ -171,7 +171,7 @@ Rectangle {
                         font.bold: true
                     }
                     Text {
-                        text: root._hasTether ? (_tether.stationVoltageV.toFixed(0) + "V • " + _tether.stationCurrentA.toFixed(1) + "A") : "--V • --A"
+                        text: root._hasTether ? (_tether.stationPowerKW.toFixed(2) + " kW • " + _tether.stationVoltageV.toFixed(0) + "V") : "-- kW"
                         color: CompanyTheme.textPrimary
                         font.pointSize: 9
                         font.bold: true
@@ -180,7 +180,7 @@ Rectangle {
                 }
             }
 
-            // 4. Drum Temperature (°C)
+            // 4. Drum Temp & Speed
             Rectangle {
                 Layout.fillWidth: true
                 height: 38
@@ -193,19 +193,52 @@ Rectangle {
                     spacing: 1
 
                     Text {
-                        text: qsTr("DRUM TEMP")
+                        text: qsTr("DRUM TEMP / SPEED")
                         color: CompanyTheme.textMuted
                         font.pointSize: 6.5
                         font.bold: true
                     }
                     Text {
-                        text: root._hasTether ? (_tether.drumTempC.toFixed(1) + "°C") : "--°C"
+                        text: root._hasTether ? (_tether.drumTempC.toFixed(0) + "°C • " + (_tether.cableSpeedMps >= 0 ? "+" : "") + _tether.cableSpeedMps.toFixed(1) + "m/s") : "--°C"
                         color: CompanyTheme.textSecondary
                         font.pointSize: 9
                         font.bold: true
                         font.family: CompanyTheme.fontMono
                     }
                 }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Text {
+                text: qsTr("HOVER:")
+                color: CompanyTheme.textMuted
+                font.pointSize: 6.5
+            }
+            Text {
+                text: root._hasTether ? _tether.hoverDurationStr : "00:00:00"
+                color: CompanyTheme.warning
+                font.pointSize: 6.5
+                font.bold: true
+                font.family: CompanyTheme.fontMono
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text {
+                text: qsTr("LINK:")
+                color: CompanyTheme.textMuted
+                font.pointSize: 6.5
+            }
+            Text {
+                text: root._hasTether ? _tether.linkTransport : "OFFLINE"
+                color: root._hasTether ? CompanyTheme.primary : CompanyTheme.textMuted
+                font.pointSize: 6.5
+                font.bold: true
+                font.family: CompanyTheme.fontMono
             }
         }
     }

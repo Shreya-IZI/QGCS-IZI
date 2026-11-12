@@ -159,6 +159,8 @@ if(IZI_BUILD_TETHERED)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/TetherOptions.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/SafeTManager.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/SafeTManager.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/SafeTTransport.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tether/SafeTTransport.h
         PARENT_SCOPE
     )
     set(CUSTOM_DEFINITIONS
