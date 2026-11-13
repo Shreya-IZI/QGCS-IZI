@@ -40,6 +40,30 @@ Item {
     property bool addWaypointMode:           true
     property bool followVehicle:             false
 
+    // DJI Flight Task Configuration
+    property string positioningAccuracy:     "RTK" // "RTK" or "GNSS"
+    property string planTimer:               "Immediate" // "Immediate", "Timed", "Recurring"
+    property real   defaultAltitude:         50.0
+
+    function stepAltitude(delta) {
+        if (root._selectedItem && root._selectedItem.isSimpleItem && root._selectedItem.altitude) {
+            var cur = Number(root._selectedItem.altitude.rawValue)
+            if (isNaN(cur)) cur = 50.0
+            root._selectedItem.altitude.value = Math.max(5.0, cur + delta)
+        } else {
+            defaultAltitude = Math.max(5.0, defaultAltitude + delta)
+            if (root._visualItems && root._itemCount > 0) {
+                for (var i = 1; i < root._itemCount; ++i) {
+                    var itm = root._visualItems.get(i)
+                    if (itm && itm.isSimpleItem && itm.altitude) {
+                        var c = Number(itm.altitude.rawValue)
+                        if (!isNaN(c)) itm.altitude.value = Math.max(5.0, c + delta)
+                    }
+                }
+            }
+        }
+    }
+
     // Mission Execution Lifecycle & Progress Tracking
     property bool _missionCompleted:         false
     property bool _wasExecutingMission:      false
@@ -323,7 +347,7 @@ Item {
     }
 
     // ====================================================================
-    // 1. TOP COMMAND & SYNC STRIP (Floating QGC Style)
+    // 1. TOP COMMAND & SYNC STRIP (DJI Glass Architecture)
     // ====================================================================
     Rectangle {
         id: topCommandStrip
@@ -333,9 +357,9 @@ Item {
         anchors.margins: CompanyTheme.spacingSm
         z: 10
         height: 48
-        radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        radius: CompanyTheme.radiusMd
+        color: CompanyTheme.bgGlass
+        border.color: CompanyTheme.borderGlass
         border.width: 1
         clip: true
 
@@ -785,12 +809,12 @@ Item {
                     }
                 }
 
-    // Floating Map Controls (Zoom In/Out + Recenter)
+    // Floating Map Controls (Zoom In/Out + Recenter - Right Side)
     ColumnLayout {
         id: mapZoomTools
-        anchors.right: queuePanel.left
+        anchors.right: parent.right
         anchors.bottom: bottomExecutionStrip.top
-        anchors.margins: CompanyTheme.spacingSm
+        anchors.margins: CompanyTheme.spacingMd
         spacing: CompanyTheme.spacingXs
         z: 15
 
@@ -847,365 +871,315 @@ Item {
     }
 
     // ====================================================================
-    // 3. FLOATING WAYPOINT QUEUE & SELECTED ITEM INSPECTOR (Right Overlay)
+    // 3. DJI FLIGHT TASK & CREATE PLAN DRAWER (Left Overlay - FlightHub 2)
     // ====================================================================
     Rectangle {
         id: queuePanel
         anchors.top: topCommandStrip.bottom
         anchors.bottom: bottomExecutionStrip.top
-        anchors.right: parent.right
+        anchors.left: parent.left
         anchors.topMargin: CompanyTheme.spacingSm
         anchors.bottomMargin: CompanyTheme.spacingSm
-        anchors.rightMargin: CompanyTheme.spacingSm
+        anchors.leftMargin: CompanyTheme.spacingSm
         z: 10
-        width: 340
-        radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        width: 360
+        radius: CompanyTheme.radiusMd
+        color: CompanyTheme.bgGlass
+        border.color: CompanyTheme.borderGlass
         border.width: 1
         clip: true
 
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: CompanyTheme.spacingMd
+            spacing: CompanyTheme.spacingSm
+
+            // 1. Task Header / Breadcrumb
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Text {
+                    text: "❮"
+                    color: CompanyTheme.djiCyan
+                    font.pointSize: CompanyTheme.fontSmall
+                    font.bold: true
+                }
+
+                Text {
+                    text: qsTr("CREATE FLIGHT PLAN")
+                    color: CompanyTheme.textPrimary
+                    font.pointSize: CompanyTheme.fontSmall
+                    font.bold: true
+                    font.letterSpacing: 0.8
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                    text: qsTr("%1 Waypoints").arg(root._flightItemCount)
+                    color: CompanyTheme.djiCyan
+                    font.pointSize: CompanyTheme.fontTiny
+                    font.bold: true
+                }
+            }
+
+            // 2. Device & RTK Status Banner
+            Rectangle {
+                Layout.fillWidth: true
+                height: 38
+                radius: CompanyTheme.radiusSm
+                color: Qt.rgba(0.04, 0.06, 0.09, 0.85)
+                border.color: CompanyTheme.borderGlass
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    spacing: 6
+
+                    Rectangle {
+                        Layout.preferredWidth: 6
+                        Layout.preferredHeight: 6
+                        radius: 3
+                        color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.warning
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        Text {
+                            text: root._hasVehicle ? qsTr("UAS #%1 Online").arg(CompanyTelemetry.vehicleId) : qsTr("No Vehicle Linked")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: CompanyTheme.fontTiny
+                            font.bold: true
+                        }
+                        Text {
+                            text: root._hasVehicle ? (CompanyTelemetry.gpsCountStr + " sats • " + CompanyTelemetry.gpsLockString) : qsTr("Simulated Editor")
+                            color: CompanyTheme.textMuted
+                            font.pointSize: 6
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.preferredHeight: 18
+                        implicitWidth: 50
+                        radius: 3
+                        color: root.positioningAccuracy === "RTK" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.positioningAccuracy
+                            color: "#FFFFFF"
+                            font.pointSize: 7
+                            font.bold: true
+                        }
+                    }
+                }
+            }
+
+            // 3. Positioning Accuracy Pill Selector
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Text {
+                    text: qsTr("Positioning:")
+                    color: CompanyTheme.textSecondary
+                    font.pointSize: CompanyTheme.fontTiny
+                    Layout.preferredWidth: 70
+                }
+
+                Row {
+                    spacing: 4
+                    Layout.fillWidth: true
+
+                    Rectangle {
+                        width: 60
+                        height: 22
+                        radius: CompanyTheme.radiusSm
+                        color: root.positioningAccuracy === "RTK" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
+                        border.color: root.positioningAccuracy === "RTK" ? CompanyTheme.djiCyan : CompanyTheme.borderCard
+                        Text {
+                            anchors.centerIn: parent
+                            text: "RTK"
+                            color: root.positioningAccuracy === "RTK" ? "#FFFFFF" : CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                            font.bold: true
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.positioningAccuracy = "RTK"
+                        }
+                    }
+
+                    Rectangle {
+                        width: 60
+                        height: 22
+                        radius: CompanyTheme.radiusSm
+                        color: root.positioningAccuracy === "GNSS" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
+                        border.color: root.positioningAccuracy === "GNSS" ? CompanyTheme.djiCyan : CompanyTheme.borderCard
+                        Text {
+                            anchors.centerIn: parent
+                            text: "GNSS"
+                            color: root.positioningAccuracy === "GNSS" ? "#FFFFFF" : CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                            font.bold: true
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.positioningAccuracy = "GNSS"
+                        }
+                    }
+                }
+            }
+
+            // 4. Plan Timer Pill Selector
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Text {
+                    text: qsTr("Execution:")
+                    color: CompanyTheme.textSecondary
+                    font.pointSize: CompanyTheme.fontTiny
+                    Layout.preferredWidth: 70
+                }
+
+                Row {
+                    spacing: 4
+                    Layout.fillWidth: true
+
+                    Repeater {
+                        model: ["Immediate", "Timed", "Recurring"]
+                        Rectangle {
+                            id: timerPill
+                            required property string modelData
+                            width: 64
+                            height: 22
+                            radius: CompanyTheme.radiusSm
+                            color: root.planTimer === timerPill.modelData ? CompanyTheme.djiBlue : CompanyTheme.bgCard
+                            border.color: root.planTimer === timerPill.modelData ? CompanyTheme.djiCyan : CompanyTheme.borderCard
+                            Text {
+                                anchors.centerIn: parent
+                                text: timerPill.modelData
+                                color: root.planTimer === timerPill.modelData ? "#FFFFFF" : CompanyTheme.textSecondary
+                                font.pointSize: 7
+                                font.bold: true
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.planTimer = timerPill.modelData
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. DJI Quick Altitude Stepper Controls
+            Rectangle {
+                Layout.fillWidth: true
+                height: 52
+                radius: CompanyTheme.radiusSm
+                color: Qt.rgba(0.04, 0.06, 0.09, 0.85)
+                border.color: CompanyTheme.borderGlass
+                border.width: 1
+
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: CompanyTheme.spacingMd
-                    spacing: CompanyTheme.spacingSm
+                    anchors.margins: 4
+                    spacing: 2
 
-                    // Queue Header
+                    Text {
+                        text: root._selectedItem ? qsTr("WAYPOINT %1 ALTITUDE").arg(root._selectedItem.sequenceNumber) : qsTr("CRUISE ALTITUDE (ALL WPS)")
+                        color: CompanyTheme.djiCyan
+                        font.pointSize: 7
+                        font.bold: true
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
                     RowLayout {
                         Layout.fillWidth: true
-                        Text {
-                            text: qsTr("MISSION QUEUE")
-                            color: CompanyTheme.textPrimary
-                            font.pointSize: CompanyTheme.fontSmall
-                            font.bold: true
-                            font.letterSpacing: 0.8
-                        }
-                        Item { Layout.fillWidth: true }
-                        Text {
-                            text: qsTr("%1 items").arg(root._itemCount)
-                            color: CompanyTheme.textMuted
-                            font.pointSize: CompanyTheme.fontSmall
-                        }
-                    }
+                        spacing: 3
+                        Layout.alignment: Qt.AlignHCenter
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 1
-                        color: CompanyTheme.borderCard
-                    }
-
-                    // Pre-Flight Mission Health Overview
-                    Rectangle {
-                        Layout.fillWidth: true
-                        radius: CompanyTheme.radiusSm
-                        color: CompanyTheme.bgInput
-                        border.color: missionHealth.ready ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.3) : CompanyTheme.borderCard
-                        border.width: 1
-                        implicitHeight: healthCol.implicitHeight + 16
-
-                        ColumnLayout {
-                            id: healthCol
-                            anchors.fill: parent
-                            anchors.margins: 8
-                            spacing: 6
-
-                            RowLayout {
-                                Layout.fillWidth: true
+                        Repeater {
+                            model: [-100, -10, -1]
+                            Rectangle {
+                                id: negStepBtn
+                                required property int modelData
+                                width: 34
+                                height: 22
+                                radius: 3
+                                color: negStepMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                                border.color: CompanyTheme.borderCard
                                 Text {
-                                    text: qsTr("PRE-FLIGHT HEALTH")
+                                    anchors.centerIn: parent
+                                    text: negStepBtn.modelData.toString()
                                     color: CompanyTheme.textSecondary
-                                    font.pointSize: CompanyTheme.fontTiny
-                                    font.bold: true
-                                    font.letterSpacing: 0.5
-                                }
-                                Item { Layout.fillWidth: true }
-                                Text {
-                                    text: qsTr("%1/%2 Checks").arg(missionHealth.passedChecks).arg(missionHealth.totalChecks)
-                                    color: missionHealth.ready ? CompanyTheme.success : (missionHealth.passedChecks >= 4 ? CompanyTheme.warning : CompanyTheme.danger)
-                                    font.pointSize: CompanyTheme.fontTiny
+                                    font.pointSize: 7
+                                    font.family: CompanyTheme.fontMono
                                     font.bold: true
                                 }
-                            }
-
-                            // 2-column Grid of the 6 checks
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: 2
-                                rowSpacing: 4
-                                columnSpacing: 8
-
-                                Repeater {
-                                    model: missionHealth.checkItems
-                                    delegate: RowLayout {
-                                        id: checkRow
-                                        required property var modelData
-                                        spacing: 5
-                                        Layout.fillWidth: true
-
-                                        Rectangle {
-                                            Layout.preferredWidth: 6
-                                            Layout.preferredHeight: 6
-                                            radius: 3
-                                            color: checkRow.modelData.passed ? CompanyTheme.success : CompanyTheme.danger
-                                        }
-
-                                        Text {
-                                            text: checkRow.modelData.name
-                                            color: checkRow.modelData.passed ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
-                                            font.pointSize: CompanyTheme.fontTiny
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-
-                                        Text {
-                                            text: checkRow.modelData.detail
-                                            color: checkRow.modelData.passed ? CompanyTheme.textSecondary : CompanyTheme.danger
-                                            font.pointSize: CompanyTheme.fontTiny
-                                            font.family: CompanyTheme.fontMono
-                                        }
-                                    }
+                                MouseArea {
+                                    id: negStepMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.stepAltitude(negStepBtn.modelData)
                                 }
                             }
+                        }
+
+                        // Current Altitude Display Box
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 22
+                            radius: 3
+                            color: CompanyTheme.djiBlueDim
+                            border.color: CompanyTheme.djiCyan
+                            border.width: 1
 
                             Text {
-                                Layout.fillWidth: true
-                                text: missionHealth.statusDetail
-                                color: missionHealth.ready ? CompanyTheme.textMuted : CompanyTheme.warning
-                                font.pointSize: CompanyTheme.fontTiny
-                                wrapMode: Text.WordWrap
-                                maximumLineCount: 2
-                                elide: Text.ElideRight
+                                anchors.centerIn: parent
+                                text: {
+                                    if (root._selectedItem && root._selectedItem.isSimpleItem && root._selectedItem.altitude) {
+                                        return root._selectedItem.altitude.valueString + " m"
+                                    }
+                                    return Math.round(root.defaultAltitude) + " m"
+                                }
+                                color: "#FFFFFF"
+                                font.pointSize: CompanyTheme.fontSmall
+                                font.family: CompanyTheme.fontMono
+                                font.bold: true
                             }
                         }
-                    }
 
-                    // Waypoint List View
-                    ListView {
-                        id: queueList
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: 4
-                        clip: true
-                        model: root._visualItems
-
-                        ScrollBar.vertical: ScrollBar {
-                            policy: ScrollBar.AsNeeded
-                        }
-
-                        delegate: Rectangle {
-                            id: itemDelegate
-                            required property var object
-                            required property int index
-
-                            readonly property bool isSelected: root._selectedVIIndex === itemDelegate.index
-                            readonly property bool isCurrentExec: itemDelegate.object ? itemDelegate.object.isCurrentItem : false
-
-                            Layout.fillWidth: true
-                            width: queueList.width
-                            height: 48
-                            radius: CompanyTheme.radiusSm
-                            color: {
-                                if (itemDelegate.isCurrentExec) return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.18)
-                                if (itemDelegate.isSelected) return CompanyTheme.primaryDim
-                                return queueMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardElevated
-                            }
-                            border.color: {
-                                if (itemDelegate.isCurrentExec) return CompanyTheme.warning
-                                if (itemDelegate.isSelected) return CompanyTheme.primary
-                                return CompanyTheme.borderCard
-                            }
-                            border.width: (itemDelegate.isSelected || itemDelegate.isCurrentExec) ? 1.5 : 1
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
-                                spacing: 8
-
-                                // Sequence Number Badge
-                                Rectangle {
-                                    Layout.preferredWidth: 24
-                                    Layout.preferredHeight: 24
-                                    radius: 12
-                                    color: itemDelegate.isSelected ? CompanyTheme.primary : CompanyTheme.bgInput
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: itemDelegate.object ? itemDelegate.object.sequenceNumber : (itemDelegate.index + 1)
-                                        color: itemDelegate.isSelected ? CompanyTheme.bgApp : CompanyTheme.textSecondary
-                                        font.pointSize: CompanyTheme.fontTiny
-                                        font.bold: true
-                                    }
-                                }
-
-                                // Command Name & Coordinates
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 1
-
-                                    Text {
-                                        text: itemDelegate.object ? itemDelegate.object.commandName : qsTr("Waypoint")
-                                        color: itemDelegate.isSelected ? CompanyTheme.primary : CompanyTheme.textPrimary
-                                        font.pointSize: CompanyTheme.fontSmall
-                                        font.bold: true
-                                        elide: Text.ElideRight
-                                    }
-
-                                    Text {
-                                        text: {
-                                            if (!itemDelegate.object) return "--"
-                                            if (itemDelegate.object.specifiesCoordinate) {
-                                                var c = itemDelegate.object.coordinate
-                                                return c.latitude.toFixed(4) + "°, " + c.longitude.toFixed(4) + "°"
-                                            }
-                                            return itemDelegate.object.commandDescription || ""
-                                        }
-                                        color: CompanyTheme.textMuted
-                                        font.pointSize: CompanyTheme.fontTiny
-                                        font.family: CompanyTheme.fontMono
-                                        elide: Text.ElideRight
-                                    }
-                                }
-
-                                // Altitude
+                        Repeater {
+                            model: [1, 10, 100]
+                            Rectangle {
+                                id: posStepBtn
+                                required property int modelData
+                                width: 34
+                                height: 22
+                                radius: 3
+                                color: posStepMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                                border.color: CompanyTheme.borderCard
                                 Text {
-                                    text: {
-                                        if (itemDelegate.object && itemDelegate.object.isSimpleItem && itemDelegate.object.altitude) {
-                                            return itemDelegate.object.altitude.valueString + " " + itemDelegate.object.altitude.units
-                                        }
-                                        return ""
-                                    }
+                                    anchors.centerIn: parent
+                                    text: "+" + posStepBtn.modelData.toString()
                                     color: CompanyTheme.textSecondary
-                                    font.pointSize: CompanyTheme.fontSmall
+                                    font.pointSize: 7
                                     font.family: CompanyTheme.fontMono
-                                }
-                            }
-
-                            MouseArea {
-                                id: queueMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (itemDelegate.object) {
-                                        root._missionController.setCurrentPlanViewSeqNum(itemDelegate.object.sequenceNumber, true)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Selected Waypoint Parameter Inspector
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 140
-                        radius: CompanyTheme.radiusSm
-                        color: CompanyTheme.bgCardElevated
-                        border.color: CompanyTheme.borderCard
-                        border.width: 1
-                        visible: root._selectedItem !== null
-
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 10
-                            spacing: 6
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Text {
-                                    text: qsTr("WAYPOINT %1 PARAMETERS").arg(root._selectedItem ? root._selectedItem.sequenceNumber : 0)
-                                    color: CompanyTheme.primary
-                                    font.pointSize: CompanyTheme.fontTiny
                                     font.bold: true
                                 }
-                                Item { Layout.fillWidth: true }
-                                // Delete Waypoint Button
-                                Button {
-                                    Layout.preferredHeight: 22
-                                    implicitWidth: 60
-                                    contentItem: Text {
-                                        text: qsTr("Delete")
-                                        color: CompanyTheme.danger
-                                        font.pointSize: CompanyTheme.fontTiny
-                                        font.bold: true
-                                        horizontalAlignment: Text.AlignHCenter
-                                    }
-                                    background: Rectangle {
-                                        radius: CompanyTheme.radiusSm
-                                        color: parent.hovered ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.2) : "transparent"
-                                        border.color: CompanyTheme.danger
-                                    }
-                                    onClicked: {
-                                        if (root._selectedVIIndex >= 0) {
-                                            root._missionController.removeVisualItem(root._selectedVIIndex)
-                                        }
-                                    }
-                                }
-                            }
-
-                            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: CompanyTheme.borderCard }
-
-                            // Altitude Input (Fact-driven)
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 8
-                                Text { text: qsTr("Altitude:"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall; Layout.preferredWidth: 70 }
-
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 28
-                                    radius: CompanyTheme.radiusSm
-                                    color: CompanyTheme.bgInput
-                                    border.color: CompanyTheme.borderCard
-
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: 8
-                                        anchors.rightMargin: 8
-
-                                        TextInput {
-                                            id: altInput
-                                            Layout.fillWidth: true
-                                            text: (root._selectedItem && root._selectedItem.isSimpleItem && root._selectedItem.altitude) ? root._selectedItem.altitude.valueString : "50"
-                                            color: CompanyTheme.textPrimary
-                                            font.pointSize: CompanyTheme.fontSmall
-                                            font.family: CompanyTheme.fontMono
-                                            selectByMouse: true
-                                            onEditingFinished: {
-                                                if (root._selectedItem && root._selectedItem.isSimpleItem && root._selectedItem.altitude) {
-                                                    var num = parseFloat(altInput.text)
-                                                    if (!isNaN(num)) {
-                                                        root._selectedItem.altitude.value = num
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        Text {
-                                            text: (root._selectedItem && root._selectedItem.isSimpleItem && root._selectedItem.altitude) ? root._selectedItem.altitude.units : "m"
-                                            color: CompanyTheme.textMuted
-                                            font.pointSize: CompanyTheme.fontTiny
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Coordinate Display
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 8
-                                Text { text: qsTr("Position:"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall; Layout.preferredWidth: 70 }
-                                Text {
-                                    text: {
-                                        if (root._selectedItem && root._selectedItem.specifiesCoordinate) {
-                                            var coord = root._selectedItem.coordinate
-                                            return coord.latitude.toFixed(6) + "°, " + coord.longitude.toFixed(6) + "°"
-                                        }
-                                        return "--"
-                                    }
-                                    color: CompanyTheme.textPrimary
-                                    font.pointSize: CompanyTheme.fontSmall
-                                    font.family: CompanyTheme.fontMono
+                                MouseArea {
+                                    id: posStepMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.stepAltitude(posStepBtn.modelData)
                                 }
                             }
                         }
@@ -1213,8 +1187,211 @@ Item {
                 }
             }
 
+            // 6. Pre-Flight Mission Health Overview
+            Rectangle {
+                Layout.fillWidth: true
+                radius: CompanyTheme.radiusSm
+                color: Qt.rgba(0.04, 0.06, 0.09, 0.85)
+                border.color: missionHealth.ready ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.3) : CompanyTheme.borderCard
+                border.width: 1
+                implicitHeight: healthCol.implicitHeight + 12
+
+                ColumnLayout {
+                    id: healthCol
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 4
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text {
+                            text: qsTr("PRE-FLIGHT CHECKS")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: 7
+                            font.bold: true
+                            font.letterSpacing: 0.5
+                        }
+                        Item { Layout.fillWidth: true }
+                        Text {
+                            text: qsTr("%1/%2 Passed").arg(missionHealth.passedChecks).arg(missionHealth.totalChecks)
+                            color: missionHealth.ready ? CompanyTheme.success : (missionHealth.passedChecks >= 4 ? CompanyTheme.warning : CompanyTheme.danger)
+                            font.pointSize: 7
+                            font.bold: true
+                        }
+                    }
+                }
+            }
+
+            // 7. Waypoint List View
+            ListView {
+                id: queueList
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 4
+                clip: true
+                model: root._visualItems
+
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
+
+                delegate: Rectangle {
+                    id: itemDelegate
+                    required property var object
+                    required property int index
+
+                    readonly property bool isSelected: root._selectedVIIndex === itemDelegate.index
+                    readonly property bool isCurrentExec: itemDelegate.object ? itemDelegate.object.isCurrentItem : false
+
+                    Layout.fillWidth: true
+                    width: queueList.width
+                    height: 42
+                    radius: CompanyTheme.radiusSm
+                    color: {
+                        if (itemDelegate.isCurrentExec) return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.18)
+                        if (itemDelegate.isSelected) return CompanyTheme.djiBlueDim
+                        return queueMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardElevated
+                    }
+                    border.color: {
+                        if (itemDelegate.isCurrentExec) return CompanyTheme.warning
+                        if (itemDelegate.isSelected) return CompanyTheme.djiCyan
+                        return CompanyTheme.borderCard
+                    }
+                    border.width: (itemDelegate.isSelected || itemDelegate.isCurrentExec) ? 1.5 : 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 6
+
+                        // Sequence Number Badge
+                        Rectangle {
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            radius: 10
+                            color: itemDelegate.isSelected ? CompanyTheme.djiBlue : CompanyTheme.bgInput
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: itemDelegate.object ? itemDelegate.object.sequenceNumber : (itemDelegate.index + 1)
+                                color: itemDelegate.isSelected ? "#FFFFFF" : CompanyTheme.textSecondary
+                                font.pointSize: 7
+                                font.bold: true
+                            }
+                        }
+
+                        // Command Name & Coordinates
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            Text {
+                                text: itemDelegate.object ? itemDelegate.object.commandName : qsTr("Waypoint")
+                                color: itemDelegate.isSelected ? CompanyTheme.djiCyan : CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontTiny
+                                font.bold: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: {
+                                    if (!itemDelegate.object) return "--"
+                                    if (itemDelegate.object.specifiesCoordinate) {
+                                        var c = itemDelegate.object.coordinate
+                                        return c.latitude.toFixed(4) + "°, " + c.longitude.toFixed(4) + "°"
+                                    }
+                                    return itemDelegate.object.commandDescription || ""
+                                }
+                                color: CompanyTheme.textMuted
+                                font.pointSize: 6
+                                font.family: CompanyTheme.fontMono
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // Altitude
+                        Text {
+                            text: {
+                                if (itemDelegate.object && itemDelegate.object.isSimpleItem && itemDelegate.object.altitude) {
+                                    return itemDelegate.object.altitude.valueString + " " + itemDelegate.object.altitude.units
+                                }
+                                return ""
+                            }
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontTiny
+                            font.family: CompanyTheme.fontMono
+                        }
+                    }
+
+                    MouseArea {
+                        id: queueMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (itemDelegate.object) {
+                                root._missionController.setCurrentPlanViewSeqNum(itemDelegate.object.sequenceNumber, true)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 8. Drawer Bottom Action Buttons (Clear & Upload)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 32
+                    contentItem: Text {
+                        text: qsTr("Clear All")
+                        color: CompanyTheme.danger
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        radius: CompanyTheme.radiusSm
+                        color: parent.hovered ? Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.2) : "transparent"
+                        border.color: CompanyTheme.danger
+                    }
+                    onClicked: {
+                        if (root._itemCount > 0) planMasterController.removeAll()
+                    }
+                }
+
+                Button {
+                    id: djiUploadBtn
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 32
+                    enabled: root._hasVehicle && !root._syncInProgress && root._itemCount > 0 && !root._isMissionActive
+                    contentItem: Text {
+                        text: qsTr("Upload Mission")
+                        color: djiUploadBtn.enabled ? "#FFFFFF" : CompanyTheme.textMuted
+                        font.pointSize: CompanyTheme.fontTiny
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        radius: CompanyTheme.radiusSm
+                        color: {
+                            if (!djiUploadBtn.enabled) return CompanyTheme.bgInput
+                            return djiUploadBtn.hovered ? CompanyTheme.djiBlueHover : CompanyTheme.djiBlue
+                        }
+                        border.color: djiUploadBtn.enabled ? CompanyTheme.djiCyan : "transparent"
+                        border.width: 1
+                    }
+                    onClicked: root.initiateMissionUpload()
+                }
+            }
+        }
+    }
+
     // ====================================================================
-    // 4. FLOATING BOTTOM MISSION EXECUTION & PROGRESS BAR (QGC Style)
+    // 4. FLOATING BOTTOM MISSION EXECUTION & PROGRESS BAR (DJI Glass HUD)
     // ====================================================================
     Rectangle {
         id: bottomExecutionStrip
@@ -1224,9 +1401,9 @@ Item {
         anchors.margins: CompanyTheme.spacingSm
         z: 10
         height: 56
-        radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        radius: CompanyTheme.radiusMd
+        color: CompanyTheme.bgGlass
+        border.color: CompanyTheme.borderGlass
         border.width: 1
 
             RowLayout {

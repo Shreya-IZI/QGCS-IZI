@@ -27,13 +27,21 @@ QtObject {
     readonly property color borderActive:    "#475569"  // Active state / high-contrast steel border
     readonly property color borderSubtle:    "#161B23"  // Internal subtle separator
 
-    // Primary & Interactive Accent Tokens (Restrained, high-contrast monochrome)
+    // Primary & Interactive Accent Tokens (DJI Professional Aerospace Standard)
     readonly property color primary:         "#F8FAFC"  // Operational high-contrast white
     readonly property color primaryHover:    "#E2E8F0"  // Steel hover
     readonly property color primaryDim:      Qt.rgba(1.0, 1.0, 1.0, 0.08) // Subtle tactical highlight
     readonly property color secondaryBlue:   "#64748B"  // Technical slate grey
-    readonly property color accent:          "#F8FAFC"  // Clean high-contrast accent
-    readonly property color accentDim:       Qt.rgba(1.0, 1.0, 1.0, 0.06)
+    readonly property color accent:          "#0082FA"  // DJI Electric Aviation Blue
+    readonly property color accentHover:     "#0091FF"  // Electric Blue hover
+    readonly property color accentDim:       Qt.rgba(0.0, 0.51, 0.98, 0.16) // Blue glow highlight
+    readonly property color djiBlue:         "#0082FA"  // DJI Signature Command Blue
+    readonly property color djiBlueHover:    "#0091FF"  // Electric Blue hover
+    readonly property color djiBlueDim:      Qt.rgba(0.0, 0.51, 0.98, 0.16)
+    readonly property color djiCyan:         "#00E5FF"  // DJI Waypoint & Route Cyan
+    readonly property color djiCyanDim:      Qt.rgba(0.0, 0.90, 1.0, 0.16)
+    readonly property color bgGlass:         Qt.rgba(0.07, 0.09, 0.13, 0.88) // Frosted tactical glass
+    readonly property color borderGlass:     Qt.rgba(1.0, 1.0, 1.0, 0.12)    // High-precision glass edge
 
     // Status Colors (Strictly Restrained Military Telemetry Standards)
     // Green -> Connected / Healthy / Armed-Ready
@@ -94,11 +102,11 @@ QtObject {
     readonly property real spacingLg:        16
     readonly property real spacingXl:        20
 
-    // Minimal sharp corners (0 to 2px)
-    readonly property real radiusSm:         1
-    readonly property real radiusMd:         2
-    readonly property real radiusLg:         2
-    readonly property real radiusPill:       2   // Rectangular technical tags
+    // Refined Aerospace Corner Radii (DJI Professional Specification)
+    readonly property real radiusSm:         4
+    readonly property real radiusMd:         6
+    readonly property real radiusLg:         8
+    readonly property real radiusPill:       16  // Smooth pill tags
 
     readonly property real topBarHeight:         44
     readonly property real bottomBarHeight:      38

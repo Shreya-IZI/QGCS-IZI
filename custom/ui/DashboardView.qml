@@ -332,26 +332,26 @@ Item {
 
     // ------------------------------------------------------------------------
     // ------------------------------------------------------------------------
-    // 2. Floating View Switcher Pill (Top Left)
+    // 2. Floating View Switcher Pill (Top Left - DJI Glass Architecture)
     // ------------------------------------------------------------------------
     Rectangle {
         id: viewSwitcherPill
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.margins: CompanyTheme.spacingMd
-        z: 10
-        height: 28
+        z: 20
+        height: 30
         radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        color: CompanyTheme.bgGlass
+        border.color: CompanyTheme.borderGlass
         border.width: 1
-        implicitWidth: switcherLayout.implicitWidth + 4
+        implicitWidth: switcherLayout.implicitWidth + 6
 
         RowLayout {
             id: switcherLayout
             anchors.fill: parent
             anchors.margins: 2
-            spacing: 2
+            spacing: 3
 
             Repeater {
                 model: [
@@ -369,15 +369,15 @@ Item {
                     readonly property bool isSelected: root.currentSubView === switchBtn.modelData.id
                     readonly property bool isHovered: switchMouseArea.containsMouse
 
-                    Layout.preferredWidth: 64
+                    Layout.preferredWidth: 68
                     Layout.fillHeight: true
                     radius: CompanyTheme.radiusSm - 1
                     color: {
-                        if (switchBtn.isSelected) return CompanyTheme.bgCardHover
-                        if (switchBtn.isHovered) return CompanyTheme.bgCard
+                        if (switchBtn.isSelected) return CompanyTheme.djiBlue
+                        if (switchBtn.isHovered) return CompanyTheme.bgCardHover
                         return "transparent"
                     }
-                    border.color: switchBtn.isSelected ? CompanyTheme.borderActive : "transparent"
+                    border.color: switchBtn.isSelected ? CompanyTheme.djiCyan : "transparent"
                     border.width: 1
 
                     RowLayout {
@@ -387,12 +387,12 @@ Item {
                         IconVector {
                             name: switchBtn.modelData.icon
                             size: 11
-                            color: switchBtn.isSelected ? CompanyTheme.textLight : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                            color: switchBtn.isSelected ? "#FFFFFF" : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                         }
 
                         Text {
                             text: switchBtn.modelData.label
-                            color: switchBtn.isSelected ? CompanyTheme.textLight : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                            color: switchBtn.isSelected ? "#FFFFFF" : (switchBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
                             font.pointSize: CompanyTheme.fontTiny
                             font.bold: switchBtn.isSelected
                             font.letterSpacing: 0.5
@@ -412,7 +412,49 @@ Item {
     }
 
     // ------------------------------------------------------------------------
-    // 3. Floating Bottom Operational Telemetry Strip (Professional Aviation HUD)
+    // 2b. DJI Attitude Horizon HUD Overlay (Collapsible Tactical Widget)
+    // ------------------------------------------------------------------------
+    AttitudeHorizonHUD {
+        id: attitudeHudOverlay
+        anchors.top: viewSwitcherPill.bottom
+        anchors.left: parent.left
+        anchors.margins: CompanyTheme.spacingMd
+        z: 20
+        visible: root.currentSubView === "MAP"
+    }
+
+    // ------------------------------------------------------------------------
+    // 2c. DJI Live Camera PIP Card (Simultaneous Multi-Viewport on Map)
+    // ------------------------------------------------------------------------
+    CameraPipCard {
+        id: cameraPipWidget
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: CompanyTheme.spacingMd
+        z: 20
+        visible: root.currentSubView === "MAP"
+        onSwapRequested: (targetSubView) => {
+            root.currentSubView = targetSubView
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // 2d. DJI Tactical Map PIP Card (Simultaneous Multi-Viewport on Camera)
+    // ------------------------------------------------------------------------
+    MapPipCard {
+        id: mapPipWidget
+        anchors.bottom: bottomTelemetryStrip.top
+        anchors.right: parent.right
+        anchors.margins: CompanyTheme.spacingMd
+        z: 20
+        visible: root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM" || root.currentSubView === "CAM"
+        onSwapRequested: {
+            root.currentSubView = "MAP"
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // 3. Floating Bottom Operational Telemetry Strip (DJI Glass HUD)
     // ------------------------------------------------------------------------
     Rectangle {
         id: bottomTelemetryStrip
@@ -422,9 +464,9 @@ Item {
         anchors.margins: CompanyTheme.spacingMd
         z: 10
         height: 38
-        radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        radius: CompanyTheme.radiusMd
+        color: CompanyTheme.bgGlass
+        border.color: CompanyTheme.borderGlass
         border.width: 1
 
         RowLayout {

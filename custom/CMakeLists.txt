@@ -31,6 +31,9 @@ set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/Sidebar.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/DashboardView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/PrimaryFlightDisplay.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/AttitudeHorizonHUD.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/CameraPipCard.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/MapPipCard.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/TacticalMapView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/SystemDiagnosticsView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/CameraView.qml
