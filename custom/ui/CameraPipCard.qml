@@ -109,7 +109,7 @@ Item {
 
                 // Title
                 Text {
-                    text: root.activeSensor === "RGB" ? qsTr("DAYLIGHT CAM") : qsTr("THERMAL IR")
+                    text: root.activeSensor === "RGB" ? qsTr("PAYLOAD EO") : qsTr("PAYLOAD IR")
                     color: CompanyTheme.textPrimary
                     font.pointSize: CompanyTheme.fontTiny
                     font.bold: true
@@ -117,19 +117,19 @@ Item {
                     elide: Text.ElideRight
                 }
 
-                // Sensor Selector Pill (RGB / IR)
+                // Sensor Selector Pill (EO / IR)
                 Row {
                     spacing: 2
                     Layout.alignment: Qt.AlignVCenter
 
                     Rectangle {
-                        width: 32
+                        width: 28
                         height: 18
                         radius: 3
                         color: root.activeSensor === "RGB" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
                         Text {
                             anchors.centerIn: parent
-                            text: "RGB"
+                            text: "EO"
                             color: root.activeSensor === "RGB" ? "#FFFFFF" : CompanyTheme.textSecondary
                             font.pointSize: 7
                             font.bold: true
@@ -142,7 +142,7 @@ Item {
                     }
 
                     Rectangle {
-                        width: 32
+                        width: 28
                         height: 18
                         radius: 3
                         color: root.activeSensor === "IR" ? CompanyTheme.djiBlue : CompanyTheme.bgCard

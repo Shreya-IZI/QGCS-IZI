@@ -907,7 +907,7 @@ Item {
                 }
 
                 Text {
-                    text: qsTr("CREATE FLIGHT PLAN")
+                    text: qsTr("AUTONOMOUS FLIGHT TASK")
                     color: CompanyTheme.textPrimary
                     font.pointSize: CompanyTheme.fontSmall
                     font.bold: true
@@ -950,13 +950,13 @@ Item {
                         Layout.fillWidth: true
                         spacing: 0
                         Text {
-                            text: root._hasVehicle ? qsTr("UAS #%1 Online").arg(CompanyTelemetry.vehicleId) : qsTr("No Vehicle Linked")
+                            text: root._hasVehicle ? qsTr("UAS #%1 Telemetry Linked").arg(CompanyTelemetry.vehicleId) : qsTr("No Vehicle Linked (Editor Mode)")
                             color: CompanyTheme.textPrimary
                             font.pointSize: CompanyTheme.fontTiny
                             font.bold: true
                         }
                         Text {
-                            text: root._hasVehicle ? (CompanyTelemetry.gpsCountStr + " sats • " + CompanyTelemetry.gpsLockString) : qsTr("Simulated Editor")
+                            text: root._hasVehicle ? (CompanyTelemetry.gpsCountStr + " sats • " + CompanyTelemetry.gpsLockString) : qsTr("Tactical Route Design")
                             color: CompanyTheme.textMuted
                             font.pointSize: 6
                         }
@@ -964,12 +964,12 @@ Item {
 
                     Rectangle {
                         Layout.preferredHeight: 18
-                        implicitWidth: 50
+                        implicitWidth: 60
                         radius: 3
                         color: root.positioningAccuracy === "RTK" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
                         Text {
                             anchors.centerIn: parent
-                            text: root.positioningAccuracy
+                            text: root.positioningAccuracy === "RTK" ? "RTK FIX" : "GNSS 3D"
                             color: "#FFFFFF"
                             font.pointSize: 7
                             font.bold: true
@@ -987,7 +987,7 @@ Item {
                     text: qsTr("Positioning:")
                     color: CompanyTheme.textSecondary
                     font.pointSize: CompanyTheme.fontTiny
-                    Layout.preferredWidth: 70
+                    Layout.preferredWidth: 72
                 }
 
                 Row {
@@ -995,16 +995,16 @@ Item {
                     Layout.fillWidth: true
 
                     Rectangle {
-                        width: 60
+                        width: 70
                         height: 22
                         radius: CompanyTheme.radiusSm
                         color: root.positioningAccuracy === "RTK" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
                         border.color: root.positioningAccuracy === "RTK" ? CompanyTheme.djiCyan : CompanyTheme.borderCard
                         Text {
                             anchors.centerIn: parent
-                            text: "RTK"
+                            text: "RTK Precise"
                             color: root.positioningAccuracy === "RTK" ? "#FFFFFF" : CompanyTheme.textSecondary
-                            font.pointSize: CompanyTheme.fontTiny
+                            font.pointSize: 7
                             font.bold: true
                         }
                         MouseArea {
@@ -1015,16 +1015,16 @@ Item {
                     }
 
                     Rectangle {
-                        width: 60
+                        width: 70
                         height: 22
                         radius: CompanyTheme.radiusSm
                         color: root.positioningAccuracy === "GNSS" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
                         border.color: root.positioningAccuracy === "GNSS" ? CompanyTheme.djiCyan : CompanyTheme.borderCard
                         Text {
                             anchors.centerIn: parent
-                            text: "GNSS"
+                            text: "Dual GNSS"
                             color: root.positioningAccuracy === "GNSS" ? "#FFFFFF" : CompanyTheme.textSecondary
-                            font.pointSize: CompanyTheme.fontTiny
+                            font.pointSize: 7
                             font.bold: true
                         }
                         MouseArea {
@@ -1036,16 +1036,16 @@ Item {
                 }
             }
 
-            // 4. Plan Timer Pill Selector
+            // 4. Mission Profile Pill Selector
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
 
                 Text {
-                    text: qsTr("Execution:")
+                    text: qsTr("Profile:")
                     color: CompanyTheme.textSecondary
                     font.pointSize: CompanyTheme.fontTiny
-                    Layout.preferredWidth: 70
+                    Layout.preferredWidth: 72
                 }
 
                 Row {
@@ -1053,11 +1053,11 @@ Item {
                     Layout.fillWidth: true
 
                     Repeater {
-                        model: ["Immediate", "Timed", "Recurring"]
+                        model: ["Patrol", "Perimeter", "Tether Loiter"]
                         Rectangle {
                             id: timerPill
                             required property string modelData
-                            width: 64
+                            width: 68
                             height: 22
                             radius: CompanyTheme.radiusSm
                             color: root.planTimer === timerPill.modelData ? CompanyTheme.djiBlue : CompanyTheme.bgCard
@@ -1079,7 +1079,7 @@ Item {
                 }
             }
 
-            // 5. DJI Quick Altitude Stepper Controls
+            // 5. Fast Altitude Stepper Controls
             Rectangle {
                 Layout.fillWidth: true
                 height: 52
@@ -1107,7 +1107,7 @@ Item {
                         Layout.alignment: Qt.AlignHCenter
 
                         Repeater {
-                            model: [-100, -10, -1]
+                            model: [-50, -10, -1]
                             Rectangle {
                                 id: negStepBtn
                                 required property int modelData
@@ -1158,7 +1158,7 @@ Item {
                         }
 
                         Repeater {
-                            model: [1, 10, 100]
+                            model: [1, 10, 50]
                             Rectangle {
                                 id: posStepBtn
                                 required property int modelData

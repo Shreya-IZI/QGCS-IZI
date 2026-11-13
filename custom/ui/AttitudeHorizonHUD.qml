@@ -9,9 +9,9 @@ import Company.UI
 Item {
     id: root
 
-    // Dimension specifications for DJI Pilot 2 HUD widget
+    // Ergonomic aerospace HUD dimensions
     implicitWidth: collapsed ? 36 : 280
-    implicitHeight: collapsed ? 36 : 240
+    implicitHeight: collapsed ? 36 : 220
 
     property bool collapsed: false
 
@@ -24,9 +24,9 @@ Item {
     readonly property bool _hasVehicle:  CompanyTelemetry.hasVehicle
     readonly property bool _isArmed:     CompanyTelemetry.armed
 
-    // Smooth width/height animation on collapse
-    Behavior on implicitWidth { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-    Behavior on implicitHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+    // Smooth transition animations
+    Behavior on implicitWidth { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Behavior on implicitHeight { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
     // Collapsed Toggle Tab
     Rectangle {
@@ -50,7 +50,7 @@ Item {
             }
 
             Text {
-                text: "HUD"
+                text: "PFD"
                 color: CompanyTheme.textPrimary
                 font.pointSize: 7
                 font.bold: true
@@ -66,7 +66,7 @@ Item {
         }
     }
 
-    // Expanded HUD Card
+    // Expanded Aerospace PFD HUD Card
     Rectangle {
         id: hudCard
         anchors.fill: parent
@@ -77,14 +77,14 @@ Item {
         border.width: 1
         clip: true
 
-        // Top Status Header
+        // Top Status Header (Flight Mode & Telemetry Header)
         Rectangle {
             id: topHeader
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
             height: 24
-            color: Qt.rgba(0.04, 0.06, 0.09, 0.92)
+            color: Qt.rgba(0.04, 0.06, 0.09, 0.94)
             border.color: CompanyTheme.borderGlass
             border.width: 1
 
@@ -94,7 +94,6 @@ Item {
                 anchors.rightMargin: 8
                 spacing: 6
 
-                // Aircraft Icon & Mode
                 Rectangle {
                     Layout.preferredWidth: 6
                     Layout.preferredHeight: 6
@@ -103,7 +102,7 @@ Item {
                 }
 
                 Text {
-                    text: root._hasVehicle ? (root._flightMode !== "" ? root._flightMode.toUpperCase() : "STANDBY") : "NO VEHICLE"
+                    text: root._hasVehicle ? (root._flightMode !== "" ? root._flightMode.toUpperCase() : "STANDBY") : "NO LINK"
                     color: CompanyTheme.djiCyan
                     font.pointSize: CompanyTheme.fontTiny
                     font.bold: true
@@ -113,8 +112,8 @@ Item {
 
                 // Heading degrees
                 Text {
-                    text: isNaN(root._heading) ? "--°" : Math.round(root._heading).toString() + "°"
-                    color: CompanyTheme.textLight
+                    text: isNaN(root._heading) ? "--°" : Math.round(root._heading).toString() + "° HDG"
+                    color: CompanyTheme.textPrimary
                     font.pointSize: CompanyTheme.fontTiny
                     font.family: CompanyTheme.fontMono
                     font.bold: true
@@ -158,38 +157,44 @@ Item {
             Item {
                 id: horizonContainer
                 anchors.centerIn: parent
-                width: Math.max(hudViewport.width, hudViewport.height) * 2.5
+                width: Math.max(hudViewport.width, hudViewport.height) * 2.6
                 height: width
 
-                readonly property real pitchScale: 3.0
+                readonly property real pitchScale: 2.8
                 readonly property real rollAngle:  root._roll
                 readonly property real pitchAngle: root._pitch
 
-                // Sky Half
+                // Deep Aerospace Sky Gradient
                 Rectangle {
                     anchors.top: parent.top
                     anchors.left: parent.left
                     anchors.right: parent.right
                     height: parent.height / 2
-                    color: "#0066CC"
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#0B192C" }
+                        GradientStop { position: 1.0; color: "#1E3E62" }
+                    }
                 }
 
-                // Ground Half
+                // Deep Terrain Earth Gradient
                 Rectangle {
                     anchors.bottom: parent.bottom
                     anchors.left: parent.left
                     anchors.right: parent.right
                     height: parent.height / 2
-                    color: "#7A431D"
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#2B1B10" }
+                        GradientStop { position: 1.0; color: "#140D08" }
+                    }
                 }
 
-                // Crisp Horizon Line
+                // Illuminated Horizon Line
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: parent.height / 2 - 1
                     width: parent.width
                     height: 2
-                    color: "#FFFFFF"
+                    color: "#00E5FF"
                 }
 
                 // Pitch Ladder Lines
@@ -203,27 +208,29 @@ Item {
                         Item {
                             id: posPitchItem
                             required property int modelData
-                            width: 40
-                            height: 4
+                            width: 44
+                            height: 6
                             anchors.horizontalCenter: parent.horizontalCenter
                             y: parent.height / 2 - (posPitchItem.modelData * horizonContainer.pitchScale) - 1
 
-                            Rectangle { anchors.left: parent.left; width: 14; height: 1.5; color: "#FFFFFF" }
-                            Rectangle { anchors.right: parent.right; width: 14; height: 1.5; color: "#FFFFFF" }
+                            Rectangle { anchors.left: parent.left; width: 14; height: 1.5; color: "#E0F2FE" }
+                            Rectangle { anchors.left: parent.left; anchors.top: parent.top; width: 1.5; height: 4; color: "#E0F2FE" }
+                            Rectangle { anchors.right: parent.right; width: 14; height: 1.5; color: "#E0F2FE" }
+                            Rectangle { anchors.right: parent.right; anchors.top: parent.top; width: 1.5; height: 4; color: "#E0F2FE" }
 
                             Text {
-                                anchors.right: parent.left; anchors.rightMargin: 3
+                                anchors.right: parent.left; anchors.rightMargin: 4
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: posPitchItem.modelData.toString()
-                                color: "#FFFFFF"
+                                color: "#E0F2FE"
                                 font.pointSize: 7
                                 font.family: CompanyTheme.fontMono
                             }
                             Text {
-                                anchors.left: parent.right; anchors.leftMargin: 3
+                                anchors.left: parent.right; anchors.leftMargin: 4
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: posPitchItem.modelData.toString()
-                                color: "#FFFFFF"
+                                color: "#E0F2FE"
                                 font.pointSize: 7
                                 font.family: CompanyTheme.fontMono
                             }
@@ -236,27 +243,29 @@ Item {
                         Item {
                             id: negPitchItem
                             required property int modelData
-                            width: 40
-                            height: 4
+                            width: 44
+                            height: 6
                             anchors.horizontalCenter: parent.horizontalCenter
                             y: parent.height / 2 + (negPitchItem.modelData * horizonContainer.pitchScale) - 1
 
-                            Rectangle { anchors.left: parent.left; width: 14; height: 1.5; color: "#FFFFFF" }
-                            Rectangle { anchors.right: parent.right; width: 14; height: 1.5; color: "#FFFFFF" }
+                            Rectangle { anchors.left: parent.left; width: 14; height: 1.5; color: "#FED7AA" }
+                            Rectangle { anchors.left: parent.left; anchors.bottom: parent.bottom; width: 1.5; height: 4; color: "#FED7AA" }
+                            Rectangle { anchors.right: parent.right; width: 14; height: 1.5; color: "#FED7AA" }
+                            Rectangle { anchors.right: parent.right; anchors.bottom: parent.bottom; width: 1.5; height: 4; color: "#FED7AA" }
 
                             Text {
-                                anchors.right: parent.left; anchors.rightMargin: 3
+                                anchors.right: parent.left; anchors.rightMargin: 4
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "-" + negPitchItem.modelData.toString()
-                                color: "#FFFFFF"
+                                color: "#FED7AA"
                                 font.pointSize: 7
                                 font.family: CompanyTheme.fontMono
                             }
                             Text {
-                                anchors.left: parent.right; anchors.leftMargin: 3
+                                anchors.left: parent.right; anchors.leftMargin: 4
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "-" + negPitchItem.modelData.toString()
-                                color: "#FFFFFF"
+                                color: "#FED7AA"
                                 font.pointSize: 7
                                 font.family: CompanyTheme.fontMono
                             }
@@ -279,45 +288,61 @@ Item {
             // Fixed Center Reticle / Aircraft Reference Symbol
             Item {
                 anchors.centerIn: parent
-                width: 60
+                width: 64
                 height: 20
                 z: 5
 
-                // Center Dot
+                // Center Target Dot
                 Rectangle {
                     anchors.centerIn: parent
                     width: 4
                     height: 4
                     radius: 2
-                    color: "#FFD700"
+                    color: "#FFB300"
                 }
 
-                // Left Wing Bar
+                // Left Wing Bar with Drop
                 Rectangle {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
-                    height: 2.5
-                    color: "#FFD700"
+                    height: 2
+                    color: "#FFB300"
+                }
+                Rectangle {
+                    x: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: 3
+                    width: 2
+                    height: 6
+                    color: "#FFB300"
                 }
 
-                // Right Wing Bar
+                // Right Wing Bar with Drop
                 Rectangle {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
-                    height: 2.5
-                    color: "#FFD700"
+                    height: 2
+                    color: "#FFB300"
+                }
+                Rectangle {
+                    x: parent.width - 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: 3
+                    width: 2
+                    height: 6
+                    color: "#FFB300"
                 }
             }
 
-            // Left Speed Tape (m/s)
+            // Left Airspeed Tape (m/s)
             Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: 48
-                color: Qt.rgba(0.06, 0.08, 0.12, 0.75)
+                width: 46
+                color: Qt.rgba(0.04, 0.07, 0.10, 0.85)
                 border.color: CompanyTheme.borderGlass
                 border.width: 1
                 z: 6
@@ -330,27 +355,27 @@ Item {
                     Text {
                         text: "SPD m/s"
                         color: CompanyTheme.textMuted
-                        font.pointSize: 7
+                        font.pointSize: 6
                         font.bold: true
                         Layout.alignment: Qt.AlignHCenter
                     }
 
                     Item { Layout.fillHeight: true }
 
-                    // Speed Readout Box
+                    // Speed Readout Pointer Box
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 22
+                        Layout.preferredHeight: 20
                         radius: 3
                         color: CompanyTheme.djiBlue
-                        border.color: "#FFFFFF"
+                        border.color: CompanyTheme.djiCyan
                         border.width: 1
 
                         Text {
                             anchors.centerIn: parent
                             text: isNaN(root._groundSpeed) ? "0.0" : root._groundSpeed.toFixed(1)
                             color: "#FFFFFF"
-                            font.pointSize: CompanyTheme.fontSmall
+                            font.pointSize: CompanyTheme.fontTiny
                             font.family: CompanyTheme.fontMono
                             font.bold: true
                         }
@@ -360,13 +385,13 @@ Item {
                 }
             }
 
-            // Right Altitude Tape (m)
+            // Right Relative Altitude Tape (m)
             Rectangle {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: 48
-                color: Qt.rgba(0.06, 0.08, 0.12, 0.75)
+                width: 46
+                color: Qt.rgba(0.04, 0.07, 0.10, 0.85)
                 border.color: CompanyTheme.borderGlass
                 border.width: 1
                 z: 6
@@ -379,27 +404,27 @@ Item {
                     Text {
                         text: "ALT m"
                         color: CompanyTheme.textMuted
-                        font.pointSize: 7
+                        font.pointSize: 6
                         font.bold: true
                         Layout.alignment: Qt.AlignHCenter
                     }
 
                     Item { Layout.fillHeight: true }
 
-                    // Altitude Readout Box
+                    // Altitude Readout Pointer Box
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 22
+                        Layout.preferredHeight: 20
                         radius: 3
                         color: CompanyTheme.djiBlue
-                        border.color: "#FFFFFF"
+                        border.color: CompanyTheme.djiCyan
                         border.width: 1
 
                         Text {
                             anchors.centerIn: parent
                             text: isNaN(root._altRel) ? "0.0" : root._altRel.toFixed(1)
                             color: "#FFFFFF"
-                            font.pointSize: CompanyTheme.fontSmall
+                            font.pointSize: CompanyTheme.fontTiny
                             font.family: CompanyTheme.fontMono
                             font.bold: true
                         }
@@ -410,14 +435,14 @@ Item {
             }
         }
 
-        // Bottom Compass Tape
+        // Bottom Compass Arc
         Rectangle {
             id: compassBar
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             height: 22
-            color: Qt.rgba(0.04, 0.06, 0.09, 0.92)
+            color: Qt.rgba(0.04, 0.06, 0.09, 0.94)
             border.color: CompanyTheme.borderGlass
             border.width: 1
 
@@ -432,7 +457,7 @@ Item {
                 Text { text: "NW"; color: CompanyTheme.textMuted; font.pointSize: 7 }
                 Item { Layout.fillWidth: true }
                 Rectangle {
-                    Layout.preferredWidth: 28
+                    Layout.preferredWidth: 32
                     Layout.preferredHeight: 14
                     radius: 2
                     color: CompanyTheme.djiBlueDim
