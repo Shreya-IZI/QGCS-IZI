@@ -581,20 +581,23 @@ Item {
                         visible: root.currentMode !== "PIP"
 
                         Rectangle {
+                            id: fullRgbBtn
                             height: 28
                             implicitWidth: fullRgbBtnText.implicitWidth + 20
                             radius: CompanyTheme.radiusSm
-                            color: CompanyTheme.primary
+                            color: fullRgbMouse.containsMouse ? CompanyTheme.primaryHover : CompanyTheme.primary
                             Text {
                                 id: fullRgbBtnText
                                 anchors.centerIn: parent
                                 text: qsTr("FULL SCREEN RGB")
-                                color: CompanyTheme.textLight
+                                color: CompanyTheme.bgApp
                                 font.bold: true
                                 font.pointSize: CompanyTheme.fontTiny
                             }
                             MouseArea {
+                                id: fullRgbMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.currentMode = "RGB_ONLY"
                             }
@@ -604,18 +607,20 @@ Item {
                             height: 28
                             implicitWidth: cfgStreamBtnText.implicitWidth + 20
                             radius: CompanyTheme.radiusSm
-                            color: CompanyTheme.bgCardSecondary
-                            border.color: CompanyTheme.borderCard
+                            color: cfgStreamMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary
+                            border.color: cfgStreamMouse.containsMouse ? CompanyTheme.borderActive : CompanyTheme.borderCard
                             border.width: 1
                             Text {
                                 id: cfgStreamBtnText
                                 anchors.centerIn: parent
                                 text: qsTr("STREAM SETTINGS")
-                                color: CompanyTheme.textPrimary
+                                color: cfgStreamMouse.containsMouse ? CompanyTheme.textLight : CompanyTheme.textPrimary
                                 font.pointSize: CompanyTheme.fontTiny
                             }
                             MouseArea {
+                                id: cfgStreamMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: streamPopup.open()
                             }
@@ -629,7 +634,7 @@ Item {
                 anchors.bottom: root.currentMode === "PIP" ? undefined : parent.bottom
                 anchors.top: root.currentMode === "PIP" ? parent.top : undefined
                 anchors.left: parent.left
-                anchors.bottomMargin: root.currentMode === "PIP" ? 0 : (62 + osdBottomLeft.height + 6)
+                anchors.bottomMargin: root.currentMode === "PIP" ? 0 : (62 + (osdBottomLeft.visible ? (osdBottomLeft.height + 6) : 0))
                 anchors.topMargin: root.currentMode === "PIP" ? 6 : 0
                 anchors.leftMargin: root.currentMode === "PIP" ? 6 : CompanyTheme.spacingMd
                 z: 10
@@ -678,6 +683,7 @@ Item {
         // --------------------------------------------------------------------
         Rectangle {
             id: osdTopLeft
+            visible: CompanyTelemetry.hasVehicle
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.topMargin: root._isNarrow ? 82 : 52
@@ -975,6 +981,7 @@ Item {
         // --------------------------------------------------------------------
         Rectangle {
             id: osdBottomLeft
+            visible: CompanyTelemetry.hasVehicle || root.showGimbalPad || (CompanyTelemetry._activeGimbal !== null)
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 62
@@ -1373,7 +1380,7 @@ Item {
 
                     Text {
                         readonly property var _veh: QGroundControl.multiVehicleManager.activeVehicle
-                        text: "ALT: " + (_veh && _veh.altitudeRelative ? _veh.altitudeRelative.value.toFixed(1) + "m" : "--m")
+                        text: "ALT: " + (_veh && _veh.altitudeRelative && !isNaN(Number(_veh.altitudeRelative.value)) ? (Number(_veh.altitudeRelative.value).toFixed(1) + "m") : "--m")
                         color: CompanyTheme.textSecondary
                         font.pointSize: CompanyTheme.fontTiny
                         font.family: CompanyTheme.fontMono
@@ -2388,20 +2395,22 @@ Item {
                 Layout.fillWidth: true
                 height: 32
                 radius: CompanyTheme.radiusSm
-                color: CompanyTheme.primary
+                color: reconnectMouse.containsMouse ? CompanyTheme.primaryHover : CompanyTheme.primary
                 RowLayout {
                     anchors.centerIn: parent
                     spacing: 6
-                    IconVector { name: "refresh"; size: 14; color: CompanyTheme.textLight }
+                    IconVector { name: "refresh"; size: 14; color: CompanyTheme.bgApp }
                     Text {
                         text: qsTr("RECONNECT VIDEO STREAM")
-                        color: CompanyTheme.textLight
+                        color: CompanyTheme.bgApp
                         font.bold: true
                         font.pointSize: CompanyTheme.fontSmall
                     }
                 }
                 MouseArea {
+                    id: reconnectMouse
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         var vs = QGroundControl.settingsManager.videoSettings

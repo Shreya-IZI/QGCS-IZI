@@ -245,7 +245,7 @@ Rectangle {
                                 Text {
                                     id: verText
                                     anchors.centerIn: parent
-                                    text: "v5.0.3"
+                                    text: ((typeof SafeTManager !== "undefined" && SafeTManager) || (typeof safeTManager !== "undefined" && safeTManager)) ? "v0.1.0-alpha" : "v5.0.3"
                                     color: CompanyTheme.primary
                                     font.pointSize: 8
                                     font.bold: true
