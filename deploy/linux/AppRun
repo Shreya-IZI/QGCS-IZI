@@ -104,10 +104,32 @@ fi
 
 QGC_NAME=$(basename "$QGC_BINARY")
 
-if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+if [ -z "$QT_QPA_PLATFORM" ] && [ "$XDG_SESSION_TYPE" = "wayland" ]; then
     echo "${QGC_NAME} AppImage: Forcing xcb platform (Wayland support incomplete)" >&2
     export QT_QPA_PLATFORM=xcb
 fi
+
+# -----------------------------------------------------------------------------
+# Clean Single-Instance Takeover
+# If a previous instance of QGroundControl is running or hung, terminate it
+# cleanly so the user is never blocked by "A second instance is already running".
+# -----------------------------------------------------------------------------
+for pid in $(pgrep -x QGroundControl 2>/dev/null); do
+    if [ "$pid" != "$$" ]; then
+        echo "Closing previous QGroundControl instance (PID: $pid)..." >&2
+        kill -TERM "$pid" 2>/dev/null || true
+        for i in 1 2 3 4 5; do
+            if ! kill -0 "$pid" 2>/dev/null; then
+                break
+            fi
+            sleep 0.1
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    fi
+done
+rm -f /tmp/qgc-*.lock 2>/dev/null || true
 
 export GST_REGISTRY_REUSE_PLUGIN_SCANNER="no"
 export GST_REGISTRY_FORK="no"

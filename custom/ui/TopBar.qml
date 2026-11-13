@@ -467,6 +467,38 @@ Rectangle {
                                         }
                                     }
                                 }
+
+                                Button {
+                                    text: qsTr("Exit GCS")
+                                    contentItem: RowLayout {
+                                        spacing: 4
+                                        IconVector {
+                                            name: "power"
+                                            size: 11
+                                            color: CompanyTheme.danger
+                                        }
+                                        Text {
+                                            text: qsTr("Exit")
+                                            color: CompanyTheme.danger
+                                            font.pointSize: 8
+                                            font.bold: true
+                                        }
+                                    }
+                                    background: Rectangle {
+                                        radius: 3
+                                        color: parent.hovered ? CompanyTheme.dangerDim : "transparent"
+                                        border.color: parent.hovered ? CompanyTheme.danger : "transparent"
+                                        border.width: 1
+                                    }
+                                    onClicked: {
+                                        iziMenuPopup.close()
+                                        if (typeof mainWindow !== "undefined" && mainWindow.finishCloseProcess) {
+                                            mainWindow.finishCloseProcess()
+                                        } else {
+                                            Qt.quit()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

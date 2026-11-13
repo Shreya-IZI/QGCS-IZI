@@ -1,8 +1,14 @@
 #include "RunGuard.h"
 
 #include <QtCore/QCryptographicHash>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QStandardPaths>
+#include <QtCore/QThread>
+
+#if defined(Q_OS_UNIX)
+#include <signal.h>
+#endif
 
 RunGuard::RunGuard(const QString &key)
     : _key(key)
@@ -49,7 +55,32 @@ bool RunGuard::isAnotherRunning()
 
 bool RunGuard::tryToRun()
 {
-    return (_lockFile.isLocked() ? true : _lockFile.tryLock(0));
+    if (_lockFile.isLocked()) {
+        return true;
+    }
+
+    if (_lockFile.tryLock(0)) {
+        return true;
+    }
+
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS) && defined(Q_OS_UNIX)
+    // If another instance holds the lock, attempt a clean takeover to prevent deadlocks
+    qint64 existingPid = 0;
+    QString existingHost, existingApp;
+    if (_lockFile.getLockInfo(&existingPid, &existingHost, &existingApp) && existingPid > 0 && existingPid != QCoreApplication::applicationPid()) {
+        qWarning() << "Previous QGroundControl instance (PID" << existingPid << ") detected. Performing clean takeover...";
+        ::kill(static_cast<pid_t>(existingPid), SIGTERM);
+        QThread::msleep(400);
+        if (::kill(static_cast<pid_t>(existingPid), 0) == 0) {
+            ::kill(static_cast<pid_t>(existingPid), SIGKILL);
+            QThread::msleep(200);
+        }
+        _lockFile.removeStaleLockFile();
+        return _lockFile.tryLock(0);
+    }
+#endif
+
+    return false;
 }
 
 void RunGuard::release()
