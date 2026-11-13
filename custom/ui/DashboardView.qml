@@ -313,26 +313,18 @@ Item {
             visible: root.currentSubView === "SYSTEM"
         }
 
-        // Viewport 4: Dedicated Daylight Camera Workspace (RGB)
+        // Viewport 4: Unified Payload Camera Workspace (Daylight EO / Thermal IR / Dual Split)
         CameraView {
-            id: daylightCameraView
+            id: primaryCameraView
             anchors.fill: parent
-            currentMode: "RGB_ONLY"
-            visible: root.currentSubView === "RGB_CAM" || root.currentSubView === "CAM"
-        }
-
-        // Viewport 5: Dedicated Thermal IR Camera Workspace (Thermal)
-        CameraView {
-            id: thermalCameraView
-            anchors.fill: parent
-            currentMode: "THERMAL_ONLY"
-            visible: root.currentSubView === "IR_CAM"
+            hasMapPip: mapPipWidget.visible
+            visible: root.currentSubView === "CAM" || root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM"
         }
     }
 
     // ------------------------------------------------------------------------
     // ------------------------------------------------------------------------
-    // 2. Floating View Switcher Pill (Top Left - DJI Glass Architecture)
+    // 2. Floating View Switcher Pill (Top Left - Clean Tactical Header)
     // ------------------------------------------------------------------------
     Rectangle {
         id: viewSwitcherPill
@@ -355,21 +347,20 @@ Item {
 
             Repeater {
                 model: [
-                    { id: "MAP",     label: qsTr("MAP"),     icon: "flight" },
-                    { id: "PFD",     label: qsTr("PFD"),     icon: "dashboard" },
-                    { id: "RGB_CAM", label: qsTr("DAY CAM"), icon: "video" },
-                    { id: "IR_CAM",  label: qsTr("IR CAM"),  icon: "video" },
-                    { id: "SYSTEM",  label: qsTr("SYSTEM"),  icon: "settings" }
+                    { id: "MAP",    label: qsTr("MAP"),    icon: "flight" },
+                    { id: "CAM",    label: qsTr("CAMERA"), icon: "video" },
+                    { id: "PFD",    label: qsTr("PFD"),    icon: "dashboard" },
+                    { id: "SYSTEM", label: qsTr("SYSTEM"), icon: "settings" }
                 ]
 
                 delegate: Rectangle {
                     id: switchBtn
                     required property var modelData
 
-                    readonly property bool isSelected: root.currentSubView === switchBtn.modelData.id
+                    readonly property bool isSelected: root.currentSubView === switchBtn.modelData.id || (switchBtn.modelData.id === "CAM" && (root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM"))
                     readonly property bool isHovered: switchMouseArea.containsMouse
 
-                    Layout.preferredWidth: 68
+                    Layout.preferredWidth: 72
                     Layout.fillHeight: true
                     radius: CompanyTheme.radiusSm - 1
                     color: {
@@ -412,7 +403,7 @@ Item {
     }
 
     // ------------------------------------------------------------------------
-    // 2b. DJI Attitude Horizon HUD Overlay (Collapsible Tactical Widget)
+    // 2b. Tactical Attitude Horizon HUD Overlay (Collapsible Avionics Widget)
     // ------------------------------------------------------------------------
     AttitudeHorizonHUD {
         id: attitudeHudOverlay
@@ -424,7 +415,7 @@ Item {
     }
 
     // ------------------------------------------------------------------------
-    // 2c. DJI Live Camera PIP Card (Simultaneous Multi-Viewport on Map)
+    // 2c. Tactical Sensor PIP Card (Simultaneous Multi-Viewport on Map)
     // ------------------------------------------------------------------------
     CameraPipCard {
         id: cameraPipWidget
@@ -434,17 +425,17 @@ Item {
         z: 20
         visible: root.currentSubView === "MAP"
         onSwapRequested: (targetSubView) => {
-            root.currentSubView = targetSubView
+            root.currentSubView = "CAM"
         }
     }
 
     // ------------------------------------------------------------------------
-    // 2d. DJI Tactical Map PIP Card (Simultaneous Multi-Viewport on Camera)
+    // 2d. Tactical Map PIP Card (Bottom-Left: Zero Overlap with Tether Card)
     // ------------------------------------------------------------------------
     MapPipCard {
         id: mapPipWidget
         anchors.bottom: bottomTelemetryStrip.top
-        anchors.right: parent.right
+        anchors.left: parent.left
         anchors.margins: CompanyTheme.spacingMd
         z: 20
         visible: root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM" || root.currentSubView === "CAM"

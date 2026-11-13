@@ -14,6 +14,7 @@ Item {
     // Supported Modes: "RGB_ONLY", "THERMAL_ONLY", "SIDE_BY_SIDE", "PIP"
     property string currentMode: "RGB_ONLY"
     property bool showGimbalPad: false
+    property bool hasMapPip: false
 
     readonly property bool _isNarrow: width < 1024 || ScreenTools.isMobile
     readonly property var _netSettings: (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : (typeof companyNetworkSettings !== "undefined" ? companyNetworkSettings : null)
@@ -985,7 +986,7 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 62
-            anchors.leftMargin: CompanyTheme.spacingMd
+            anchors.leftMargin: root.hasMapPip ? (CompanyTheme.spacingMd + 230) : CompanyTheme.spacingMd
             radius: CompanyTheme.radiusSm
             color: CompanyTheme.bgOverlayDark
             border.color: CompanyTheme.borderCard
@@ -1943,8 +1944,8 @@ Item {
         z: 30
         height: 28
         radius: CompanyTheme.radiusSm
-        color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        color: CompanyTheme.bgGlass
+        border.color: CompanyTheme.borderGlass
         border.width: 1
         implicitWidth: toolbarLayout.implicitWidth + 4
 
@@ -1952,14 +1953,13 @@ Item {
             id: toolbarLayout
             anchors.fill: parent
             anchors.margins: 2
-            spacing: 2
+            spacing: 3
 
             Repeater {
                 model: [
-                    { id: "RGB_ONLY",     label: qsTr("RGB") },
-                    { id: "THERMAL_ONLY", label: qsTr("THERMAL") },
-                    { id: "SIDE_BY_SIDE", label: qsTr("SPLIT") },
-                    { id: "PIP",          label: qsTr("PIP") }
+                    { id: "RGB_ONLY",     label: qsTr("EO DAYLIGHT") },
+                    { id: "THERMAL_ONLY", label: qsTr("IR THERMAL") },
+                    { id: "SIDE_BY_SIDE", label: qsTr("DUAL SPLIT") }
                 ]
 
                 delegate: Rectangle {
@@ -1969,16 +1969,16 @@ Item {
                     readonly property bool isSelected: root.currentMode === modeBtn.modelData.id
                     readonly property bool isHovered: modeMouseArea.containsMouse
 
-                    Layout.preferredWidth: root._isNarrow ? 64 : 76
+                    Layout.preferredWidth: root._isNarrow ? 80 : 96
                     Layout.fillHeight: true
                     radius: CompanyTheme.radiusSm - 1
                     color: {
-                        if (modeBtn.isSelected) return CompanyTheme.primaryDim
+                        if (modeBtn.isSelected) return CompanyTheme.djiBlue
                         if (modeBtn.isHovered) return CompanyTheme.bgCardHover
                         return "transparent"
                     }
 
-                    border.color: modeBtn.isSelected ? CompanyTheme.borderActive : "transparent"
+                    border.color: modeBtn.isSelected ? CompanyTheme.djiCyan : "transparent"
                     border.width: 1
 
                     RowLayout {
@@ -1989,13 +1989,13 @@ Item {
                             width: 6
                             height: 6
                             radius: 3
-                            color: modeBtn.isSelected ? CompanyTheme.primary : CompanyTheme.textMuted
+                            color: modeBtn.isSelected ? "#FFFFFF" : CompanyTheme.textMuted
                         }
 
                         Text {
                             text: modeBtn.modelData.label
-                            color: modeBtn.isSelected ? CompanyTheme.primary : (modeBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
-                            font.pointSize: CompanyTheme.fontTiny
+                            color: modeBtn.isSelected ? "#FFFFFF" : (modeBtn.isHovered ? CompanyTheme.textPrimary : CompanyTheme.textSecondary)
+                            font.pointSize: 7
                             font.bold: modeBtn.isSelected
                             font.letterSpacing: 0.5
                         }
