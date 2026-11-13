@@ -1372,7 +1372,8 @@ Item {
                     }
 
                     Text {
-                        text: "ALT: " + CompanyTelemetry.altitudeStr
+                        readonly property var _veh: QGroundControl.multiVehicleManager.activeVehicle
+                        text: "ALT: " + (_veh && _veh.altitudeRelative ? _veh.altitudeRelative.value.toFixed(1) + "m" : "--m")
                         color: CompanyTheme.textSecondary
                         font.pointSize: CompanyTheme.fontTiny
                         font.family: CompanyTheme.fontMono
