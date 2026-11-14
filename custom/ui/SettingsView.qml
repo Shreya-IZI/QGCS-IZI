@@ -204,11 +204,11 @@ Item {
                         IconVector {
                             name: "logs"
                             size: 14
-                            color: root.activeSubTab === "TELEMETRY" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "TELEMETRY" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                         }
                         Text {
                             text: qsTr("DATA LOGGING")
-                            color: root.activeSubTab === "TELEMETRY" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "TELEMETRY" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                             font.pointSize: CompanyTheme.fontSmall
                             font.bold: root.activeSubTab === "TELEMETRY"
                         }
@@ -236,11 +236,11 @@ Item {
                         IconVector {
                             name: "radio"
                             size: 14
-                            color: root.activeSubTab === "NETWORK" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "NETWORK" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                         }
                         Text {
                             text: qsTr("NETWORK & LINKS")
-                            color: root.activeSubTab === "NETWORK" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "NETWORK" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                             font.pointSize: CompanyTheme.fontSmall
                             font.bold: root.activeSubTab === "NETWORK"
                         }
@@ -268,11 +268,11 @@ Item {
                         IconVector {
                             name: "map"
                             size: 14
-                            color: root.activeSubTab === "OFFLINE_MAPS" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "OFFLINE_MAPS" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                         }
                         Text {
                             text: qsTr("OFFLINE MAPS")
-                            color: root.activeSubTab === "OFFLINE_MAPS" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "OFFLINE_MAPS" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                             font.pointSize: CompanyTheme.fontSmall
                             font.bold: root.activeSubTab === "OFFLINE_MAPS"
                         }
@@ -308,11 +308,11 @@ Item {
                         IconVector {
                             name: "activity"
                             size: 14
-                            color: root.activeSubTab === "TETHER" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "TETHER" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                         }
                         Text {
                             text: qsTr("TETHER STATION")
-                            color: root.activeSubTab === "TETHER" ? CompanyTheme.bgApp : CompanyTheme.textSecondary
+                            color: root.activeSubTab === "TETHER" ? CompanyTheme.textLight : CompanyTheme.textSecondary
                             font.pointSize: CompanyTheme.fontSmall
                             font.bold: root.activeSubTab === "TETHER"
                         }

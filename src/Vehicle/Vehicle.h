@@ -372,7 +372,8 @@ public:
     ///     @param motor Motor number, 1-based
     ///     @param percent 0-no power, 100-full power
     ///     @param timeoutSec Disabled motor after this amount of time
-    Q_INVOKABLE void motorTest(int motor, int percent, int timeoutSecs, bool showError);
+    ///     @param motorCount Number of motors to test in sequence (0 or 1 = single motor, >1 = sequence)
+    Q_INVOKABLE void motorTest(int motor, int percent, int timeoutSecs, bool showError, int motorCount = 0);
 
     enum PIDTuningTelemetryMode {
         ModeDisabled,

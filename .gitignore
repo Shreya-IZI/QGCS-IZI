@@ -192,3 +192,10 @@ pytest-of-*/
 # Local Docker CLI & build signatures
 .docker_cli/
 *.idsig
+
+# Android signing credentials - NEVER COMMIT
+*.keystore
+*.jks
+*.p12
+*.pfx
+/deploy/android/izi_rc_release.keystore

@@ -68,7 +68,81 @@ SetupPage {
             Row {
                 id:         motorButtons
                 enabled:    safetySwitch.checked
-                spacing:    ScreenTools.defaultFontPixelWidth * 4
+                spacing:    ScreenTools.defaultFontPixelWidth * 2
+
+                property int  activeMotorIndex:   -1
+                property bool isSequenceRunning:  false
+                property bool isSyncRunning:      false
+
+                function stopAllMotors() {
+                    seqTimer.stop()
+                    syncStaggerTimer.stop()
+                    syncDurationTimer.stop()
+                    isSequenceRunning = false
+                    isSyncRunning = false
+                    activeMotorIndex = -1
+                    for (var i = 0; i < buttonRepeater.count; i++) {
+                        controller.vehicle.motorTest(i + 1, 0, 0, false)
+                    }
+                }
+
+                function startSequenceTest() {
+                    stopAllMotors()
+                    if (buttonRepeater.count <= 0 || sliderThrottle.value <= 0) return
+                    isSequenceRunning = true
+                    activeMotorIndex = 0
+                    // Send native MAV_CMD_DO_MOTOR_TEST with motorCount parameter
+                    controller.vehicle.motorTest(1, sliderThrottle.value, _motorTimeoutSecs, false, buttonRepeater.count)
+                    seqTimer.start()
+                }
+
+                function startSyncTest() {
+                    stopAllMotors()
+                    if (buttonRepeater.count <= 0 || sliderThrottle.value <= 0) return
+                    isSyncRunning = true
+                    activeMotorIndex = -2
+                    syncStaggerTimer.targetIndex = 0
+                    syncStaggerTimer.start()
+                    syncDurationTimer.start()
+                }
+
+                Timer {
+                    id: seqTimer
+                    interval: (_motorTimeoutSecs * 1000) + 300
+                    repeat: true
+                    onTriggered: {
+                        motorButtons.activeMotorIndex++
+                        if (motorButtons.activeMotorIndex < buttonRepeater.count) {
+                            controller.vehicle.motorTest(motorButtons.activeMotorIndex + 1, sliderThrottle.value, _motorTimeoutSecs, false)
+                        } else {
+                            motorButtons.stopAllMotors()
+                        }
+                    }
+                }
+
+                Timer {
+                    id: syncStaggerTimer
+                    property int targetIndex: 0
+                    interval: 25
+                    repeat: true
+                    onTriggered: {
+                        if (targetIndex < buttonRepeater.count) {
+                            controller.vehicle.motorTest(targetIndex + 1, sliderThrottle.value, _motorTimeoutSecs, false)
+                            targetIndex++
+                        } else {
+                            stop()
+                        }
+                    }
+                }
+
+                Timer {
+                    id: syncDurationTimer
+                    interval: (_motorTimeoutSecs * 1000)
+                    repeat: false
+                    onTriggered: {
+                        motorButtons.stopAllMotors()
+                    }
+                }
 
                 Repeater {
                     id:         buttonRepeater
@@ -78,19 +152,30 @@ SetupPage {
                         id:         button
                         anchors.verticalCenter:     parent.verticalCenter
                         text:       motorIndexToString(index)
+                        highlighted: motorButtons.activeMotorIndex === index || motorButtons.isSyncRunning
                         onClicked:  {
+                            motorButtons.stopAllMotors()
+                            motorButtons.activeMotorIndex = index
                             controller.vehicle.motorTest(index + 1, sliderThrottle.value, sliderThrottle.value === 0 ? 0 : _motorTimeoutSecs, true)
                         }
                     }
                 } // Repeater
 
                 QGCButton {
-                    id:         allButton
-                    text:       qsTr("All")
+                    id:         allSeqButton
+                    text:       qsTr("All (Sequence)")
+                    highlighted: motorButtons.isSequenceRunning
                     onClicked:  {
-                        for (var motorIndex=0; motorIndex<buttonRepeater.count; motorIndex++) {
-                            controller.vehicle.motorTest(motorIndex + 1, sliderThrottle.value, sliderThrottle.value === 0 ? 0 : _motorTimeoutSecs, true)
-                        }
+                        motorButtons.startSequenceTest()
+                    }
+                }
+
+                QGCButton {
+                    id:         syncButton
+                    text:       qsTr("All (Sync)")
+                    highlighted: motorButtons.isSyncRunning
+                    onClicked:  {
+                        motorButtons.startSyncTest()
                     }
                 }
 
@@ -98,12 +183,28 @@ SetupPage {
                     id:         allStopButton
                     text:       qsTr("Stop")
                     onClicked:  {
-                        for (var motorIndex=0; motorIndex<buttonRepeater.count; motorIndex++) {
-                            controller.vehicle.motorTest(motorIndex + 1, 0, 0, true)
-                        }
+                        motorButtons.stopAllMotors()
                     }
                 }
             } // Row
+
+            // Status label for active motor testing
+            QGCLabel {
+                font.pointSize: ScreenTools.smallFontPointSize
+                color:  motorButtons.isSequenceRunning || motorButtons.isSyncRunning ? qgcPal.colorGreen : qgcPal.text
+                text: {
+                    if (motorButtons.isSequenceRunning) {
+                        return qsTr("Sequence Testing: Motor %1 (%2 of %3)...").arg(motorIndexToString(motorButtons.activeMotorIndex)).arg(motorButtons.activeMotorIndex + 1).arg(buttonRepeater.count)
+                    }
+                    if (motorButtons.isSyncRunning) {
+                        return qsTr("Synchronous Testing: All %1 Motors Active (%2%)...").arg(buttonRepeater.count).arg(sliderThrottle.value)
+                    }
+                    if (motorButtons.activeMotorIndex >= 0) {
+                        return qsTr("Testing Motor %1...").arg(motorIndexToString(motorButtons.activeMotorIndex))
+                    }
+                    return qsTr("Motors idle. Click a single motor, All (Sequence), or All (Sync).")
+                }
+            }
 
             Row {
                 spacing: ScreenTools.defaultFontPixelWidth
@@ -113,6 +214,7 @@ SetupPage {
                     onClicked: {
                         if (!checked) {
                             sliderThrottle.setValue(0);
+                            motorButtons.stopAllMotors();
                         }
                     }
                 }

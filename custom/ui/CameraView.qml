@@ -586,12 +586,14 @@ Item {
                             height: 28
                             implicitWidth: fullRgbBtnText.implicitWidth + 20
                             radius: CompanyTheme.radiusSm
-                            color: fullRgbMouse.containsMouse ? CompanyTheme.primaryHover : CompanyTheme.primary
+                            color: fullRgbMouse.containsMouse ? CompanyTheme.djiBlueHover : CompanyTheme.djiBlue
+                            border.color: CompanyTheme.djiCyan
+                            border.width: 1
                             Text {
                                 id: fullRgbBtnText
                                 anchors.centerIn: parent
                                 text: qsTr("FULL SCREEN RGB")
-                                color: CompanyTheme.bgApp
+                                color: "#FFFFFF"
                                 font.bold: true
                                 font.pointSize: CompanyTheme.fontTiny
                             }
@@ -2395,14 +2397,16 @@ Item {
                 Layout.fillWidth: true
                 height: 32
                 radius: CompanyTheme.radiusSm
-                color: reconnectMouse.containsMouse ? CompanyTheme.primaryHover : CompanyTheme.primary
+                color: reconnectMouse.containsMouse ? CompanyTheme.djiBlueHover : CompanyTheme.djiBlue
+                border.color: CompanyTheme.djiCyan
+                border.width: 1
                 RowLayout {
                     anchors.centerIn: parent
                     spacing: 6
-                    IconVector { name: "refresh"; size: 14; color: CompanyTheme.bgApp }
+                    IconVector { name: "refresh"; size: 14; color: "#FFFFFF" }
                     Text {
                         text: qsTr("RECONNECT VIDEO STREAM")
-                        color: CompanyTheme.bgApp
+                        color: "#FFFFFF"
                         font.bold: true
                         font.pointSize: CompanyTheme.fontSmall
                     }

@@ -48,7 +48,7 @@ Button {
 
     readonly property color _textColor: {
         if (!root.enabled) return CompanyTheme.textMuted
-        if (isPrimary) return CompanyTheme.bgApp
+        if (isPrimary) return CompanyTheme.textLight
         if (isDanger) return CompanyTheme.textLight
         if (isOutline) return CompanyTheme.accent
         return CompanyTheme.textPrimary

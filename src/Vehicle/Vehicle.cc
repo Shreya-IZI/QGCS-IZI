@@ -2421,9 +2421,9 @@ void Vehicle::setSoloFirmware(bool soloFirmware)
     }
 }
 
-void Vehicle::motorTest(int motor, int percent, int timeoutSecs, bool showError)
+void Vehicle::motorTest(int motor, int percent, int timeoutSecs, bool showError, int motorCount)
 {
-    sendMavCommand(_defaultComponentId, MAV_CMD_DO_MOTOR_TEST, showError, motor, MOTOR_TEST_THROTTLE_PERCENT, percent, timeoutSecs, 0, MOTOR_TEST_ORDER_BOARD);
+    sendMavCommand(_defaultComponentId, MAV_CMD_DO_MOTOR_TEST, showError, motor, MOTOR_TEST_THROTTLE_PERCENT, percent, timeoutSecs, motorCount, MOTOR_TEST_ORDER_BOARD);
 }
 
 void Vehicle::setOfflineEditingDefaultComponentId(int defaultComponentId)

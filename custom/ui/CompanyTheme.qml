@@ -28,9 +28,9 @@ QtObject {
     readonly property color borderSubtle:    "#161B23"  // Internal subtle separator
 
     // Primary & Interactive Accent Tokens (DJI Professional Aerospace Standard)
-    readonly property color primary:         "#F8FAFC"  // Operational high-contrast white
-    readonly property color primaryHover:    "#E2E8F0"  // Steel hover
-    readonly property color primaryDim:      Qt.rgba(1.0, 1.0, 1.0, 0.08) // Subtle tactical highlight
+    readonly property color primary:         "#0082FA"  // DJI Signature Command Blue (No blinding white)
+    readonly property color primaryHover:    "#0091FF"  // Electric Blue hover
+    readonly property color primaryDim:      Qt.rgba(0.0, 0.51, 0.98, 0.16) // Subtle tactical highlight
     readonly property color secondaryBlue:   "#64748B"  // Technical slate grey
     readonly property color accent:          "#0082FA"  // DJI Electric Aviation Blue
     readonly property color accentHover:     "#0091FF"  // Electric Blue hover

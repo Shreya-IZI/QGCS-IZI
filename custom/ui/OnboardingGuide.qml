@@ -360,14 +360,14 @@ Item {
                     implicitWidth: nextText.implicitWidth + 20
                     radius: 2
                     color: nextMouseArea.containsMouse ? CompanyTheme.primaryHover : CompanyTheme.primary
-                    border.color: CompanyTheme.borderActive
+                    border.color: CompanyTheme.djiCyan
                     border.width: 1
 
                     Text {
                         id: nextText
                         anchors.centerIn: parent
                         text: root.currentStep < root.steps.length - 1 ? qsTr("NEXT →") : qsTr("LET'S FLY  ✓")
-                        color: CompanyTheme.bgApp
+                        color: "#FFFFFF"
                         font.pointSize: CompanyTheme.fontSmall
                         font.bold: true
                         font.letterSpacing: 0.6
