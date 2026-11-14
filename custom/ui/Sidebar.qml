@@ -175,11 +175,12 @@ Rectangle {
                 // ============================================================
                 Repeater {
                     model: [
-                        { id: "MAP",     title: qsTr("Map View"),      icon: "flight" },
-                        { id: "PFD",     title: qsTr("PFD HUD"),       icon: "dashboard" },
-                        { id: "RGB_CAM", title: qsTr("Daylight Cam"),  icon: "video" },
-                        { id: "IR_CAM",  title: qsTr("Thermal IR"),    icon: "video" },
-                        { id: "SYSTEM",  title: qsTr("System"),        icon: "settings" }
+                        { id: "MAP",         title: qsTr("Map View"),          icon: "flight" },
+                        { id: "PFD",         title: qsTr("PFD HUD"),           icon: "dashboard" },
+                        { id: "EO_CAM",      title: qsTr("Normal / EO Cam"),   icon: "video" },
+                        { id: "IR_CAM",      title: qsTr("IR Camera"),         icon: "video" },
+                        { id: "THERMAL_CAM", title: qsTr("Thermal Camera"),    icon: "video" },
+                        { id: "SYSTEM",      title: qsTr("System"),            icon: "settings" }
                     ]
 
                     delegate: Rectangle {

@@ -257,7 +257,7 @@ Item {
                 return videoCanvas.width
             }
             height: videoCanvas.height
-            visible: root.currentMode !== "THERMAL_ONLY"
+            visible: root.currentMode !== "THERMAL_ONLY" && root.currentMode !== "THERMAL_CAMERA"
             z: 1
 
             // Persistent VideoOutput for RGB Primary Stream
@@ -475,7 +475,7 @@ Item {
                 }
                 return videoCanvas.height
             }
-            visible: root.currentMode !== "RGB_ONLY"
+            visible: root.currentMode === "THERMAL_ONLY" || root.currentMode === "THERMAL_CAMERA" || root.currentMode === "SIDE_BY_SIDE" || root.currentMode === "PIP"
             z: root.currentMode === "PIP" ? 20 : 1
 
             // Persistent VideoOutput for Thermal Video Stream
@@ -1197,7 +1197,7 @@ Item {
                 RowLayout {
                     spacing: 10
                     Text {
-                        visible: root.currentMode !== "THERMAL_ONLY"
+                        visible: root.currentMode !== "THERMAL_ONLY" && root.currentMode !== "THERMAL_CAMERA"
                         text: "RGB HFOV: " + CompanyTelemetry.rgbHfovStr
                         color: CompanyTheme.primary
                         font.pointSize: CompanyTheme.fontTiny
@@ -1211,7 +1211,7 @@ Item {
                         font.pointSize: CompanyTheme.fontTiny
                     }
                     Text {
-                        visible: root.currentMode !== "RGB_ONLY"
+                        visible: root.currentMode === "THERMAL_ONLY" || root.currentMode === "THERMAL_CAMERA" || root.currentMode === "SIDE_BY_SIDE" || root.currentMode === "PIP"
                         text: "IR HFOV: " + CompanyTelemetry.thermalHfovStr
                         color: CompanyTheme.accent
                         font.pointSize: CompanyTheme.fontTiny
@@ -1741,7 +1741,7 @@ Item {
     }
 
     // ========================================================================
-    // TACTICAL GIMBAL CONTROLLER OVERLAY (Anchored next to camera controls)
+    // TACTICAL GIMBAL CONTROLLER OVERLAY (Pan, Tilt, Angle Adjustment & Positioning)
     // ========================================================================
     Rectangle {
         id: gimbalControlPanel
@@ -1750,16 +1750,36 @@ Item {
         anchors.rightMargin: 12
         anchors.verticalCenter: cameraControlToolbar.verticalCenter
         z: 36
-        width: 170
+        width: 220
         radius: CompanyTheme.radiusSm
         color: CompanyTheme.bgOverlayDark
-        border.color: CompanyTheme.borderCard
+        border.color: CompanyTheme.borderActive
         border.width: 1
-        implicitHeight: gimbalPanelCol.implicitHeight + 16
+        implicitHeight: gimbalPanelCol.implicitHeight + 20
 
         readonly property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
         readonly property var _gimbalController: _activeVehicle ? _activeVehicle.gimbalController : null
         readonly property var _activeGimbal: _gimbalController ? _gimbalController.activeGimbal : null
+
+        function sendGimbalMove(pitch, yaw, isRate) {
+            if (_activeVehicle && _activeVehicle.sendGimbalControl) {
+                _activeVehicle.sendGimbalControl(pitch, yaw, isRate)
+            } else if (_gimbalController) {
+                if (isRate) {
+                    _gimbalController.sendGimbalRate(pitch, yaw)
+                } else {
+                    _gimbalController.sendPitchBodyYaw(pitch, yaw, false)
+                }
+            }
+        }
+
+        function centerGimbalPos() {
+            if (_activeVehicle && _activeVehicle.centerGimbal) {
+                _activeVehicle.centerGimbal()
+            } else if (_gimbalController) {
+                _gimbalController.centerGimbal()
+            }
+        }
 
         ColumnLayout {
             id: gimbalPanelCol
@@ -1770,21 +1790,22 @@ Item {
             // Header: Title & Close
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 4
+                spacing: 6
 
-                IconVector { name: "sliders"; size: 12; color: CompanyTheme.primary }
+                IconVector { name: "sliders"; size: 13; color: CompanyTheme.djiCyan }
                 Text {
                     text: qsTr("GIMBAL CONTROL")
                     color: CompanyTheme.textPrimary
                     font.bold: true
                     font.pointSize: CompanyTheme.fontTiny
-                    font.letterSpacing: 0.5
+                    font.letterSpacing: 0.8
                     Layout.fillWidth: true
                 }
                 Text {
                     text: "✕"
                     color: CompanyTheme.textMuted
-                    font.pointSize: 9
+                    font.pointSize: 10
+                    font.bold: true
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
@@ -1793,140 +1814,189 @@ Item {
                 }
             }
 
-            // Attitude Readout
-            RowLayout {
+            // Live Telemetry Readout (Pitch / Yaw / Roll)
+            Rectangle {
                 Layout.fillWidth: true
-                spacing: 8
-                Text {
-                    text: "P: " + (gimbalControlPanel._activeGimbal && gimbalControlPanel._activeGimbal.absolutePitch ? gimbalControlPanel._activeGimbal.absolutePitch.value.toFixed(1) + "°" : "0.0°")
-                    color: CompanyTheme.textSecondary
-                    font.pointSize: 7
-                    font.family: CompanyTheme.fontMono
-                }
-                Item { Layout.fillWidth: true }
-                Text {
-                    text: "Y: " + (gimbalControlPanel._activeGimbal && gimbalControlPanel._activeGimbal.bodyYaw ? gimbalControlPanel._activeGimbal.bodyYaw.value.toFixed(1) + "°" : "0.0°")
-                    color: CompanyTheme.textSecondary
-                    font.pointSize: 7
-                    font.family: CompanyTheme.fontMono
+                height: 24
+                radius: 3
+                color: CompanyTheme.bgCard
+                border.color: CompanyTheme.borderCard
+                border.width: 1
+
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    Text {
+                        text: "PITCH: " + CompanyTelemetry.gimbalPitchStr
+                        color: CompanyTheme.djiCyan
+                        font.pointSize: 7.5
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+                    Text {
+                        text: "YAW: " + CompanyTelemetry.gimbalBodyYawStr
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: 7.5
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+                    Text {
+                        text: "R: " + CompanyTelemetry.gimbalRollStr
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: 7.5
+                        font.family: CompanyTheme.fontMono
+                    }
                 }
             }
 
-            // D-Pad Cross
+            // D-Pad Cross (Pan Left/Right, Tilt Up/Down)
             GridLayout {
                 Layout.alignment: Qt.AlignHCenter
                 columns: 3
                 rowSpacing: 4
                 columnSpacing: 4
 
-                Item { width: 34; height: 34 }
+                Item { width: 40; height: 36 }
 
-                // Pitch Up
+                // Tilt Up (Pitch Up)
                 Rectangle {
-                    width: 34; height: 34; radius: 3
-                    color: upM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "▲"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    width: 40; height: 36; radius: 3
+                    color: upM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
+                    border.color: upM.containsMouse ? CompanyTheme.djiCyan : CompanyTheme.borderCard; border.width: 1
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "▲"; color: "#FFFFFF"; font.pointSize: 9 }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("UP"); color: "#FFFFFF"; font.pointSize: 6; font.bold: true }
+                    }
                     MouseArea {
                         id: upM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(15, 0)
-                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                        onPressed: gimbalControlPanel.sendGimbalMove(15, 0, true)
+                        onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
 
-                Item { width: 34; height: 34 }
+                Item { width: 40; height: 36 }
 
-                // Pan Left
+                // Pan Left (Yaw Left)
                 Rectangle {
-                    width: 34; height: 34; radius: 3
-                    color: leftM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "◀"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    width: 40; height: 36; radius: 3
+                    color: leftM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
+                    border.color: leftM.containsMouse ? CompanyTheme.djiCyan : CompanyTheme.borderCard; border.width: 1
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "◀"; color: "#FFFFFF"; font.pointSize: 9 }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("PAN L"); color: "#FFFFFF"; font.pointSize: 6; font.bold: true }
+                    }
                     MouseArea {
                         id: leftM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, -20)
-                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                        onPressed: gimbalControlPanel.sendGimbalMove(0, -20, true)
+                        onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
 
                 // Center
                 Rectangle {
-                    width: 34; height: 34; radius: 3
-                    color: centerM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.primary; border.width: 1
-                    Text { anchors.centerIn: parent; text: "●"; color: CompanyTheme.primary; font.pointSize: 8 }
+                    width: 40; height: 36; radius: 3
+                    color: centerM.containsMouse ? CompanyTheme.djiBlueHover : CompanyTheme.djiBlue
+                    border.color: CompanyTheme.djiCyan; border.width: 1
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "●"; color: "#FFFFFF"; font.pointSize: 8 }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("CTR"); color: "#FFFFFF"; font.pointSize: 6; font.bold: true }
+                    }
                     MouseArea {
                         id: centerM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.centerGimbal()
+                        onClicked: gimbalControlPanel.centerGimbalPos()
                     }
                 }
 
-                // Pan Right
+                // Pan Right (Yaw Right)
                 Rectangle {
-                    width: 34; height: 34; radius: 3
-                    color: rightM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "▶"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    width: 40; height: 36; radius: 3
+                    color: rightM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
+                    border.color: rightM.containsMouse ? CompanyTheme.djiCyan : CompanyTheme.borderCard; border.width: 1
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "▶"; color: "#FFFFFF"; font.pointSize: 9 }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("PAN R"); color: "#FFFFFF"; font.pointSize: 6; font.bold: true }
+                    }
                     MouseArea {
                         id: rightM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 20)
-                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                        onPressed: gimbalControlPanel.sendGimbalMove(0, 20, true)
+                        onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
 
-                Item { width: 34; height: 34 }
+                Item { width: 40; height: 36 }
 
-                // Pitch Down
+                // Tilt Down (Pitch Down)
                 Rectangle {
-                    width: 34; height: 34; radius: 3
-                    color: downM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "▼"; color: CompanyTheme.textPrimary; font.pointSize: 9 }
+                    width: 40; height: 36; radius: 3
+                    color: downM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
+                    border.color: downM.containsMouse ? CompanyTheme.djiCyan : CompanyTheme.borderCard; border.width: 1
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "▼"; color: "#FFFFFF"; font.pointSize: 9 }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("DOWN"); color: "#FFFFFF"; font.pointSize: 6; font.bold: true }
+                    }
                     MouseArea {
                         id: downM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(-15, 0)
-                        onReleased: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendGimbalRate(0, 0)
+                        onPressed: gimbalControlPanel.sendGimbalMove(-15, 0, true)
+                        onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
 
-                Item { width: 34; height: 34 }
+                Item { width: 40; height: 36 }
             }
 
-            // Presets Row
+            // Camera Angle Presets
+            Text {
+                text: qsTr("CAMERA ANGLE PRESETS")
+                color: CompanyTheme.textMuted
+                font.pointSize: 6.5
+                font.bold: true
+                font.letterSpacing: 0.5
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 4
 
                 Rectangle {
-                    Layout.fillWidth: true; height: 22; radius: 2
-                    color: nadirM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
+                    Layout.fillWidth: true; height: 24; radius: 3
+                    color: horizM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
                     border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "NADIR"; color: CompanyTheme.textPrimary; font.pointSize: 6.5; font.bold: true }
-                    MouseArea {
-                        id: nadirM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendPitchBodyYaw(-90, 0)
-                    }
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true; height: 22; radius: 2
-                    color: tactM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "-45°"; color: CompanyTheme.textPrimary; font.pointSize: 6.5; font.bold: true }
-                    MouseArea {
-                        id: tactM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendPitchBodyYaw(-45, 0)
-                    }
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true; height: 22; radius: 2
-                    color: horizM.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCardSecondary
-                    border.color: CompanyTheme.borderCard; border.width: 1
-                    Text { anchors.centerIn: parent; text: "0°"; color: CompanyTheme.textPrimary; font.pointSize: 6.5; font.bold: true }
+                    Text { anchors.centerIn: parent; text: "0° LEVEL"; color: "#FFFFFF"; font.pointSize: 7; font.bold: true }
                     MouseArea {
                         id: horizM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: if (gimbalControlPanel._gimbalController) gimbalControlPanel._gimbalController.sendPitchBodyYaw(0, 0)
+                        onClicked: gimbalControlPanel.sendGimbalMove(0, 0, false)
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; height: 24; radius: 3
+                    color: tactM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "-45° TACT"; color: "#FFFFFF"; font.pointSize: 7; font.bold: true }
+                    MouseArea {
+                        id: tactM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: gimbalControlPanel.sendGimbalMove(-45, 0, false)
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; height: 24; radius: 3
+                    color: nadirM.containsMouse ? CompanyTheme.djiBlue : CompanyTheme.bgCardSecondary
+                    border.color: CompanyTheme.borderCard; border.width: 1
+                    Text { anchors.centerIn: parent; text: "-90° NADIR"; color: "#FFFFFF"; font.pointSize: 7; font.bold: true }
+                    MouseArea {
+                        id: nadirM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: gimbalControlPanel.sendGimbalMove(-90, 0, false)
                     }
                 }
             }
@@ -1959,19 +2029,21 @@ Item {
 
             Repeater {
                 model: [
-                    { id: "RGB_ONLY",     label: qsTr("EO DAYLIGHT") },
-                    { id: "THERMAL_ONLY", label: qsTr("IR THERMAL") },
-                    { id: "SIDE_BY_SIDE", label: qsTr("DUAL SPLIT") }
+                    { id: "EO_CAMERA",      label: qsTr("NORMAL / EO") },
+                    { id: "IR_CAMERA",      label: qsTr("IR CAMERA") },
+                    { id: "THERMAL_CAMERA", label: qsTr("THERMAL") },
+                    { id: "SIDE_BY_SIDE",   label: qsTr("DUAL SPLIT") },
+                    { id: "PIP",            label: qsTr("PIP") }
                 ]
 
                 delegate: Rectangle {
                     id: modeBtn
                     required property var modelData
 
-                    readonly property bool isSelected: root.currentMode === modeBtn.modelData.id
+                    readonly property bool isSelected: root.currentMode === modeBtn.modelData.id || (modeBtn.modelData.id === "EO_CAMERA" && root.currentMode === "RGB_ONLY") || (modeBtn.modelData.id === "THERMAL_CAMERA" && root.currentMode === "THERMAL_ONLY")
                     readonly property bool isHovered: modeMouseArea.containsMouse
 
-                    Layout.preferredWidth: root._isNarrow ? 80 : 96
+                    Layout.preferredWidth: root._isNarrow ? 76 : 94
                     Layout.fillHeight: true
                     radius: CompanyTheme.radiusSm - 1
                     color: {
@@ -1985,7 +2057,7 @@ Item {
 
                     RowLayout {
                         anchors.centerIn: parent
-                        spacing: 6
+                        spacing: 5
 
                         Rectangle {
                             width: 6
@@ -2008,7 +2080,36 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.currentMode = modeBtn.modelData.id
+                        onClicked: {
+                            root.currentMode = modeBtn.modelData.id
+                            var vs = QGroundControl.settingsManager.videoSettings
+                            if (modeBtn.modelData.id === "EO_CAMERA" || modeBtn.modelData.id === "RGB_ONLY") {
+                                if (root._netSettings) root._netSettings.selectedCameraFeed = "EO"
+                                if (vs) vs.rtspUrl.rawValue = (root._netSettings ? root._netSettings.eoVideoUrl : "rtsp://192.168.168.119:554/live/ch0")
+                                toastText.text = qsTr("NORMAL / EO CAMERA SELECTED")
+                                toastAnim.restart()
+                            } else if (modeBtn.modelData.id === "IR_CAMERA") {
+                                if (root._netSettings) root._netSettings.selectedCameraFeed = "IR"
+                                if (vs) vs.rtspUrl.rawValue = (root._netSettings ? root._netSettings.irVideoUrl : "rtsp://192.168.168.119:554/live/ch1")
+                                toastText.text = qsTr("IR CAMERA (NIGHT VISION) SELECTED")
+                                toastAnim.restart()
+                            } else if (modeBtn.modelData.id === "THERMAL_CAMERA" || modeBtn.modelData.id === "THERMAL_ONLY") {
+                                if (root._netSettings) root._netSettings.selectedCameraFeed = "THERMAL"
+                                if (vs) vs.rtspUrl.rawValue = (root._netSettings ? root._netSettings.thermalVideoUrl : "rtsp://192.168.168.119:8554/thermal")
+                                toastText.text = qsTr("THERMAL CAMERA SELECTED")
+                                toastAnim.restart()
+                            } else if (modeBtn.modelData.id === "SIDE_BY_SIDE") {
+                                toastText.text = qsTr("DUAL SPLIT VIEW ACTIVE")
+                                toastAnim.restart()
+                            } else if (modeBtn.modelData.id === "PIP") {
+                                toastText.text = qsTr("PICTURE-IN-PICTURE (PIP) ACTIVE")
+                                toastAnim.restart()
+                            }
+                            if (vs && vs.streamEnabled && vs.streamEnabled.rawValue) {
+                                QGroundControl.videoManager.stopVideo()
+                                QGroundControl.videoManager.startVideo()
+                            }
+                        }
                     }
                 }
             }

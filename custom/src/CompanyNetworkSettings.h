@@ -20,6 +20,11 @@ class CompanyNetworkSettings : public QObject
     Q_PROPERTY(int     thermalVideoPort    READ thermalVideoPort    WRITE setThermalVideoPort    NOTIFY thermalVideoPortChanged)
     Q_PROPERTY(QString thermalVideoType    READ thermalVideoType    WRITE setThermalVideoType    NOTIFY thermalVideoTypeChanged)
 
+    // Multi-Camera Payload Video Settings
+    Q_PROPERTY(QString eoVideoUrl          READ eoVideoUrl          WRITE setEoVideoUrl          NOTIFY eoVideoUrlChanged)
+    Q_PROPERTY(QString irVideoUrl          READ irVideoUrl          WRITE setIrVideoUrl          NOTIFY irVideoUrlChanged)
+    Q_PROPERTY(QString selectedCameraFeed  READ selectedCameraFeed  WRITE setSelectedCameraFeed  NOTIFY selectedCameraFeedChanged)
+
     // UDP Telemetry Broadcast Output
     Q_PROPERTY(bool    udpTelemetryEnabled READ udpTelemetryEnabled WRITE setUdpTelemetryEnabled NOTIFY udpTelemetryEnabledChanged)
     Q_PROPERTY(QString udpTelemetryDestIP  READ udpTelemetryDestIP  WRITE setUdpTelemetryDestIP  NOTIFY udpTelemetryDestIPChanged)
@@ -52,6 +57,10 @@ public:
     int     thermalVideoPort() const    { return _thermalVideoPort; }
     QString thermalVideoType() const    { return _thermalVideoType; }
 
+    QString eoVideoUrl() const          { return _eoVideoUrl; }
+    QString irVideoUrl() const          { return _irVideoUrl; }
+    QString selectedCameraFeed() const  { return _selectedCameraFeed; }
+
     bool    udpTelemetryEnabled() const { return _udpTelemetryEnabled; }
     QString udpTelemetryDestIP() const  { return _udpTelemetryDestIP; }
     int     udpTelemetryDestPort() const{ return _udpTelemetryDestPort; }
@@ -74,6 +83,10 @@ public:
     Q_INVOKABLE void setThermalVideoUrl(const QString &url);
     Q_INVOKABLE void setThermalVideoPort(int port);
     Q_INVOKABLE void setThermalVideoType(const QString &type);
+
+    Q_INVOKABLE void setEoVideoUrl(const QString &url);
+    Q_INVOKABLE void setIrVideoUrl(const QString &url);
+    Q_INVOKABLE void setSelectedCameraFeed(const QString &feed);
 
     Q_INVOKABLE void setUdpTelemetryEnabled(bool enabled);
     Q_INVOKABLE void setUdpTelemetryDestIP(const QString &ip);
@@ -106,6 +119,10 @@ signals:
     void thermalVideoPortChanged(int port);
     void thermalVideoTypeChanged(const QString &type);
 
+    void eoVideoUrlChanged(const QString &url);
+    void irVideoUrlChanged(const QString &url);
+    void selectedCameraFeedChanged(const QString &feed);
+
     void udpTelemetryEnabledChanged(bool enabled);
     void udpTelemetryDestIPChanged(const QString &ip);
     void udpTelemetryDestPortChanged(int port);
@@ -128,9 +145,14 @@ private:
     void _syncWithQGCSettings();
 
     // Thermal Video
-    QString _thermalVideoUrl     = QStringLiteral("rtsp://127.0.0.1:8554/thermal");
+    QString _thermalVideoUrl     = QStringLiteral("rtsp://192.168.168.119:8554/thermal");
     int     _thermalVideoPort    = 8554;
     QString _thermalVideoType    = QStringLiteral("RTSP");
+
+    // Multi-Camera Payload Video
+    QString _eoVideoUrl          = QStringLiteral("rtsp://192.168.168.119:554/live/ch0");
+    QString _irVideoUrl          = QStringLiteral("rtsp://192.168.168.119:554/live/ch1");
+    QString _selectedCameraFeed  = QStringLiteral("EO");
 
     // UDP Telemetry Broadcast
     bool    _udpTelemetryEnabled = false;

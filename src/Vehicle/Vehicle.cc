@@ -2426,6 +2426,29 @@ void Vehicle::motorTest(int motor, int percent, int timeoutSecs, bool showError,
     sendMavCommand(_defaultComponentId, MAV_CMD_DO_MOTOR_TEST, showError, motor, MOTOR_TEST_THROTTLE_PERCENT, percent, timeoutSecs, motorCount, MOTOR_TEST_ORDER_BOARD);
 }
 
+void Vehicle::sendGimbalControl(float pitch, float yaw, bool isRate)
+{
+    if (_gimbalController) {
+        if (isRate) {
+            _gimbalController->sendGimbalRate(pitch, yaw);
+        } else {
+            _gimbalController->sendPitchBodyYaw(pitch, yaw, false);
+        }
+    }
+    // Also send standard MAVLink Mount control (MAV_CMD_DO_MOUNT_CONTROL = 205) for ArduPilot / standard mounts
+    if (!isRate) {
+        sendMavCommand(_defaultComponentId, MAV_CMD_DO_MOUNT_CONTROL, false, pitch, 0.0f, yaw, 0.0f, 0.0f, 0.0f, MAV_MOUNT_MODE_MAVLINK_TARGETING);
+    }
+}
+
+void Vehicle::centerGimbal()
+{
+    if (_gimbalController) {
+        _gimbalController->centerGimbal();
+    }
+    sendMavCommand(_defaultComponentId, MAV_CMD_DO_MOUNT_CONTROL, false, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, MAV_MOUNT_MODE_MAVLINK_TARGETING);
+}
+
 void Vehicle::setOfflineEditingDefaultComponentId(int defaultComponentId)
 {
     if (_offlineEditingVehicle) {

@@ -1730,6 +1730,68 @@ Item {
                             columnSpacing: CompanyTheme.spacingMd
                             rowSpacing: CompanyTheme.spacingSm
 
+                            // Normal / EO Stream URL
+                            ColumnLayout {
+                                spacing: 4
+                                Layout.fillWidth: true
+                                Text { text: qsTr("Normal / EO Camera URL (RTSP)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 34
+                                    radius: CompanyTheme.radiusSm
+                                    color: CompanyTheme.bgInput
+                                    border.color: CompanyTheme.borderCard
+                                    border.width: 1
+                                    TextInput {
+                                        id: eoUrlInput
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        color: CompanyTheme.textPrimary
+                                        font.pointSize: CompanyTheme.fontBody
+                                        font.family: CompanyTheme.fontMono
+                                        selectByMouse: true
+                                        text: root._netSettings ? root._netSettings.eoVideoUrl : "rtsp://192.168.168.119:554/live/ch0"
+                                        onEditingFinished: {
+                                            if (root._netSettings) {
+                                                root._netSettings.setEoVideoUrl(text)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // IR Camera (Night Vision) Stream URL
+                            ColumnLayout {
+                                spacing: 4
+                                Layout.fillWidth: true
+                                Text { text: qsTr("IR Camera URL (Night Vision RTSP)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 34
+                                    radius: CompanyTheme.radiusSm
+                                    color: CompanyTheme.bgInput
+                                    border.color: CompanyTheme.borderCard
+                                    border.width: 1
+                                    TextInput {
+                                        id: irUrlInput
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        color: CompanyTheme.textPrimary
+                                        font.pointSize: CompanyTheme.fontBody
+                                        font.family: CompanyTheme.fontMono
+                                        selectByMouse: true
+                                        text: root._netSettings ? root._netSettings.irVideoUrl : "rtsp://192.168.168.119:554/live/ch1"
+                                        onEditingFinished: {
+                                            if (root._netSettings) {
+                                                root._netSettings.setIrVideoUrl(text)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             // Thermal Stream Endpoint URL
                             ColumnLayout {
                                 spacing: 4
@@ -1751,7 +1813,7 @@ Item {
                                         font.pointSize: CompanyTheme.fontBody
                                         font.family: CompanyTheme.fontMono
                                         selectByMouse: true
-                                        text: root._netSettings ? root._netSettings.thermalVideoUrl : "rtsp://127.0.0.1:8554/thermal"
+                                        text: root._netSettings ? root._netSettings.thermalVideoUrl : "rtsp://192.168.168.119:8554/thermal"
                                         onEditingFinished: {
                                             if (root._netSettings) {
                                                 root._netSettings.setThermalVideoUrl(text)

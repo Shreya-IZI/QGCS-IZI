@@ -375,6 +375,13 @@ public:
     ///     @param motorCount Number of motors to test in sequence (0 or 1 = single motor, >1 = sequence)
     Q_INVOKABLE void motorTest(int motor, int percent, int timeoutSecs, bool showError, int motorCount = 0);
 
+    /// Control gimbal / mount orientation or rate across both MAVLink Gimbal v2 and Mount v1 protocols
+    ///     @param pitch Pitch angle (-90 to +90 deg) or pitch rate (deg/s if isRate is true)
+    ///     @param yaw Yaw angle (-180 to +180 deg) or yaw rate (deg/s if isRate is true)
+    ///     @param isRate True if sending angular velocity rates, false if sending target angles
+    Q_INVOKABLE void sendGimbalControl(float pitch, float yaw, bool isRate = false);
+    Q_INVOKABLE void centerGimbal();
+
     enum PIDTuningTelemetryMode {
         ModeDisabled,
         ModeRateAndAttitude,

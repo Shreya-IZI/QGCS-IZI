@@ -318,7 +318,17 @@ Item {
             id: primaryCameraView
             anchors.fill: parent
             hasMapPip: mapPipWidget.visible
-            visible: root.currentSubView === "CAM" || root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM"
+            visible: root.currentSubView === "CAM" || root.currentSubView === "RGB_CAM" || root.currentSubView === "EO_CAM" || root.currentSubView === "IR_CAM" || root.currentSubView === "THERMAL_CAM"
+        }
+    }
+
+    onCurrentSubViewChanged: {
+        if (root.currentSubView === "EO_CAM" || root.currentSubView === "RGB_CAM") {
+            primaryCameraView.currentMode = "EO_CAMERA"
+        } else if (root.currentSubView === "IR_CAM") {
+            primaryCameraView.currentMode = "IR_CAMERA"
+        } else if (root.currentSubView === "THERMAL_CAM") {
+            primaryCameraView.currentMode = "THERMAL_CAMERA"
         }
     }
 
@@ -357,7 +367,7 @@ Item {
                     id: switchBtn
                     required property var modelData
 
-                    readonly property bool isSelected: root.currentSubView === switchBtn.modelData.id || (switchBtn.modelData.id === "CAM" && (root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM"))
+                    readonly property bool isSelected: root.currentSubView === switchBtn.modelData.id || (switchBtn.modelData.id === "CAM" && (root.currentSubView === "RGB_CAM" || root.currentSubView === "EO_CAM" || root.currentSubView === "IR_CAM" || root.currentSubView === "THERMAL_CAM"))
                     readonly property bool isHovered: switchMouseArea.containsMouse
 
                     Layout.preferredWidth: 72
@@ -438,7 +448,7 @@ Item {
         anchors.left: parent.left
         anchors.margins: CompanyTheme.spacingMd
         z: 20
-        visible: root.currentSubView === "RGB_CAM" || root.currentSubView === "IR_CAM" || root.currentSubView === "CAM"
+        visible: root.currentSubView === "RGB_CAM" || root.currentSubView === "EO_CAM" || root.currentSubView === "IR_CAM" || root.currentSubView === "THERMAL_CAM" || root.currentSubView === "CAM"
         onSwapRequested: {
             root.currentSubView = "MAP"
         }

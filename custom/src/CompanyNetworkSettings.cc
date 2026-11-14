@@ -77,6 +77,33 @@ void CompanyNetworkSettings::setThermalVideoUrl(const QString &url)
     }
 }
 
+void CompanyNetworkSettings::setEoVideoUrl(const QString &url)
+{
+    if (_eoVideoUrl != url) {
+        _eoVideoUrl = url;
+        emit eoVideoUrlChanged(_eoVideoUrl);
+        saveSettings();
+    }
+}
+
+void CompanyNetworkSettings::setIrVideoUrl(const QString &url)
+{
+    if (_irVideoUrl != url) {
+        _irVideoUrl = url;
+        emit irVideoUrlChanged(_irVideoUrl);
+        saveSettings();
+    }
+}
+
+void CompanyNetworkSettings::setSelectedCameraFeed(const QString &feed)
+{
+    if (_selectedCameraFeed != feed) {
+        _selectedCameraFeed = feed;
+        emit selectedCameraFeedChanged(_selectedCameraFeed);
+        saveSettings();
+    }
+}
+
 void CompanyNetworkSettings::setThermalVideoPort(int port)
 {
     if (isValidPort(port) && _thermalVideoPort != port) {
@@ -241,9 +268,16 @@ void CompanyNetworkSettings::loadSettings()
 
     // Thermal Video
     settings.beginGroup(QStringLiteral("Company_ThermalVideo"));
-    _thermalVideoUrl  = settings.value(QStringLiteral("url"), QStringLiteral("rtsp://127.0.0.1:8554/thermal")).toString();
+    _thermalVideoUrl  = settings.value(QStringLiteral("url"), QStringLiteral("rtsp://192.168.168.119:8554/thermal")).toString();
     _thermalVideoPort = settings.value(QStringLiteral("port"), 8554).toInt();
     _thermalVideoType = settings.value(QStringLiteral("type"), QStringLiteral("RTSP")).toString();
+    settings.endGroup();
+
+    // Multi-Camera Payload Video
+    settings.beginGroup(QStringLiteral("Company_MultiCamera"));
+    _eoVideoUrl         = settings.value(QStringLiteral("eoVideoUrl"), QStringLiteral("rtsp://192.168.168.119:554/live/ch0")).toString();
+    _irVideoUrl         = settings.value(QStringLiteral("irVideoUrl"), QStringLiteral("rtsp://192.168.168.119:554/live/ch1")).toString();
+    _selectedCameraFeed = settings.value(QStringLiteral("selectedFeed"), QStringLiteral("EO")).toString();
     settings.endGroup();
 
     // UDP Telemetry Broadcast
@@ -276,6 +310,10 @@ void CompanyNetworkSettings::loadSettings()
     emit thermalVideoPortChanged(_thermalVideoPort);
     emit thermalVideoTypeChanged(_thermalVideoType);
 
+    emit eoVideoUrlChanged(_eoVideoUrl);
+    emit irVideoUrlChanged(_irVideoUrl);
+    emit selectedCameraFeedChanged(_selectedCameraFeed);
+
     emit udpTelemetryEnabledChanged(_udpTelemetryEnabled);
     emit udpTelemetryDestIPChanged(_udpTelemetryDestIP);
     emit udpTelemetryDestPortChanged(_udpTelemetryDestPort);
@@ -306,6 +344,13 @@ void CompanyNetworkSettings::saveSettings()
     settings.setValue(QStringLiteral("url"), _thermalVideoUrl);
     settings.setValue(QStringLiteral("port"), _thermalVideoPort);
     settings.setValue(QStringLiteral("type"), _thermalVideoType);
+    settings.endGroup();
+
+    // Multi-Camera Payload Video
+    settings.beginGroup(QStringLiteral("Company_MultiCamera"));
+    settings.setValue(QStringLiteral("eoVideoUrl"), _eoVideoUrl);
+    settings.setValue(QStringLiteral("irVideoUrl"), _irVideoUrl);
+    settings.setValue(QStringLiteral("selectedFeed"), _selectedCameraFeed);
     settings.endGroup();
 
     // UDP Telemetry Broadcast
