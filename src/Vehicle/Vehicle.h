@@ -382,6 +382,9 @@ public:
     Q_INVOKABLE void sendGimbalControl(float pitch, float yaw, bool isRate = false);
     Q_INVOKABLE void centerGimbal();
 
+    /// Audio speech announcement via QGC text-to-speech engine
+    Q_INVOKABLE void say(const QString& text);
+
     enum PIDTuningTelemetryMode {
         ModeDisabled,
         ModeRateAndAttitude,

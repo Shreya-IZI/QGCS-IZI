@@ -2449,6 +2449,11 @@ void Vehicle::centerGimbal()
     sendMavCommand(_defaultComponentId, MAV_CMD_DO_MOUNT_CONTROL, false, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, MAV_MOUNT_MODE_MAVLINK_TARGETING);
 }
 
+void Vehicle::say(const QString& text)
+{
+    _say(text);
+}
+
 void Vehicle::setOfflineEditingDefaultComponentId(int defaultComponentId)
 {
     if (_offlineEditingVehicle) {

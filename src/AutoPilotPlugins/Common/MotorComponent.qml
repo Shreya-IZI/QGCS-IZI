@@ -85,6 +85,14 @@ SetupPage {
                 property string completionStatusText:  ""
                 property bool   isCompletedSuccess:    false
 
+                function speak(msg) {
+                    if (controller.vehicle && controller.vehicle.say) {
+                        controller.vehicle.say(msg)
+                    } else if (typeof CompanyPayloadInterface !== "undefined" && CompanyPayloadInterface && CompanyPayloadInterface.say) {
+                        CompanyPayloadInterface.say(msg)
+                    }
+                }
+
                 function stopAllMotors() {
                     seqTimer.stop()
                     syncStaggerTimer.stop()
@@ -98,6 +106,7 @@ SetupPage {
                     }
                     if (wasRunning && !isCompletedSuccess) {
                         completionStatusText = qsTr("Motor test stopped.")
+                        speak(qsTr("Motor test stopped."))
                     }
                 }
 
@@ -108,6 +117,7 @@ SetupPage {
                     if (buttonRepeater.count <= 0 || sliderThrottle.value <= 0) return
                     isSequenceRunning = true
                     activeMotorIndex = 0
+                    speak(qsTr("Testing motor %1 in sequence").arg(motorIndexToString(0)))
                     // Send native MAV_CMD_DO_MOTOR_TEST with motorCount parameter
                     controller.vehicle.motorTest(1, sliderThrottle.value, _motorTimeoutSecs, false, buttonRepeater.count)
                     seqTimer.start()
@@ -120,6 +130,7 @@ SetupPage {
                     if (buttonRepeater.count <= 0 || sliderThrottle.value <= 0) return
                     isSyncRunning = true
                     activeMotorIndex = -2
+                    speak(qsTr("Testing all motors simultaneously"))
                     syncStaggerTimer.targetIndex = 0
                     syncStaggerTimer.start()
                     syncDurationTimer.start()
@@ -133,9 +144,11 @@ SetupPage {
                         motorButtons.activeMotorIndex++
                         if (motorButtons.activeMotorIndex < buttonRepeater.count) {
                             controller.vehicle.motorTest(motorButtons.activeMotorIndex + 1, sliderThrottle.value, _motorTimeoutSecs, false)
+                            motorButtons.speak(qsTr("Testing motor %1").arg(motorIndexToString(motorButtons.activeMotorIndex)))
                         } else {
                             motorButtons.isCompletedSuccess = true
                             motorButtons.completionStatusText = qsTr("✓ Test Complete: All %1 motors tested successfully in sequence.").arg(buttonRepeater.count)
+                            motorButtons.speak(qsTr("Sequence motor test complete"))
                             motorButtons.stopAllMotors()
                         }
                     }
@@ -163,6 +176,7 @@ SetupPage {
                     onTriggered: {
                         motorButtons.isCompletedSuccess = true
                         motorButtons.completionStatusText = qsTr("✓ Test Complete: All %1 motors spun simultaneously (%2% throttle).").arg(buttonRepeater.count).arg(sliderThrottle.value)
+                        motorButtons.speak(qsTr("Simultaneous motor test complete"))
                         motorButtons.stopAllMotors()
                     }
                 }
@@ -181,6 +195,7 @@ SetupPage {
                             motorButtons.completionStatusText = ""
                             motorButtons.stopAllMotors()
                             motorButtons.activeMotorIndex = index
+                            motorButtons.speak(qsTr("Testing motor %1").arg(motorIndexToString(index)))
                             controller.vehicle.motorTest(index + 1, sliderThrottle.value, sliderThrottle.value === 0 ? 0 : _motorTimeoutSecs, true)
                         }
                     }

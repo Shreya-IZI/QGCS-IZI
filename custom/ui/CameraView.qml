@@ -16,6 +16,105 @@ Item {
     property bool showGimbalPad: false
     property bool hasMapPip: false
 
+    focus: true
+    Component.onCompleted: root.forceActiveFocus()
+    onVisibleChanged: if (visible) root.forceActiveFocus()
+
+    // ------------------------------------------------------------------------
+    // Operator Keyboard Hotkeys for Tactical Gimbal & Camera
+    // ------------------------------------------------------------------------
+    Keys.onPressed: function(event) {
+        if (event.isAutoRepeat) return
+        var pSpeed = gimbalControlPanel.pitchSpeed
+        var ySpeed = gimbalControlPanel.panSpeed
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_W) {
+            gimbalControlPanel.sendGimbalMove(pSpeed, 0, true)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Down || event.key === Qt.Key_S) {
+            gimbalControlPanel.sendGimbalMove(-pSpeed, 0, true)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Left || event.key === Qt.Key_A) {
+            gimbalControlPanel.sendGimbalMove(0, -ySpeed, true)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Right || event.key === Qt.Key_D) {
+            gimbalControlPanel.sendGimbalMove(0, ySpeed, true)
+            event.accepted = true
+        } else if (event.key === Qt.Key_C) {
+            gimbalControlPanel.centerGimbalPos()
+            toastText.text = qsTr("GIMBAL CENTERED")
+            toastAnim.restart()
+            event.accepted = true
+        } else if (event.key === Qt.Key_N) {
+            gimbalControlPanel.sendGimbalMove(-90, 0, false)
+            toastText.text = qsTr("GIMBAL NADIR (-90°)")
+            toastAnim.restart()
+            event.accepted = true
+        } else if (event.key === Qt.Key_Space) {
+            root.triggerSnapshot()
+            event.accepted = true
+        } else if (event.key === Qt.Key_R) {
+            root.toggleRecording()
+            event.accepted = true
+        } else if (event.key === Qt.Key_G) {
+            root.showGimbalPad = !root.showGimbalPad
+            event.accepted = true
+        }
+    }
+
+    Keys.onReleased: function(event) {
+        if (event.isAutoRepeat) return
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_W ||
+            event.key === Qt.Key_Down || event.key === Qt.Key_S ||
+            event.key === Qt.Key_Left || event.key === Qt.Key_A ||
+            event.key === Qt.Key_Right || event.key === Qt.Key_D) {
+            gimbalControlPanel.sendGimbalMove(0, 0, true)
+            event.accepted = true
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Stream Health & Auto-Reconnect Watchdog
+    // ------------------------------------------------------------------------
+    property int streamStallCounter: 0
+    property bool isStreamStalled: false
+
+    function reconnectStream() {
+        toastText.text = qsTr("RECONNECTING VIDEO STREAM...")
+        toastAnim.restart()
+        QGroundControl.videoManager.stopVideo()
+        streamStallCounter = 0
+        isStreamStalled = false
+        reconnectDelayTimer.start()
+    }
+
+    Timer {
+        id: reconnectDelayTimer
+        interval: 500
+        repeat: false
+        onTriggered: QGroundControl.videoManager.startVideo()
+    }
+
+    Timer {
+        id: streamWatchdogTimer
+        interval: 1000
+        running: root.visible
+        repeat: true
+        onTriggered: {
+            var vs = QGroundControl.settingsManager.videoSettings
+            if (vs && vs.streamEnabled && vs.streamEnabled.rawValue) {
+                if (QGroundControl.videoManager.decoding) {
+                    root.streamStallCounter = 0
+                    root.isStreamStalled = false
+                } else if (QGroundControl.videoManager.hasVideo) {
+                    root.streamStallCounter++
+                    if (root.streamStallCounter >= 5) {
+                        root.isStreamStalled = true
+                    }
+                }
+            }
+        }
+    }
+
     readonly property bool _isNarrow: width < 1024 || ScreenTools.isMobile
     readonly property var _netSettings: (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : (typeof companyNetworkSettings !== "undefined" ? companyNetworkSettings : null)
 
@@ -1734,8 +1833,54 @@ Item {
                 }
 
                 ToolTip.visible: gimbalToggleMouse.containsMouse
-                ToolTip.text: qsTr("Gimbal Tactical Pad")
+                ToolTip.text: qsTr("Gimbal Tactical Pad (G)")
                 ToolTip.delay: 400
+            }
+
+            // Divider
+            Rectangle {
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 1
+                Layout.alignment: Qt.AlignHCenter
+                color: CompanyTheme.borderCard
+            }
+
+            // 6. Storage & Media Ready Indicator
+            Rectangle {
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 28
+                radius: CompanyTheme.radiusSm - 1
+                color: CompanyTheme.bgCardSecondary
+                border.color: CompanyTheme.borderCard
+                border.width: 1
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 1
+                    IconVector {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        name: "folder"
+                        size: 11
+                        color: QGroundControl.videoManager.recording ? CompanyTheme.error : CompanyTheme.djiCyan
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: QGroundControl.videoManager.recording ? "REC" : "READY"
+                        color: QGroundControl.videoManager.recording ? CompanyTheme.error : CompanyTheme.textSecondary
+                        font.pointSize: 5.5
+                        font.bold: true
+                    }
+                }
+
+                MouseArea {
+                    id: storageTipM
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+
+                ToolTip.visible: storageTipM.containsMouse
+                ToolTip.text: QGroundControl.videoManager.recording ? qsTr("Recording in progress...") : qsTr("Storage Ready: Photos & Video saved to local drive")
+                ToolTip.delay: 300
             }
         }
     }
@@ -1760,6 +1905,10 @@ Item {
         readonly property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
         readonly property var _gimbalController: _activeVehicle ? _activeVehicle.gimbalController : null
         readonly property var _activeGimbal: _gimbalController ? _gimbalController.activeGimbal : null
+
+        property string slewMode: "NORM" // "FINE", "NORM", "FAST"
+        readonly property real pitchSpeed: slewMode === "FINE" ? 5.0 : (slewMode === "FAST" ? 25.0 : 15.0)
+        readonly property real panSpeed:   slewMode === "FINE" ? 7.0 : (slewMode === "FAST" ? 35.0 : 20.0)
 
         function sendGimbalMove(pitch, yaw, isRate) {
             if (_activeVehicle && _activeVehicle.sendGimbalControl) {
@@ -1810,6 +1959,47 @@ Item {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.showGimbalPad = false
+                    }
+                }
+            }
+
+            // Slew Speed Selector (Precision vs Rapid)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 3
+
+                Repeater {
+                    model: [
+                        { id: "FINE", label: "FINE 5°/s" },
+                        { id: "NORM", label: "NORM 15°/s" },
+                        { id: "FAST", label: "FAST 25°/s" }
+                    ]
+                    delegate: Rectangle {
+                        id: slewPill
+                        required property var modelData
+                        readonly property bool isCur: gimbalControlPanel.slewMode === modelData.id
+                        Layout.fillWidth: true
+                        height: 20
+                        radius: 3
+                        color: isCur ? CompanyTheme.djiBlue : (slewM.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary)
+                        border.color: isCur ? CompanyTheme.djiCyan : CompanyTheme.borderCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: slewPill.modelData.label
+                            color: isCur ? "#FFFFFF" : CompanyTheme.textSecondary
+                            font.pointSize: 6
+                            font.bold: isCur
+                        }
+
+                        MouseArea {
+                            id: slewM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: gimbalControlPanel.slewMode = slewPill.modelData.id
+                        }
                     }
                 }
             }
@@ -1871,7 +2061,7 @@ Item {
                     }
                     MouseArea {
                         id: upM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: gimbalControlPanel.sendGimbalMove(15, 0, true)
+                        onPressed: gimbalControlPanel.sendGimbalMove(gimbalControlPanel.pitchSpeed, 0, true)
                         onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
@@ -1891,7 +2081,7 @@ Item {
                     }
                     MouseArea {
                         id: leftM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: gimbalControlPanel.sendGimbalMove(0, -20, true)
+                        onPressed: gimbalControlPanel.sendGimbalMove(0, -gimbalControlPanel.panSpeed, true)
                         onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
@@ -1926,7 +2116,7 @@ Item {
                     }
                     MouseArea {
                         id: rightM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: gimbalControlPanel.sendGimbalMove(0, 20, true)
+                        onPressed: gimbalControlPanel.sendGimbalMove(0, gimbalControlPanel.panSpeed, true)
                         onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
@@ -1946,7 +2136,7 @@ Item {
                     }
                     MouseArea {
                         id: downM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onPressed: gimbalControlPanel.sendGimbalMove(-15, 0, true)
+                        onPressed: gimbalControlPanel.sendGimbalMove(-gimbalControlPanel.pitchSpeed, 0, true)
                         onReleased: gimbalControlPanel.sendGimbalMove(0, 0, true)
                     }
                 }
@@ -1999,6 +2189,14 @@ Item {
                         onClicked: gimbalControlPanel.sendGimbalMove(-90, 0, false)
                     }
                 }
+            }
+
+            // Hotkey Hint
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: qsTr("Keys: ↑/↓/←/→ or WASD | C: Ctr | N: Nadir")
+                color: CompanyTheme.textMuted
+                font.pointSize: 6.5
             }
         }
     }
@@ -2126,7 +2324,7 @@ Item {
                 Layout.fillHeight: true
                 radius: CompanyTheme.radiusSm - 1
                 color: streamPopup.visible ? CompanyTheme.primaryDim : (streamMouseArea.containsMouse ? CompanyTheme.bgCardHover : "transparent")
-                border.color: streamPopup.visible ? CompanyTheme.borderActive : "transparent"
+                border.color: root.isStreamStalled ? CompanyTheme.warning : (streamPopup.visible ? CompanyTheme.borderActive : "transparent")
                 border.width: 1
 
                 RowLayout {
@@ -2137,12 +2335,12 @@ Item {
                         width: 6
                         height: 6
                         radius: 3
-                        color: root._isRgbActive ? CompanyTheme.success : (QGroundControl.videoManager.hasVideo ? CompanyTheme.warning : CompanyTheme.danger)
+                        color: root._isRgbActive ? (root.isStreamStalled ? CompanyTheme.warning : CompanyTheme.success) : (QGroundControl.videoManager.hasVideo ? CompanyTheme.warning : CompanyTheme.danger)
                     }
 
                     Text {
-                        text: qsTr("STREAM")
-                        color: streamPopup.visible ? CompanyTheme.primary : CompanyTheme.textSecondary
+                        text: root.isStreamStalled ? qsTr("STALL") : qsTr("STREAM")
+                        color: root.isStreamStalled ? CompanyTheme.warning : (streamPopup.visible ? CompanyTheme.primary : CompanyTheme.textSecondary)
                         font.pointSize: CompanyTheme.fontTiny
                         font.bold: true
                     }
@@ -2154,13 +2352,19 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (streamPopup.visible) {
+                        if (root.isStreamStalled) {
+                            root.reconnectStream()
+                        } else if (streamPopup.visible) {
                             streamPopup.close()
                         } else {
                             streamPopup.open()
                         }
                     }
                 }
+
+                ToolTip.visible: streamMouseArea.containsMouse
+                ToolTip.text: root.isStreamStalled ? qsTr("Stream Stalled - Click to Reconnect") : (root._isRgbActive ? qsTr("Stream Active") : qsTr("Stream Offline"))
+                ToolTip.delay: 300
             }
         }
     }
