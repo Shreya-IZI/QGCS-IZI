@@ -15,6 +15,7 @@ Item {
     property string currentMode: "RGB_ONLY"
     property bool showGimbalPad: false
     property bool hasMapPip: false
+    property bool showHudOverlay: true
 
     focus: true
     Component.onCompleted: root.forceActiveFocus()
@@ -57,6 +58,11 @@ Item {
             event.accepted = true
         } else if (event.key === Qt.Key_G) {
             root.showGimbalPad = !root.showGimbalPad
+            event.accepted = true
+        } else if (event.key === Qt.Key_H) {
+            root.showHudOverlay = !root.showHudOverlay
+            toastText.text = root.showHudOverlay ? qsTr("HUD OVERLAY ENABLED") : qsTr("HUD OVERLAY HIDDEN")
+            toastAnim.restart()
             event.accepted = true
         }
     }
@@ -324,6 +330,87 @@ Item {
     Item {
         id: videoCanvas
         anchors.fill: parent
+
+        // --------------------------------------------------------------------
+        // Superimposed Video Tactical HUD Overlay (Attitude Horizon & Flight Data)
+        // --------------------------------------------------------------------
+        AttitudeHorizonHUD {
+            id: videoHudOverlay
+            anchors.centerIn: parent
+            width: root._isNarrow ? 260 : 320
+            height: root._isNarrow ? 180 : 220
+            z: 22
+            visible: root.showHudOverlay && (root.currentMode !== "STANDBY") && CompanyTelemetry.hasVehicle
+            opacity: 0.88
+        }
+
+        // --------------------------------------------------------------------
+        // Tap-to-Point / POI Target Acquisition Handler
+        // Double-click on live video centers the gimbal on the targeted point
+        // --------------------------------------------------------------------
+        MouseArea {
+            id: roiMouseArea
+            anchors.fill: parent
+            z: 8
+            onClicked: root.forceActiveFocus()
+            onDoubleClicked: (mouse) => {
+                if (!CompanyTelemetry.hasVehicle) return
+                var cx = videoCanvas.width / 2.0
+                var cy = videoCanvas.height / 2.0
+                var relX = (mouse.x - cx) / cx
+                var relY = (mouse.y - cy) / cy
+
+                var fovH = (typeof CompanyTelemetry.fov !== "undefined" && CompanyTelemetry.fov > 1.0) ? CompanyTelemetry.fov : 45.0
+                var fovV = fovH * (videoCanvas.height / Math.max(1, videoCanvas.width))
+
+                var deltaYaw = relX * (fovH / 2.0)
+                var deltaPitch = -relY * (fovV / 2.0)
+
+                var curPitch = CompanyTelemetry.gimbalPitchDeg || 0
+                var curYaw = CompanyTelemetry.gimbalBodyYawDeg || 0
+
+                var targetPitch = Math.max(-90, Math.min(25, curPitch + deltaPitch))
+                var targetYaw = curYaw + deltaYaw
+
+                gimbalControlPanel.sendGimbalMove(targetPitch, targetYaw, false)
+
+                roiLockReticle.x = mouse.x - roiLockReticle.width / 2
+                roiLockReticle.y = mouse.y - roiLockReticle.height / 2
+                roiLockReticle.visible = true
+                roiAnim.restart()
+
+                toastText.text = qsTr("TARGET ACQUIRED: POINTING GIMBAL")
+                toastAnim.restart()
+            }
+        }
+
+        // Target Lock Reticle (ROI Marker)
+        Item {
+            id: roiLockReticle
+            width: 44
+            height: 44
+            visible: false
+            z: 25
+
+            // Corner brackets
+            Rectangle { x: 0; y: 0; width: 10; height: 2; color: CompanyTheme.djiCyan }
+            Rectangle { x: 0; y: 0; width: 2; height: 10; color: CompanyTheme.djiCyan }
+            Rectangle { x: 34; y: 0; width: 10; height: 2; color: CompanyTheme.djiCyan }
+            Rectangle { x: 42; y: 0; width: 2; height: 10; color: CompanyTheme.djiCyan }
+            Rectangle { x: 0; y: 42; width: 10; height: 2; color: CompanyTheme.djiCyan }
+            Rectangle { x: 0; y: 34; width: 2; height: 10; color: CompanyTheme.djiCyan }
+            Rectangle { x: 34; y: 42; width: 10; height: 2; color: CompanyTheme.djiCyan }
+            Rectangle { x: 42; y: 34; width: 2; height: 10; color: CompanyTheme.djiCyan }
+            Rectangle { anchors.centerIn: parent; width: 4; height: 4; radius: 2; color: CompanyTheme.djiCyan }
+
+            SequentialAnimation {
+                id: roiAnim
+                ScaleAnimator { target: roiLockReticle; from: 1.6; to: 1.0; duration: 250; easing.type: Easing.OutBack }
+                PauseAnimation { duration: 1500 }
+                OpacityAnimator { target: roiLockReticle; from: 1.0; to: 0.0; duration: 350 }
+                ScriptAction { script: roiLockReticle.visible = false; }
+            }
+        }
 
         // --------------------------------------------------------------------
         // Divider for SIDE_BY_SIDE mode
@@ -1837,6 +1924,40 @@ Item {
                 ToolTip.delay: 400
             }
 
+            // 6. Superimposed Tactical HUD Overlay Toggle
+            Rectangle {
+                id: hudToggleBtn
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: CompanyTheme.radiusSm - 1
+                color: root.showHudOverlay ? CompanyTheme.primaryDim : (hudToggleMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent")
+                border.color: root.showHudOverlay ? CompanyTheme.primary : (hudToggleMouse.containsMouse ? CompanyTheme.borderActive : "transparent")
+                border.width: 1
+
+                IconVector {
+                    anchors.centerIn: parent
+                    name: "eye"
+                    size: 16
+                    color: root.showHudOverlay ? CompanyTheme.primary : CompanyTheme.textPrimary
+                }
+
+                MouseArea {
+                    id: hudToggleMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.showHudOverlay = !root.showHudOverlay
+                        toastText.text = root.showHudOverlay ? qsTr("HUD OVERLAY ENABLED") : qsTr("HUD OVERLAY HIDDEN")
+                        toastAnim.restart()
+                    }
+                }
+
+                ToolTip.visible: hudToggleMouse.containsMouse
+                ToolTip.text: qsTr("Toggle Superimposed HUD Overlay (H)")
+                ToolTip.delay: 400
+            }
+
             // Divider
             Rectangle {
                 Layout.preferredWidth: 28
@@ -1845,7 +1966,7 @@ Item {
                 color: CompanyTheme.borderCard
             }
 
-            // 6. Storage & Media Ready Indicator
+            // 7. Storage & Media Ready Indicator
             Rectangle {
                 Layout.preferredWidth: 36
                 Layout.preferredHeight: 28

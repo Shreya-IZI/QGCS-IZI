@@ -24,6 +24,7 @@ Rectangle {
     signal showUserGuideRequested()
     signal flightActionRequested(string actionType)
     signal safetyModalRequested()
+    signal preFlightModalRequested()
 
     // Bottom border separator line
     Rectangle {
@@ -1269,6 +1270,80 @@ Rectangle {
                         }
                     }
                 }
+            }
+
+            // Automated Pre-Flight Safety Audit Button
+            Rectangle {
+                id: preFlightBtn
+                Layout.preferredHeight: 28
+                implicitWidth: preFlightRow.implicitWidth + 18
+                radius: 14
+                color: preFlightMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                border.color: preFlightMouse.containsMouse ? CompanyTheme.djiCyan : CompanyTheme.borderCard
+                border.width: 1
+
+                RowLayout {
+                    id: preFlightRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    IconVector {
+                        name: "shield"
+                        size: 13
+                        color: CompanyTheme.djiCyan
+                    }
+
+                    Text {
+                        text: qsTr("PRE-FLIGHT")
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: CompanyTheme.fontSmall
+                        font.bold: true
+                        font.letterSpacing: 0.5
+                    }
+                }
+
+                MouseArea {
+                    id: preFlightMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.preFlightModalRequested()
+                }
+
+                ToolTip.visible: preFlightMouse.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: qsTr("Automated Pre-Flight Readiness Audit\nVerify IMU, GNSS fix, Battery/Tether, Failsafes, and Motors before takeoff")
+            }
+
+            // High-Contrast Sunlight Mode Toggle
+            Rectangle {
+                id: sunlightBtn
+                Layout.preferredHeight: 28
+                implicitWidth: 32
+                radius: CompanyTheme.radiusSm
+                color: CompanyTheme.isSunlightMode ? Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.25) : (sunlightMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCardSecondary)
+                border.color: CompanyTheme.isSunlightMode ? CompanyTheme.warning : CompanyTheme.borderCard
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: CompanyTheme.isSunlightMode ? "☀️" : "🌙"
+                    font.pointSize: 11
+                }
+
+                MouseArea {
+                    id: sunlightMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        CompanyTheme.isSunlightMode = !CompanyTheme.isSunlightMode
+                    }
+                }
+
+                ToolTip.visible: sunlightMouse.containsMouse
+                ToolTip.delay: 300
+                ToolTip.text: CompanyTheme.isSunlightMode ? qsTr("Sunlight Mode: ACTIVE (High-Contrast Outdoor)\nClick for Tactical Night Mode") : qsTr("Sunlight Mode: OFF (Tactical Dark)\nClick for High-Contrast Outdoor Sunlight Mode")
             }
 
             // Window Management Controls (Minimize, Maximize/Restore, Close)

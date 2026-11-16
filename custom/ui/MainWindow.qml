@@ -188,6 +188,9 @@ ApplicationWindow {
         onSafetyModalRequested: () => {
             safetyModal.isOpen = true
         }
+        onPreFlightModalRequested: () => {
+            preFlightModal.isOpen = true
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -443,6 +446,15 @@ ApplicationWindow {
         }
         onConfigureSafetyRequested: {
             contentArea.switchTab(7)
+        }
+    }
+
+    // Automated Pre-Flight Safety Readiness Modal
+    PreFlightChecklistModal {
+        id: preFlightModal
+        isOpen: false
+        onClosed: {
+            safetyModal.isOpen = true
         }
     }
 

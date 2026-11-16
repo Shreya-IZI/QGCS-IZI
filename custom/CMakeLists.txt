@@ -45,6 +45,7 @@ set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/ParametersView.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/OnboardingGuide.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/SafetyFailsafesModal.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/PreFlightChecklistModal.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/CompanyCard.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/CompanyButton.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/StatusBadge.qml

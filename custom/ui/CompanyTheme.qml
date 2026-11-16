@@ -5,27 +5,30 @@ import QtQuick
 QtObject {
     id: theme
 
+    // Operational Mode: High-Contrast Sunlight Visibility
+    property bool isSunlightMode: false
+
     // ------------------------------------------------------------------------
     // Colors - IZI Aerospace/Defence Specification
     // Palette: Black / White / Charcoal with razor-thin borders and restrained status
     // Strictly NO generic SaaS blue dominance, NO excessive gradients or glows.
     // ------------------------------------------------------------------------
-    readonly property color bgApp:           "#080A0D"  // Matte aerospace deep charcoal canvas
-    readonly property color bgSidebar:       "#0E1217"  // Tactical navigation panel
-    readonly property color bgTopBar:        "#0E1217"  // Tactical status header
-    readonly property color bgWorkspace:     "#0B0E13"  // Operational workspace canvas
-    readonly property color bgCard:          "#11161D"  // Primary instrument card / panel
-    readonly property color bgCardSecondary: "#151B23"  // Secondary well / segmented container
-    readonly property color bgCardElevated:  "#1A212B"  // Elevated control / active well
+    readonly property color bgApp:           isSunlightMode ? "#000000" : "#080A0D"  // Matte aerospace deep charcoal canvas
+    readonly property color bgSidebar:       isSunlightMode ? "#05070A" : "#0E1217"  // Tactical navigation panel
+    readonly property color bgTopBar:        isSunlightMode ? "#05070A" : "#0E1217"  // Tactical status header
+    readonly property color bgWorkspace:     isSunlightMode ? "#000000" : "#0B0E13"  // Operational workspace canvas
+    readonly property color bgCard:          isSunlightMode ? "#0A0E14" : "#11161D"  // Primary instrument card / panel
+    readonly property color bgCardSecondary: isSunlightMode ? "#0E131A" : "#151B23"  // Secondary well / segmented container
+    readonly property color bgCardElevated:  isSunlightMode ? "#141C26" : "#1A212B"  // Elevated control / active well
     readonly property color bgCardHover:     "#1E2632"  // Interactive hover state
-    readonly property color bgInput:         "#0A0D11"  // Input field / inset telemetry readout
+    readonly property color bgInput:         isSunlightMode ? "#000000" : "#0A0D11"  // Input field / inset telemetry readout
     readonly property color bgOverlay:       Qt.rgba(0.04, 0.06, 0.08, 0.88) // Tactical translucent overlay
     readonly property color bgOverlayDark:   Qt.rgba(0.03, 0.04, 0.06, 0.96) // High-contrast HUD overlay
 
     // Border Tokens (Razor-thin, technical precision lines)
-    readonly property color borderCard:      "#1E2530"  // Standard instrument & card divider
-    readonly property color borderActive:    "#475569"  // Active state / high-contrast steel border
-    readonly property color borderSubtle:    "#161B23"  // Internal subtle separator
+    readonly property color borderCard:      isSunlightMode ? "#475569" : "#1E2530"  // Standard instrument & card divider
+    readonly property color borderActive:    isSunlightMode ? "#00E5FF" : "#475569"  // Active state / high-contrast steel border
+    readonly property color borderSubtle:    isSunlightMode ? "#334155" : "#161B23"  // Internal subtle separator
 
     // Primary & Interactive Accent Tokens (DJI Professional Aerospace Standard)
     readonly property color primary:         "#0082FA"  // DJI Signature Command Blue (No blinding white)
@@ -58,9 +61,9 @@ QtObject {
     readonly property color info:            "#94A3B8"  // Informational slate grey
 
     // Typography Colors
-    readonly property color textPrimary:     "#F8FAFC"  // Crisp high-contrast white
-    readonly property color textSecondary:   "#94A3B8"  // Technical secondary cool grey
-    readonly property color textMuted:       "#64748B"  // Darker slate text
+    readonly property color textPrimary:     isSunlightMode ? "#FFFFFF" : "#F8FAFC"  // Crisp high-contrast white
+    readonly property color textSecondary:   isSunlightMode ? "#CBD5E1" : "#94A3B8"  // Technical secondary cool grey
+    readonly property color textMuted:       isSunlightMode ? "#94A3B8" : "#64748B"  // Darker slate text
     readonly property color textLight:       "#FFFFFF"  // Pure white
 
     // ------------------------------------------------------------------------

@@ -795,26 +795,96 @@ Item {
                     }
                 }
 
-                // Action buttons: Cancel and Confirm
-                RowLayout {
+                // Tactical Slide-to-Confirm Interlock (Flight Critical Protection)
+                ColumnLayout {
                     Layout.fillWidth: true
                     Layout.topMargin: CompanyTheme.spacingSm
-                    spacing: CompanyTheme.spacingMd
+                    spacing: 8
 
-                    CompanyButton {
+                    Rectangle {
+                        id: slideTrack
                         Layout.fillWidth: true
-                        text: qsTr("Cancel")
-                        isOutline: true
-                        onClicked: root.cancelActionConfirmation()
+                        height: 46
+                        radius: 23
+                        color: CompanyTheme.bgInput
+                        border.color: slideHandle.x > 10 ? root._confirmColor : CompanyTheme.borderCard
+                        border.width: 1.5
+                        clip: true
+
+                        // Progress fill
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: slideHandle.x + slideHandle.width / 2
+                            radius: 23
+                            color: Qt.rgba(root._confirmColor.r, root._confirmColor.g, root._confirmColor.b, 0.25)
+                        }
+
+                        // Track prompt text
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("SLIDE RIGHT TO CONFIRM %1 >>>").arg(root._confirmActionType)
+                            color: CompanyTheme.textSecondary
+                            font.bold: true
+                            font.pointSize: CompanyTheme.fontTiny
+                            font.letterSpacing: 1.0
+                            opacity: Math.max(0.0, 1.0 - (slideHandle.x / (slideTrack.width * 0.5)))
+                        }
+
+                        // Draggable Slider Handle
+                        Rectangle {
+                            id: slideHandle
+                            x: 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 40
+                            height: 40
+                            radius: 20
+                            color: root._confirmColor
+
+                            IconVector {
+                                anchors.centerIn: parent
+                                name: root._confirmActionType === "EMERGENCY_STOP" ? "alert-triangle" : "arrow-right"
+                                size: 18
+                                color: "#FFFFFF"
+                            }
+
+                            Behavior on x {
+                                id: slideAnim
+                                enabled: !slideMouse.drag.active
+                                NumberAnimation { duration: 250; easing.type: Easing.OutBounce }
+                            }
+
+                            MouseArea {
+                                id: slideMouse
+                                anchors.fill: parent
+                                drag.target: slideHandle
+                                drag.axis: Drag.XAxis
+                                drag.minimumX: 3
+                                drag.maximumX: slideTrack.width - slideHandle.width - 3
+                                cursorShape: Qt.PointingHandCursor
+
+                                onReleased: {
+                                    if (slideHandle.x >= slideTrack.width - slideHandle.width - 12) {
+                                        slideHandle.x = 3
+                                        root.executeConfirmedAction()
+                                    } else {
+                                        slideHandle.x = 3
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     CompanyButton {
                         Layout.fillWidth: true
-                        text: root._confirmActionType === "START_MISSION" ? qsTr("Confirm Mission Start") : (root._confirmActionType === "EMERGENCY_STOP" ? qsTr("CONFIRM EMERGENCY KILL") : qsTr("Confirm %1").arg(root._confirmActionType))
-                        isDanger: root._confirmActionType === "ARM" || root._confirmActionType === "DISARM" || root._confirmActionType === "EMERGENCY_STOP"
-                        isPrimary: root._confirmActionType !== "ARM" && root._confirmActionType !== "DISARM" && root._confirmActionType !== "EMERGENCY_STOP"
-                        customColor: root._confirmColor
-                        onClicked: root.executeConfirmedAction()
+                        Layout.preferredHeight: 30
+                        text: qsTr("Cancel")
+                        isOutline: true
+                        onClicked: {
+                            slideHandle.x = 3
+                            root.cancelActionConfirmation()
+                        }
                     }
                 }
             }
