@@ -137,7 +137,19 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.activeSensor = "RGB"
+                            onClicked: {
+                                root.activeSensor = "RGB"
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                var net = (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : null
+                                if (net) net.selectedCameraFeed = "EO"
+                                if (vs) {
+                                    vs.rtspUrl.rawValue = (net ? net.eoVideoUrl : "rtsp://192.168.168.119:554/live/ch0")
+                                    if (vs.streamEnabled && vs.streamEnabled.rawValue) {
+                                        QGroundControl.videoManager.stopVideo()
+                                        QGroundControl.videoManager.startVideo()
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -156,7 +168,19 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.activeSensor = "IR"
+                            onClicked: {
+                                root.activeSensor = "IR"
+                                var vs = QGroundControl.settingsManager.videoSettings
+                                var net = (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : null
+                                if (net) net.selectedCameraFeed = "IR"
+                                if (vs) {
+                                    vs.rtspUrl.rawValue = (net ? net.irVideoUrl : "rtsp://192.168.168.119:554/live/ch1")
+                                    if (vs.streamEnabled && vs.streamEnabled.rawValue) {
+                                        QGroundControl.videoManager.stopVideo()
+                                        QGroundControl.videoManager.startVideo()
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -435,7 +435,7 @@ Item {
         z: 20
         visible: root.currentSubView === "MAP"
         onSwapRequested: (targetSubView) => {
-            root.currentSubView = "CAM"
+            root.currentSubView = (targetSubView && targetSubView !== "") ? targetSubView : "EO_CAM"
         }
     }
 
