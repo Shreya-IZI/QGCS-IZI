@@ -88,7 +88,7 @@ SetupPage {
             Loader {
                 id: remoteControlCalibrationLoader
                 Layout.fillWidth: true
-                sourceComponent: activeJoystick && !activeVehicle.armed ? remoteControlCalibrationComponent : null
+                sourceComponent: activeJoystick && (!activeVehicle || !activeVehicle.armed) ? remoteControlCalibrationComponent : null
             }
 
             Component {

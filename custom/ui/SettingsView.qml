@@ -47,7 +47,9 @@ Item {
         Qt.callLater(function() {
             if (activeSubTab === "TELEMETRY") ensureTabVisible(subTabLoggingBtn)
             else if (activeSubTab === "NETWORK") ensureTabVisible(subTabNetworkBtn)
+            else if (activeSubTab === "JOYSTICK") ensureTabVisible(subTabJoystickBtn)
             else if (activeSubTab === "OFFLINE_MAPS") ensureTabVisible(subTabOfflineMapsBtn)
+            else if (activeSubTab === "TETHER") ensureTabVisible(subTabTetherBtn)
         })
     }
 
@@ -249,6 +251,39 @@ Item {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.activeSubTab = "NETWORK"
+                    }
+                }
+
+                // SUB-TAB C: JOYSTICK & RC TRANSMITTER
+                Rectangle {
+                    id: subTabJoystickBtn
+                    implicitWidth: Math.max(140, subTabJoystickRow.implicitWidth + 24)
+                    implicitHeight: 30
+                    radius: CompanyTheme.radiusSm
+                    color: root.activeSubTab === "JOYSTICK" ? CompanyTheme.primary : CompanyTheme.bgCardSecondary
+                    border.color: root.activeSubTab === "JOYSTICK" ? CompanyTheme.primary : CompanyTheme.borderCard
+                    border.width: 1
+
+                    RowLayout {
+                        id: subTabJoystickRow
+                        anchors.centerIn: parent
+                        spacing: 6
+                        IconVector {
+                            name: "joystick"
+                            size: 14
+                            color: root.activeSubTab === "JOYSTICK" ? CompanyTheme.textLight : CompanyTheme.textSecondary
+                        }
+                        Text {
+                            text: qsTr("JOYSTICK & RC")
+                            color: root.activeSubTab === "JOYSTICK" ? CompanyTheme.textLight : CompanyTheme.textSecondary
+                            font.pointSize: CompanyTheme.fontSmall
+                            font.bold: root.activeSubTab === "JOYSTICK"
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.activeSubTab = "JOYSTICK"
                     }
                 }
 
@@ -3918,6 +3953,745 @@ Item {
                                         text: qsTr("SIMULATE CABLE SLACK (8 N)")
                                         isOutline: true
                                         onClicked: if (tetherSettingsCol._tether) tetherSettingsCol._tether.simulateFault("SLACK")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ================================================================
+            // SUB-TAB E: JOYSTICK & RC TRANSMITTER CONFIGURATION & TELEMETRY
+            // ================================================================
+            ColumnLayout {
+                id: joystickSubTabCol
+                Layout.fillWidth: true
+                spacing: CompanyTheme.spacingMd
+                visible: root.activeSubTab === "JOYSTICK"
+
+                readonly property var _activeJoystick: (typeof joystickManager !== "undefined" && joystickManager) ? joystickManager.activeJoystick : null
+                readonly property bool _hasJoystick: _activeJoystick !== null
+                readonly property bool _isEnabled: _hasJoystick && (typeof joystickManager !== "undefined") && joystickManager.activeJoystickEnabledForActiveVehicle
+                readonly property bool _isCalibrated: _hasJoystick && _activeJoystick.settings && _activeJoystick.settings.calibrated ? _activeJoystick.settings.calibrated.rawValue : false
+                readonly property var _availableNames: (typeof joystickManager !== "undefined" && joystickManager && joystickManager.availableJoystickNames) ? joystickManager.availableJoystickNames : []
+
+                property real liveRoll: 0
+                property real livePitch: 0
+                property real liveYaw: 0
+                property real liveThrottle: 0
+                property var liveRawValues: []
+                property var pressedButtonsMap: ({})
+                property bool isConfigPolling: false
+
+                function startPolling() {
+                    if (_activeJoystick && !isConfigPolling) {
+                        try {
+                            _activeJoystick.startConfiguration()
+                            isConfigPolling = true
+                        } catch(e) {}
+                    }
+                }
+
+                function stopPolling() {
+                    if (_activeJoystick && isConfigPolling) {
+                        try {
+                            _activeJoystick.stopConfiguration()
+                            isConfigPolling = false
+                        } catch(e) {}
+                    }
+                }
+
+                Component.onCompleted: {
+                    if (root.activeSubTab === "JOYSTICK") startPolling()
+                }
+
+                Component.onDestruction: {
+                    stopPolling()
+                }
+
+                Connections {
+                    target: root
+                    function onActiveSubTabChanged() {
+                        if (root.activeSubTab === "JOYSTICK") {
+                            joystickSubTabCol.startPolling()
+                        } else {
+                            joystickSubTabCol.stopPolling()
+                        }
+                    }
+                }
+
+                Connections {
+                    target: joystickSubTabCol._activeJoystick
+                    ignoreUnknownSignals: true
+                    function onAxisValues(roll, pitch, yaw, throttle) {
+                        joystickSubTabCol.liveRoll = roll
+                        joystickSubTabCol.livePitch = pitch
+                        joystickSubTabCol.liveYaw = yaw
+                        joystickSubTabCol.liveThrottle = throttle
+                    }
+                    function onRawChannelValuesChanged(values) {
+                        if (!values || values.length === 0) return
+                        joystickSubTabCol.liveRawValues = values
+                        if (values.length > 0) joystickSubTabCol.liveRoll = Math.max(-1.0, Math.min(1.0, values[0] / 32768.0))
+                        if (values.length > 1) joystickSubTabCol.livePitch = Math.max(-1.0, Math.min(1.0, values[1] / 32768.0))
+                        if (values.length > 2) joystickSubTabCol.liveYaw = Math.max(-1.0, Math.min(1.0, values[2] / 32768.0))
+                        if (values.length > 3) joystickSubTabCol.liveThrottle = Math.max(0.0, Math.min(1.0, (values[3] + 32768.0) / 65536.0))
+                    }
+                    function onRawButtonPressedChanged(index, pressed) {
+                        var copy = Object.assign({}, joystickSubTabCol.pressedButtonsMap)
+                        copy[index] = pressed
+                        joystickSubTabCol.pressedButtonsMap = copy
+                    }
+                }
+
+                // ------------------------------------------------------------
+                // 1. DEVICE IDENTIFICATION & SELECTION CARD
+                // ------------------------------------------------------------
+                Rectangle {
+                    Layout.fillWidth: true
+                    radius: CompanyTheme.radiusMd
+                    color: CompanyTheme.bgCard
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    implicitHeight: devCardCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                    ColumnLayout {
+                        id: devCardCol
+                        anchors.fill: parent
+                        anchors.margins: CompanyTheme.spacingLg
+                        spacing: CompanyTheme.spacingMd
+
+                        // Header
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            IconVector {
+                                name: "joystick"
+                                size: 18
+                                color: joystickSubTabCol._isEnabled ? CompanyTheme.success : (joystickSubTabCol._hasJoystick ? CompanyTheme.primary : CompanyTheme.textSecondary)
+                            }
+
+                            ColumnLayout {
+                                spacing: 2
+                                Layout.fillWidth: true
+
+                                Text {
+                                    text: qsTr("HARDWARE TRANSMITTER & JOYSTICK SUBSYSTEM")
+                                    color: CompanyTheme.textPrimary
+                                    font.pointSize: CompanyTheme.fontH2
+                                    font.bold: true
+                                }
+                                Text {
+                                    text: qsTr("Direct USB HID, Bluetooth, and handheld transmitter stick controls")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+                            }
+
+                            // Status Badges
+                            RowLayout {
+                                spacing: 6
+                                Rectangle {
+                                    height: 22
+                                    implicitWidth: devConnBadgeText.implicitWidth + 12
+                                    radius: CompanyTheme.radiusSm
+                                    color: joystickSubTabCol._hasJoystick ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.2) : Qt.rgba(CompanyTheme.danger.r, CompanyTheme.danger.g, CompanyTheme.danger.b, 0.2)
+                                    border.color: joystickSubTabCol._hasJoystick ? CompanyTheme.primary : CompanyTheme.danger
+                                    border.width: 1
+                                    Text {
+                                        id: devConnBadgeText
+                                        anchors.centerIn: parent
+                                        text: joystickSubTabCol._hasJoystick ? (joystickSubTabCol._activeJoystick.connectionType ? joystickSubTabCol._activeJoystick.connectionType.toUpperCase() : "HID CONNECTED") : "NO CONTROLLER"
+                                        color: joystickSubTabCol._hasJoystick ? CompanyTheme.primary : CompanyTheme.danger
+                                        font.pointSize: 8
+                                        font.bold: true
+                                    }
+                                }
+
+                                Rectangle {
+                                    height: 22
+                                    implicitWidth: devCalBadgeText.implicitWidth + 12
+                                    radius: CompanyTheme.radiusSm
+                                    color: joystickSubTabCol._isCalibrated ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.2) : Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.2)
+                                    border.color: joystickSubTabCol._isCalibrated ? CompanyTheme.success : CompanyTheme.warning
+                                    border.width: 1
+                                    Text {
+                                        id: devCalBadgeText
+                                        anchors.centerIn: parent
+                                        text: joystickSubTabCol._isCalibrated ? qsTr("CALIBRATED") : qsTr("UNCALIBRATED")
+                                        color: joystickSubTabCol._isCalibrated ? CompanyTheme.success : CompanyTheme.warning
+                                        font.pointSize: 8
+                                        font.bold: true
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: CompanyTheme.borderSubtle
+                        }
+
+                        // Controller Selector (if multiple available)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingMd
+                            visible: joystickSubTabCol._availableNames.length > 1
+
+                            Text {
+                                text: qsTr("Select Active Controller:")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontSmall
+                                font.bold: true
+                            }
+
+                            RowLayout {
+                                spacing: 6
+                                Repeater {
+                                    model: joystickSubTabCol._availableNames
+                                    delegate: Rectangle {
+                                        id: joySelBtn
+                                        required property string modelData
+                                        readonly property bool isSelected: joystickSubTabCol._activeJoystick && joystickSubTabCol._activeJoystick.name === joySelBtn.modelData
+                                        implicitWidth: joySelText.implicitWidth + 16
+                                        implicitHeight: 28
+                                        radius: CompanyTheme.radiusSm
+                                        color: isSelected ? CompanyTheme.primary : CompanyTheme.bgCardSecondary
+                                        border.color: isSelected ? CompanyTheme.primary : CompanyTheme.borderCard
+                                        border.width: 1
+
+                                        Text {
+                                            id: joySelText
+                                            anchors.centerIn: parent
+                                            text: joySelBtn.modelData
+                                            color: joySelBtn.isSelected ? CompanyTheme.textLight : CompanyTheme.textSecondary
+                                            font.pointSize: 8
+                                            font.bold: joySelBtn.isSelected
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (QGroundControl.settingsManager.joystickManagerSettings) {
+                                                    QGroundControl.settingsManager.joystickManagerSettings.activeJoystickName.rawValue = joySelBtn.modelData
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Device Quick Spec Tiles
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 46
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+                                    Text { text: qsTr("DEVICE NAME"); color: CompanyTheme.textMuted; font.pointSize: 7; font.bold: true }
+                                    Text {
+                                        text: joystickSubTabCol._hasJoystick ? joystickSubTabCol._activeJoystick.name : qsTr("None")
+                                        color: CompanyTheme.textPrimary; font.pointSize: 9; font.bold: true; elide: Text.ElideRight
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 46
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+                                    Text { text: qsTr("TOTAL AXES"); color: CompanyTheme.textMuted; font.pointSize: 7; font.bold: true }
+                                    Text {
+                                        text: joystickSubTabCol._hasJoystick ? (joystickSubTabCol._activeJoystick.axisCount + " Axes") : "--"
+                                        color: CompanyTheme.info; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 46
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+                                    Text { text: qsTr("BUTTONS"); color: CompanyTheme.textMuted; font.pointSize: 7; font.bold: true }
+                                    Text {
+                                        text: joystickSubTabCol._hasJoystick ? (joystickSubTabCol._activeJoystick.buttonCount + " Switches") : "--"
+                                        color: CompanyTheme.primary; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 46
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderCard
+
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+                                    Text { text: qsTr("BATTERY"); color: CompanyTheme.textMuted; font.pointSize: 7; font.bold: true }
+                                    Text {
+                                        text: (joystickSubTabCol._hasJoystick && joystickSubTabCol._activeJoystick.batteryPercent >= 0) ? (joystickSubTabCol._activeJoystick.batteryPercent + "%") : qsTr("USB Powered")
+                                        color: CompanyTheme.success; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono
+                                    }
+                                }
+                            }
+                        }
+
+                        // No Controller Warning Banner
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 44
+                            visible: !joystickSubTabCol._hasJoystick
+                            radius: CompanyTheme.radiusSm
+                            color: Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.15)
+                            border.color: CompanyTheme.warning
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 8
+
+                                IconVector { name: "alert-triangle"; size: 16; color: CompanyTheme.warning }
+                                Text {
+                                    text: qsTr("No physical HID controller detected. Connect a USB gamepad or ensure the Skydroid transmitter is in HID Mode.")
+                                    color: CompanyTheme.textPrimary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ------------------------------------------------------------
+                // 2. MASTER FLIGHT CONTROL & SAFETY INTERLOCKS CARD
+                // ------------------------------------------------------------
+                Rectangle {
+                    Layout.fillWidth: true
+                    radius: CompanyTheme.radiusMd
+                    color: CompanyTheme.bgCard
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    implicitHeight: controlCardCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                    ColumnLayout {
+                        id: controlCardCol
+                        anchors.fill: parent
+                        anchors.margins: CompanyTheme.spacingLg
+                        spacing: CompanyTheme.spacingMd
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            IconVector { name: "shield"; size: 18; color: CompanyTheme.primary }
+                            Text {
+                                text: qsTr("FLIGHT CONTROL & SAFETY INTERLOCKS")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontH2
+                                font.bold: true
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: CompanyTheme.borderSubtle
+                        }
+
+                        // Master Toggle Row
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingMd
+
+                            ColumnLayout {
+                                spacing: 2
+                                Layout.fillWidth: true
+
+                                Text {
+                                    text: qsTr("Enable Joystick Flight Control (MAVLink)")
+                                    color: CompanyTheme.textPrimary
+                                    font.pointSize: CompanyTheme.fontBody
+                                    font.bold: true
+                                }
+                                Text {
+                                    text: qsTr("Streams MAVLink MANUAL_CONTROL packets to the Cube Orange autopilot in real time")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+                            }
+
+                            CompanyButton {
+                                text: joystickSubTabCol._isEnabled ? qsTr("JOYSTICK: ENABLED (ACTIVE)") : qsTr("JOYSTICK: DISABLED (OFF)")
+                                isOutline: !joystickSubTabCol._isEnabled
+                                enabled: joystickSubTabCol._hasJoystick
+                                onClicked: {
+                                    if (typeof joystickManager !== "undefined" && joystickManager) {
+                                        if (!joystickSubTabCol._isCalibrated && !joystickSubTabCol._isEnabled) {
+                                            if (joystickSubTabCol._activeJoystick && joystickSubTabCol._activeJoystick.settings && joystickSubTabCol._activeJoystick.settings.calibrated) {
+                                                joystickSubTabCol._activeJoystick.settings.calibrated.rawValue = true
+                                            }
+                                        }
+                                        joystickManager.activeJoystickEnabledForActiveVehicle = !joystickManager.activeJoystickEnabledForActiveVehicle
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: CompanyTheme.borderSubtle
+                        }
+
+                        // Calibration Bypass / Quick Zero
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingMd
+
+                            ColumnLayout {
+                                spacing: 2
+                                Layout.fillWidth: true
+
+                                Text {
+                                    text: qsTr("Calibration Lock Bypass (Bench Testing)")
+                                    color: CompanyTheme.textPrimary
+                                    font.pointSize: CompanyTheme.fontBody
+                                    font.bold: true
+                                }
+                                Text {
+                                    text: qsTr("Marks the controller as calibrated to allow bench testing without completing the 10-step wizard")
+                                    color: CompanyTheme.textSecondary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+                            }
+
+                            CompanyButton {
+                                text: qsTr("SET CALIBRATED (BYPASS)")
+                                isOutline: true
+                                enabled: joystickSubTabCol._hasJoystick
+                                onClicked: {
+                                    if (joystickSubTabCol._activeJoystick && joystickSubTabCol._activeJoystick.settings && joystickSubTabCol._activeJoystick.settings.calibrated) {
+                                        joystickSubTabCol._activeJoystick.settings.calibrated.rawValue = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ------------------------------------------------------------
+                // 3. REAL-TIME MULTI-AXIS TELEMETRY VISUALIZER
+                // ------------------------------------------------------------
+                Rectangle {
+                    Layout.fillWidth: true
+                    radius: CompanyTheme.radiusMd
+                    color: CompanyTheme.bgCard
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    implicitHeight: axisCardCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                    ColumnLayout {
+                        id: axisCardCol
+                        anchors.fill: parent
+                        anchors.margins: CompanyTheme.spacingLg
+                        spacing: CompanyTheme.spacingMd
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            IconVector { name: "flight"; size: 18; color: CompanyTheme.primary }
+                            Text {
+                                text: qsTr("REAL-TIME AXIS DEFLECTION TELEMETRY")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontH2
+                                font.bold: true
+                                Layout.fillWidth: true
+                            }
+                            Text {
+                                text: qsTr("Deflect sticks to observe live telemetry")
+                                color: CompanyTheme.textMuted
+                                font.pointSize: CompanyTheme.fontSmall
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: CompanyTheme.borderSubtle
+                        }
+
+                        // 4 Primary Flight Axes
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            // 1. ROLL (Lateral)
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+                                Text { text: "ROLL (CH 1)"; color: CompanyTheme.textPrimary; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 100 }
+                                Rectangle {
+                                    Layout.fillWidth: true; Layout.preferredHeight: 14; radius: 7; color: CompanyTheme.bgCardSecondary
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: Math.abs(joystickSubTabCol.liveRoll) * (parent.width / 2)
+                                        height: parent.height; radius: 7
+                                        color: CompanyTheme.primary
+                                        x: joystickSubTabCol.liveRoll >= 0 ? parent.width / 2 : (parent.width / 2) - width
+                                    }
+                                    Rectangle { anchors.centerIn: parent; width: 2; height: parent.height + 6; color: CompanyTheme.borderActive }
+                                }
+                                Text { text: (joystickSubTabCol.liveRoll >= 0 ? "+" : "") + (joystickSubTabCol.liveRoll * 100).toFixed(1) + "%"; color: CompanyTheme.textLight; font.pointSize: 10; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight }
+                            }
+
+                            // 2. PITCH (Longitudinal)
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+                                Text { text: "PITCH (CH 2)"; color: CompanyTheme.textPrimary; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 100 }
+                                Rectangle {
+                                    Layout.fillWidth: true; Layout.preferredHeight: 14; radius: 7; color: CompanyTheme.bgCardSecondary
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: Math.abs(joystickSubTabCol.livePitch) * (parent.width / 2)
+                                        height: parent.height; radius: 7
+                                        color: CompanyTheme.primary
+                                        x: joystickSubTabCol.livePitch >= 0 ? parent.width / 2 : (parent.width / 2) - width
+                                    }
+                                    Rectangle { anchors.centerIn: parent; width: 2; height: parent.height + 6; color: CompanyTheme.borderActive }
+                                }
+                                Text { text: (joystickSubTabCol.livePitch >= 0 ? "+" : "") + (joystickSubTabCol.livePitch * 100).toFixed(1) + "%"; color: CompanyTheme.textLight; font.pointSize: 10; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight }
+                            }
+
+                            // 3. YAW (Heading)
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+                                Text { text: "YAW (CH 3)"; color: CompanyTheme.textPrimary; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 100 }
+                                Rectangle {
+                                    Layout.fillWidth: true; Layout.preferredHeight: 14; radius: 7; color: CompanyTheme.bgCardSecondary
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: Math.abs(joystickSubTabCol.liveYaw) * (parent.width / 2)
+                                        height: parent.height; radius: 7
+                                        color: CompanyTheme.primary
+                                        x: joystickSubTabCol.liveYaw >= 0 ? parent.width / 2 : (parent.width / 2) - width
+                                    }
+                                    Rectangle { anchors.centerIn: parent; width: 2; height: parent.height + 6; color: CompanyTheme.borderActive }
+                                }
+                                Text { text: (joystickSubTabCol.liveYaw >= 0 ? "+" : "") + (joystickSubTabCol.liveYaw * 100).toFixed(1) + "%"; color: CompanyTheme.textLight; font.pointSize: 10; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight }
+                            }
+
+                            // 4. THROTTLE (Altitude / Power)
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+                                Text { text: "THROTTLE (CH 4)"; color: CompanyTheme.textPrimary; font.pointSize: 10; font.bold: true; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 100 }
+                                Rectangle {
+                                    Layout.fillWidth: true; Layout.preferredHeight: 14; radius: 7; color: CompanyTheme.bgCardSecondary
+                                    Rectangle {
+                                        anchors.left: parent.left
+                                        width: Math.max(0, Math.min(parent.width, joystickSubTabCol.liveThrottle * parent.width))
+                                        height: parent.height; radius: 7
+                                        color: CompanyTheme.success
+                                    }
+                                }
+                                Text { text: Math.round(joystickSubTabCol.liveThrottle * 100) + "%"; color: CompanyTheme.textLight; font.pointSize: 10; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight }
+                            }
+                        }
+                    }
+                }
+
+                // ------------------------------------------------------------
+                // 4. HARDWARE BUTTON & SWITCH MATRIX
+                // ------------------------------------------------------------
+                Rectangle {
+                    Layout.fillWidth: true
+                    radius: CompanyTheme.radiusMd
+                    color: CompanyTheme.bgCard
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    implicitHeight: btnCardCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                    ColumnLayout {
+                        id: btnCardCol
+                        anchors.fill: parent
+                        anchors.margins: CompanyTheme.spacingLg
+                        spacing: CompanyTheme.spacingMd
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            IconVector { name: "rc"; size: 18; color: CompanyTheme.primary }
+                            Text {
+                                text: qsTr("TRANSMITTER BUTTONS & FLIGHT SWITCHES")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontH2
+                                font.bold: true
+                                Layout.fillWidth: true
+                            }
+                            Text {
+                                text: qsTr("Indicators illuminate when physical buttons/switches are engaged")
+                                color: CompanyTheme.textMuted
+                                font.pointSize: CompanyTheme.fontSmall
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: CompanyTheme.borderSubtle
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Repeater {
+                                model: Math.max(16, joystickSubTabCol._activeJoystick ? Math.min(32, joystickSubTabCol._activeJoystick.buttonCount) : 16)
+                                delegate: Rectangle {
+                                    id: joyBtnBox
+                                    required property int index
+                                    readonly property bool isPressed: !!joystickSubTabCol.pressedButtonsMap[joyBtnBox.index]
+
+                                    width: 48
+                                    height: 34
+                                    radius: CompanyTheme.radiusSm
+                                    color: isPressed ? CompanyTheme.primary : CompanyTheme.bgCardSecondary
+                                    border.color: isPressed ? CompanyTheme.primary : CompanyTheme.borderCard
+                                    border.width: 1
+
+                                    ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 1
+                                        Text {
+                                            text: "B" + (joyBtnBox.index + 1)
+                                            color: joyBtnBox.isPressed ? CompanyTheme.textLight : CompanyTheme.textPrimary
+                                            font.pointSize: 8
+                                            font.bold: true
+                                        }
+                                        Text {
+                                            text: joyBtnBox.isPressed ? "ON" : "OFF"
+                                            color: joyBtnBox.isPressed ? CompanyTheme.textLight : CompanyTheme.textMuted
+                                            font.pointSize: 6
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ------------------------------------------------------------
+                // 5. SKYDROID G30 HARDWARE SETUP & TROUBLESHOOTING GUIDE
+                // ------------------------------------------------------------
+                Rectangle {
+                    Layout.fillWidth: true
+                    radius: CompanyTheme.radiusMd
+                    color: CompanyTheme.bgCard
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                    implicitHeight: skyGuideCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                    ColumnLayout {
+                        id: skyGuideCol
+                        anchors.fill: parent
+                        anchors.margins: CompanyTheme.spacingLg
+                        spacing: CompanyTheme.spacingMd
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            IconVector { name: "settings"; size: 18; color: CompanyTheme.info }
+                            Text {
+                                text: qsTr("SKYDROID G30 TRANSMITTER SETUP GUIDE")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontH2
+                                font.bold: true
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: CompanyTheme.borderSubtle
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            RowLayout {
+                                spacing: 8
+                                Rectangle { width: 20; height: 20; radius: 10; color: CompanyTheme.primaryDim; Text { anchors.centerIn: parent; text: "1"; color: CompanyTheme.primary; font.bold: true; font.pointSize: 8 } }
+                                Text { text: qsTr("Open the built-in <b>Device Assistant</b> (or Skydroid Assistant) system app on the G30 transmitter."); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; Layout.fillWidth: true }
+                            }
+
+                            RowLayout {
+                                spacing: 8
+                                Rectangle { width: 20; height: 20; radius: 10; color: CompanyTheme.primaryDim; Text { anchors.centerIn: parent; text: "2"; color: CompanyTheme.primary; font.bold: true; font.pointSize: 8 } }
+                                Text { text: qsTr("Navigate to <b>Settings ➔ Output Mode</b> and select <b>HID / Gamepad</b> (do not select UART, SBUS, or Trainer)."); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; Layout.fillWidth: true }
+                            }
+
+                            RowLayout {
+                                spacing: 8
+                                Rectangle { width: 20; height: 20; radius: 10; color: CompanyTheme.primaryDim; Text { anchors.centerIn: parent; text: "3"; color: CompanyTheme.primary; font.bold: true; font.pointSize: 8 } }
+                                Text { text: qsTr("Perform full circular stick calibration in Device Assistant and tap <b>Save / Finish</b>."); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; Layout.fillWidth: true }
+                            }
+
+                            RowLayout {
+                                spacing: 8
+                                Rectangle { width: 20; height: 20; radius: 10; color: CompanyTheme.primaryDim; Text { anchors.centerIn: parent; text: "4"; color: CompanyTheme.primary; font.bold: true; font.pointSize: 8 } }
+                                Text { text: qsTr("Return to IZi GCS and verify the Roll, Pitch, Yaw, and Throttle meters above deflect smoothly."); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; Layout.fillWidth: true }
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingMd
+
+                            Item { Layout.fillWidth: true }
+
+                            CompanyButton {
+                                text: qsTr("LAUNCH VEHICLE SETUP JOYSTICK CALIBRATION ➔")
+                                isOutline: false
+                                onClicked: {
+                                    if (typeof contentArea !== "undefined" && contentArea.switchTab) {
+                                        contentArea.switchTab(7) // Tab 7: Vehicle Setup
                                     }
                                 }
                             }

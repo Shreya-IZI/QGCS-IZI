@@ -25,6 +25,7 @@ Rectangle {
     signal flightActionRequested(string actionType)
     signal safetyModalRequested()
     signal preFlightModalRequested()
+    signal openJoystickSettingsRequested()
 
     // Bottom border separator line
     Rectangle {
@@ -1018,6 +1019,93 @@ Rectangle {
                 }
             }
 
+            // 3J. Joystick & RC Transmitter Status Chip
+            Rectangle {
+                id: joystickChip
+                readonly property var _activeJoystick: (typeof joystickManager !== "undefined" && joystickManager) ? joystickManager.activeJoystick : null
+                readonly property bool _hasJoystick: _activeJoystick !== null
+                readonly property bool _isEnabled: _hasJoystick && (typeof joystickManager !== "undefined") && joystickManager.activeJoystickEnabledForActiveVehicle
+                readonly property bool _isCalibrated: _hasJoystick && _activeJoystick.settings && _activeJoystick.settings.calibrated ? _activeJoystick.settings.calibrated.rawValue : false
+
+                Layout.preferredHeight: 28
+                implicitWidth: joystickChipRow.implicitWidth + 16
+                radius: CompanyTheme.radiusSm
+                color: {
+                    if (!_hasJoystick) return CompanyTheme.bgCardSecondary
+                    if (_isEnabled) return Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.2)
+                    return Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.2)
+                }
+                border.color: {
+                    if (!_hasJoystick) return CompanyTheme.borderCard
+                    if (_isEnabled) return CompanyTheme.success
+                    return CompanyTheme.warning
+                }
+                border.width: (_hasJoystick && _isEnabled) ? 1.5 : 1
+
+                RowLayout {
+                    id: joystickChipRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    IconVector {
+                        name: "joystick"
+                        size: 13
+                        color: {
+                            if (!joystickChip._hasJoystick) return CompanyTheme.textMuted
+                            if (joystickChip._isEnabled) return CompanyTheme.success
+                            return CompanyTheme.warning
+                        }
+                    }
+
+                    Text {
+                        text: {
+                            if (!joystickChip._hasJoystick) return qsTr("RC: NONE")
+                            if (joystickChip._isEnabled) return qsTr("RC: ACTIVE")
+                            if (!joystickChip._isCalibrated) return qsTr("RC: UNCAL")
+                            return qsTr("RC: OFF")
+                        }
+                        color: {
+                            if (!joystickChip._hasJoystick) return CompanyTheme.textMuted
+                            if (joystickChip._isEnabled) return CompanyTheme.success
+                            return CompanyTheme.warning
+                        }
+                        font.pointSize: 10
+                        font.bold: true
+                        font.family: CompanyTheme.fontMono
+                    }
+                }
+
+                MouseArea {
+                    id: joystickChipMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (joystickQuickPopup.visible) {
+                            joystickQuickPopup.close()
+                        } else {
+                            joystickQuickPopup.open()
+                        }
+                    }
+                }
+
+                ToolTip.visible: joystickChipMouse.containsMouse && !joystickQuickPopup.visible
+                ToolTip.delay: 300
+                ToolTip.text: {
+                    if (!joystickChip._hasJoystick) {
+                        return qsTr("No Joystick / Gamepad Detected\nConnect a USB controller or configure Skydroid HID mode.")
+                    }
+                    var lines = [
+                        qsTr("Controller: %1").arg(joystickChip._activeJoystick.name),
+                        qsTr("Status: %1").arg(joystickChip._isEnabled ? qsTr("ENABLED for vehicle") : qsTr("DISABLED (Click to enable)")),
+                        qsTr("Calibration: %1").arg(joystickChip._isCalibrated ? qsTr("Calibrated") : qsTr("Requires Calibration")),
+                        qsTr("Axes: %1 • Buttons: %2").arg(joystickChip._activeJoystick.axisCount).arg(joystickChip._activeJoystick.buttonCount),
+                        qsTr("Click to open quick control & live monitor")
+                    ]
+                    return lines.join("\n")
+                }
+            }
+
             // Divider
             Rectangle {
                 Layout.preferredWidth: 1
@@ -1431,6 +1519,334 @@ Rectangle {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Quick Joystick / RC Transmitter Control & Diagnostics Popup
+    // ========================================================================
+    Popup {
+        id: joystickQuickPopup
+        x: Math.max(10, Math.min(root.width - width - 10, joystickChip.mapToItem(root, 0, 0).x - width/2 + joystickChip.width/2))
+        y: root.height + 4
+        width: 360
+        implicitHeight: quickCol.implicitHeight + 24
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        property real liveRoll: 0
+        property real livePitch: 0
+        property real liveYaw: 0
+        property real liveThrottle: 0
+        property bool isPolling: false
+
+        onOpened: {
+            if (joystickChip._activeJoystick && !isPolling) {
+                try {
+                    joystickChip._activeJoystick.startConfiguration()
+                    isPolling = true
+                } catch(e) {}
+            }
+        }
+
+        onClosed: {
+            if (joystickChip._activeJoystick && isPolling) {
+                try {
+                    joystickChip._activeJoystick.stopConfiguration()
+                    isPolling = false
+                } catch(e) {}
+            }
+        }
+
+        Connections {
+            target: joystickChip._activeJoystick
+            ignoreUnknownSignals: true
+            function onAxisValues(roll, pitch, yaw, throttle) {
+                joystickQuickPopup.liveRoll = roll
+                joystickQuickPopup.livePitch = pitch
+                joystickQuickPopup.liveYaw = yaw
+                joystickQuickPopup.liveThrottle = throttle
+            }
+            function onRawChannelValuesChanged(values) {
+                if (!values || values.length === 0) return
+                if (values.length > 0) joystickQuickPopup.liveRoll = Math.max(-1.0, Math.min(1.0, values[0] / 32768.0))
+                if (values.length > 1) joystickQuickPopup.livePitch = Math.max(-1.0, Math.min(1.0, values[1] / 32768.0))
+                if (values.length > 2) joystickQuickPopup.liveYaw = Math.max(-1.0, Math.min(1.0, values[2] / 32768.0))
+                if (values.length > 3) joystickQuickPopup.liveThrottle = Math.max(0.0, Math.min(1.0, (values[3] + 32768.0) / 65536.0))
+            }
+        }
+
+        background: Rectangle {
+            color: CompanyTheme.bgSidebar
+            radius: CompanyTheme.radiusMd
+            border.color: CompanyTheme.borderCard
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            id: quickCol
+            spacing: 10
+
+            // Header Row
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                IconVector {
+                    name: "joystick"
+                    size: 16
+                    color: joystickChip._isEnabled ? CompanyTheme.success : (joystickChip._hasJoystick ? CompanyTheme.warning : CompanyTheme.textSecondary)
+                }
+
+                Text {
+                    text: qsTr("TRANSMITTER & JOYSTICK CONTROL")
+                    color: CompanyTheme.textPrimary
+                    font.pointSize: CompanyTheme.fontSmall
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+
+                Button {
+                    text: "✕"
+                    contentItem: Text {
+                        text: parent.text
+                        color: CompanyTheme.textMuted
+                        font.pointSize: 9
+                    }
+                    background: Rectangle { color: "transparent" }
+                    onClicked: joystickQuickPopup.close()
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: CompanyTheme.borderCard
+            }
+
+            // Device Status Card
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 56
+                radius: CompanyTheme.radiusSm
+                color: CompanyTheme.bgCard
+                border.color: CompanyTheme.borderCard
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 4
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text {
+                            text: joystickChip._activeJoystick ? joystickChip._activeJoystick.name : qsTr("No Controller Detected")
+                            color: CompanyTheme.textPrimary
+                            font.pointSize: 10
+                            font.bold: true
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        Rectangle {
+                            height: 18
+                            implicitWidth: calBadgeText.implicitWidth + 8
+                            radius: 3
+                            color: joystickChip._isCalibrated ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.2) : Qt.rgba(CompanyTheme.warning.r, CompanyTheme.warning.g, CompanyTheme.warning.b, 0.2)
+                            Text {
+                                id: calBadgeText
+                                anchors.centerIn: parent
+                                text: joystickChip._isCalibrated ? qsTr("CALIBRATED") : qsTr("UNCALIBRATED")
+                                color: joystickChip._isCalibrated ? CompanyTheme.success : CompanyTheme.warning
+                                font.pointSize: 7
+                                font.bold: true
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text {
+                            text: joystickChip._hasJoystick ? qsTr("Axes: %1 • Buttons: %2").arg(joystickChip._activeJoystick.axisCount).arg(joystickChip._activeJoystick.buttonCount) : qsTr("Check USB cable or Skydroid HID setting")
+                            color: CompanyTheme.textSecondary
+                            font.pointSize: 8
+                            Layout.fillWidth: true
+                        }
+                        Text {
+                            visible: joystickChip._hasJoystick && joystickChip._activeJoystick && joystickChip._activeJoystick.batteryPercent >= 0
+                            text: (joystickChip._hasJoystick && joystickChip._activeJoystick && joystickChip._activeJoystick.batteryPercent >= 0) ? qsTr("Batt: %1%").arg(joystickChip._activeJoystick.batteryPercent) : ""
+                            color: CompanyTheme.info
+                            font.pointSize: 8
+                            font.bold: true
+                        }
+                    }
+                }
+            }
+
+            // Master Enable / Disable Flight Control Action Button
+            Button {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 34
+                enabled: joystickChip._hasJoystick
+                contentItem: RowLayout {
+                    spacing: 6
+                    anchors.centerIn: parent
+                    IconVector {
+                        name: joystickChip._isEnabled ? "lock" : "arm"
+                        size: 13
+                        color: joystickChip._isEnabled ? CompanyTheme.danger : CompanyTheme.textLight
+                    }
+                    Text {
+                        text: joystickChip._isEnabled ? qsTr("DISABLE JOYSTICK CONTROL") : qsTr("ENABLE JOYSTICK FOR FLIGHT CONTROL")
+                        color: joystickChip._isEnabled ? CompanyTheme.danger : CompanyTheme.textLight
+                        font.pointSize: 8
+                        font.bold: true
+                    }
+                }
+                background: Rectangle {
+                    radius: CompanyTheme.radiusSm
+                    color: {
+                        if (!joystickChip._hasJoystick) return CompanyTheme.bgCard
+                        if (joystickChip._isEnabled) return parent.hovered ? CompanyTheme.dangerDim : CompanyTheme.bgCardSecondary
+                        return parent.hovered ? CompanyTheme.primaryHover : CompanyTheme.primary
+                    }
+                    border.color: joystickChip._isEnabled ? CompanyTheme.danger : CompanyTheme.primary
+                    border.width: 1
+                }
+                onClicked: {
+                    if (typeof joystickManager !== "undefined" && joystickManager) {
+                        if (!joystickChip._isCalibrated && !joystickChip._isEnabled) {
+                            if (joystickChip._activeJoystick && joystickChip._activeJoystick.settings && joystickChip._activeJoystick.settings.calibrated) {
+                                joystickChip._activeJoystick.settings.calibrated.rawValue = true
+                            }
+                        }
+                        joystickManager.activeJoystickEnabledForActiveVehicle = !joystickManager.activeJoystickEnabledForActiveVehicle
+                    }
+                }
+            }
+
+            // Live Axis Deflection Meters
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 116
+                radius: CompanyTheme.radiusSm
+                color: CompanyTheme.bgCard
+                border.color: CompanyTheme.borderCard
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 4
+
+                    Text {
+                        text: qsTr("LIVE STICK DEFLECTION")
+                        color: CompanyTheme.textMuted
+                        font.pointSize: 7
+                        font.bold: true
+                    }
+
+                    // Roll
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Text { text: "ROLL"; color: CompanyTheme.textSecondary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 42 }
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.preferredHeight: 7; radius: 3.5; color: CompanyTheme.bgCardSecondary
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: Math.abs(joystickQuickPopup.liveRoll) * (parent.width / 2)
+                                height: parent.height; radius: 3.5
+                                color: CompanyTheme.primary
+                                x: joystickQuickPopup.liveRoll >= 0 ? parent.width / 2 : (parent.width / 2) - width
+                            }
+                            Rectangle { anchors.centerIn: parent; width: 2; height: parent.height + 4; color: CompanyTheme.borderCard }
+                        }
+                        Text { text: (joystickQuickPopup.liveRoll >= 0 ? "+" : "") + joystickQuickPopup.liveRoll.toFixed(2); color: CompanyTheme.textPrimary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignRight }
+                    }
+
+                    // Pitch
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Text { text: "PITCH"; color: CompanyTheme.textSecondary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 42 }
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.preferredHeight: 7; radius: 3.5; color: CompanyTheme.bgCardSecondary
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: Math.abs(joystickQuickPopup.livePitch) * (parent.width / 2)
+                                height: parent.height; radius: 3.5
+                                color: CompanyTheme.primary
+                                x: joystickQuickPopup.livePitch >= 0 ? parent.width / 2 : (parent.width / 2) - width
+                            }
+                            Rectangle { anchors.centerIn: parent; width: 2; height: parent.height + 4; color: CompanyTheme.borderCard }
+                        }
+                        Text { text: (joystickQuickPopup.livePitch >= 0 ? "+" : "") + joystickQuickPopup.livePitch.toFixed(2); color: CompanyTheme.textPrimary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignRight }
+                    }
+
+                    // Yaw
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Text { text: "YAW"; color: CompanyTheme.textSecondary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 42 }
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.preferredHeight: 7; radius: 3.5; color: CompanyTheme.bgCardSecondary
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: Math.abs(joystickQuickPopup.liveYaw) * (parent.width / 2)
+                                height: parent.height; radius: 3.5
+                                color: CompanyTheme.primary
+                                x: joystickQuickPopup.liveYaw >= 0 ? parent.width / 2 : (parent.width / 2) - width
+                            }
+                            Rectangle { anchors.centerIn: parent; width: 2; height: parent.height + 4; color: CompanyTheme.borderCard }
+                        }
+                        Text { text: (joystickQuickPopup.liveYaw >= 0 ? "+" : "") + joystickQuickPopup.liveYaw.toFixed(2); color: CompanyTheme.textPrimary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignRight }
+                    }
+
+                    // Throttle
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Text { text: "THR"; color: CompanyTheme.textSecondary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 42 }
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.preferredHeight: 7; radius: 3.5; color: CompanyTheme.bgCardSecondary
+                            Rectangle {
+                                anchors.left: parent.left
+                                width: Math.max(0, Math.min(parent.width, joystickQuickPopup.liveThrottle * parent.width))
+                                height: parent.height; radius: 3.5
+                                color: CompanyTheme.success
+                            }
+                        }
+                        Text { text: Math.round(joystickQuickPopup.liveThrottle * 100) + "%"; color: CompanyTheme.textPrimary; font.pointSize: 8; font.family: CompanyTheme.fontMono; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignRight }
+                    }
+                }
+            }
+
+            // Bottom Navigation Link to Full Settings
+            Button {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 28
+                contentItem: RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 6
+                    IconVector { name: "settings"; size: 12; color: CompanyTheme.primary }
+                    Text {
+                        text: qsTr("OPEN FULL JOYSTICK & RC SETTINGS ➔")
+                        color: CompanyTheme.primary
+                        font.pointSize: 8
+                        font.bold: true
+                    }
+                }
+                background: Rectangle {
+                    radius: CompanyTheme.radiusSm
+                    color: parent.hovered ? CompanyTheme.primaryDim : "transparent"
+                    border.color: CompanyTheme.borderCard
+                }
+                onClicked: {
+                    joystickQuickPopup.close()
+                    root.openJoystickSettingsRequested()
                 }
             }
         }

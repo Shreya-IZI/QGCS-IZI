@@ -191,6 +191,10 @@ ApplicationWindow {
         onPreFlightModalRequested: () => {
             preFlightModal.isOpen = true
         }
+        onOpenJoystickSettingsRequested: () => {
+            contentArea.switchTab(5)
+            settingsView.activeSubTab = "JOYSTICK"
+        }
     }
 
     // ------------------------------------------------------------------------
