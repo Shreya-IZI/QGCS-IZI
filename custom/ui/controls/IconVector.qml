@@ -421,6 +421,137 @@ Item {
                     ctx.stroke()
                     break
 
+                case "drone":
+                case "uav":
+                    // Minimal Drone Outline (Fly Card)
+                    ctx.beginPath()
+                    ctx.arc(8*f, 8*f, 2.2*f, 0, 2*Math.PI)
+                    ctx.stroke()
+                    // 4 diagonal arms
+                    ctx.beginPath()
+                    ctx.moveTo(6.4*f, 6.4*f); ctx.lineTo(3.2*f, 3.2*f)
+                    ctx.moveTo(9.6*f, 6.4*f); ctx.lineTo(12.8*f, 3.2*f)
+                    ctx.moveTo(6.4*f, 9.6*f); ctx.lineTo(3.2*f, 12.8*f)
+                    ctx.moveTo(9.6*f, 9.6*f); ctx.lineTo(12.8*f, 12.8*f)
+                    ctx.stroke()
+                    // 4 rotor bars
+                    ctx.beginPath()
+                    ctx.moveTo(1.5*f, 3.2*f); ctx.lineTo(4.9*f, 3.2*f)
+                    ctx.moveTo(11.1*f, 3.2*f); ctx.lineTo(14.5*f, 3.2*f)
+                    ctx.moveTo(1.5*f, 12.8*f); ctx.lineTo(4.9*f, 12.8*f)
+                    ctx.moveTo(11.1*f, 12.8*f); ctx.lineTo(14.5*f, 12.8*f)
+                    ctx.stroke()
+                    break
+
+                case "plan":
+                case "route":
+                    // Waypoint Pin & Curving Flight Path (Plan Card)
+                    ctx.beginPath()
+                    ctx.arc(4.5*f, 4.5*f, 2.0*f, 0, 2*Math.PI)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.moveTo(4.5*f, 6.5*f)
+                    ctx.bezierCurveTo(4.5*f, 10.5*f, 13.5*f, 6.5*f, 13.5*f, 10.5*f)
+                    ctx.lineTo(11.5*f, 13.5*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(11.5*f, 13.5*f, 1.2*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    break
+
+                case "chart":
+                case "analyze":
+                    // Bar Chart (Analyze Card)
+                    ctx.beginPath()
+                    ctx.moveTo(2.5*f, 13.5*f); ctx.lineTo(13.5*f, 13.5*f)
+                    ctx.stroke()
+                    // 3 bars
+                    ctx.beginPath()
+                    ctx.moveTo(4.5*f, 13.5*f); ctx.lineTo(4.5*f, 8.5*f)
+                    ctx.moveTo(8.0*f, 13.5*f); ctx.lineTo(8.0*f, 5.0*f)
+                    ctx.moveTo(11.5*f, 13.5*f); ctx.lineTo(11.5*f, 2.5*f)
+                    ctx.stroke()
+                    break
+
+                case "sliders":
+                case "configure":
+                    // Configuration Sliders (Configure Card)
+                    ctx.beginPath()
+                    ctx.moveTo(2.5*f, 4.0*f); ctx.lineTo(13.5*f, 4.0*f)
+                    ctx.moveTo(2.5*f, 8.0*f); ctx.lineTo(13.5*f, 8.0*f)
+                    ctx.moveTo(2.5*f, 12.0*f); ctx.lineTo(13.5*f, 12.0*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(5.5*f, 4.0*f, 1.5*f, 0, 2*Math.PI)
+                    ctx.arc(10.5*f, 8.0*f, 1.5*f, 0, 2*Math.PI)
+                    ctx.arc(6.5*f, 12.0*f, 1.5*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    break
+
+                case "layers":
+                case "fleet_stack":
+                    // Stacked Fleet Layers (Fleet Card)
+                    for (var ly = 0; ly < 3; ly++) {
+                        var yOff = ly * 3.5 * f
+                        ctx.beginPath()
+                        ctx.moveTo(8*f, (3.5 + ly*3.5)*f)
+                        ctx.lineTo(13.5*f, (6.0 + ly*3.5)*f)
+                        ctx.lineTo(8*f, (8.5 + ly*3.5)*f)
+                        ctx.lineTo(2.5*f, (6.0 + ly*3.5)*f)
+                        ctx.closePath()
+                        ctx.stroke()
+                    }
+                    break
+
+                case "speedometer":
+                case "speed":
+                    ctx.beginPath()
+                    ctx.arc(8*f, 9*f, 5.5*f, Math.PI * 0.8, Math.PI * 2.2)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.moveTo(8*f, 9*f); ctx.lineTo(10.5*f, 6.5*f)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(8*f, 9*f, 1.2*f, 0, 2*Math.PI)
+                    ctx.fill()
+                    break
+
+                case "altitude":
+                    // Slanted Navigation Vector Arrow
+                    ctx.beginPath()
+                    ctx.moveTo(2.5*f, 13.5*f)
+                    ctx.lineTo(13.5*f, 2.5*f)
+                    ctx.lineTo(7.5*f, 2.5*f)
+                    ctx.moveTo(13.5*f, 2.5*f)
+                    ctx.lineTo(13.5*f, 8.5*f)
+                    ctx.stroke()
+                    break
+
+                case "vspeed":
+                    // Vertical Up/Down Arrows
+                    ctx.beginPath()
+                    ctx.moveTo(5.5*f, 4*f); ctx.lineTo(5.5*f, 12*f)
+                    ctx.moveTo(3.5*f, 6*f); ctx.lineTo(5.5*f, 4*f); ctx.lineTo(7.5*f, 6*f)
+                    ctx.moveTo(10.5*f, 4*f); ctx.lineTo(10.5*f, 12*f)
+                    ctx.moveTo(8.5*f, 10*f); ctx.lineTo(10.5*f, 12*f); ctx.lineTo(12.5*f, 10*f)
+                    ctx.stroke()
+                    break
+
+                case "check_circle":
+                    ctx.beginPath()
+                    ctx.arc(8*f, 8*f, 6.0*f, 0, 2*Math.PI)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.moveTo(5*f, 8*f); ctx.lineTo(7*f, 10.5*f); ctx.lineTo(11.5*f, 5.5*f)
+                    ctx.stroke()
+                    break
+
+                case "chevron_right":
+                    ctx.beginPath()
+                    ctx.moveTo(6*f, 4*f); ctx.lineTo(10*f, 8*f); ctx.lineTo(6*f, 12*f)
+                    ctx.stroke()
+                    break
+
                 default:
                     ctx.beginPath()
                     ctx.arc(8*f, 8*f, 4*f, 0, 2*Math.PI)

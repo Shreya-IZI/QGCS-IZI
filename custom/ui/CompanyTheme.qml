@@ -9,79 +9,86 @@ QtObject {
     property bool isSunlightMode: false
 
     // ------------------------------------------------------------------------
-    // Colors - IZI Aerospace/Defence Specification
-    // Palette: Black / White / Charcoal with razor-thin borders and restrained status
-    // Strictly NO generic SaaS blue dominance, NO excessive gradients or glows.
+    // Colors - IZI GCS GRAPHITE GREEN Brand Identity
+    // Palette:
+    // - Main background:      #0B1118
+    // - Secondary background: #101720
+    // - Card background:      #17212C
+    // - Primary accent:       #8BEA68
+    // - Primary text:         #FFFFFF
+    // - Secondary text:       #A7B0B8
+    // - Borders:              subtle graphite grey (#222F3D)
+    // - Success:              green (#8BEA68)
+    // - Warning:              amber (#F59E0B)
+    // - Critical:             red (#EF4444)
+    // STRICT DESIGN RULE: No blue, cyan, purple or blue gradients anywhere.
     // ------------------------------------------------------------------------
-    readonly property color bgApp:           isSunlightMode ? "#000000" : "#080A0D"  // Matte aerospace deep charcoal canvas
-    readonly property color bgSidebar:       isSunlightMode ? "#05070A" : "#0E1217"  // Tactical navigation panel
-    readonly property color bgTopBar:        isSunlightMode ? "#05070A" : "#0E1217"  // Tactical status header
-    readonly property color bgWorkspace:     isSunlightMode ? "#000000" : "#0B0E13"  // Operational workspace canvas
-    readonly property color bgCard:          isSunlightMode ? "#0A0E14" : "#11161D"  // Primary instrument card / panel
-    readonly property color bgCardSecondary: isSunlightMode ? "#0E131A" : "#151B23"  // Secondary well / segmented container
-    readonly property color bgCardElevated:  isSunlightMode ? "#141C26" : "#1A212B"  // Elevated control / active well
-    readonly property color bgCardHover:     "#1E2632"  // Interactive hover state
-    readonly property color bgInput:         isSunlightMode ? "#000000" : "#0A0D11"  // Input field / inset telemetry readout
-    readonly property color bgOverlay:       Qt.rgba(0.04, 0.06, 0.08, 0.88) // Tactical translucent overlay
-    readonly property color bgOverlayDark:   Qt.rgba(0.03, 0.04, 0.06, 0.96) // High-contrast HUD overlay
+    readonly property color bgApp:           isSunlightMode ? "#000000" : "#0B1118"  // Tactical graphite canvas
+    readonly property color bgSidebar:       isSunlightMode ? "#05070A" : "#101720"  // Secondary graphite panel
+    readonly property color bgTopBar:        isSunlightMode ? "#05070A" : "#101720"  // Tactical header
+    readonly property color bgWorkspace:     isSunlightMode ? "#000000" : "#0B1118"  // Primary workspace
+    readonly property color bgCard:          isSunlightMode ? "#0D141D" : "#17212C"  // Primary instrument card
+    readonly property color bgCardSecondary: isSunlightMode ? "#101720" : "#101720"  // Secondary container
+    readonly property color bgCardElevated:  isSunlightMode ? "#151F2B" : "#1D2A37"  // Elevated control / active card
+    readonly property color bgCardHover:     "#233242"  // Interactive hover state
+    readonly property color bgInput:         isSunlightMode ? "#000000" : "#0E151F"  // Inset input field
+    readonly property color bgOverlay:       Qt.rgba(0.043, 0.067, 0.094, 0.88)     // Translucent dark overlay (#0B1118)
+    readonly property color bgOverlayDark:   Qt.rgba(0.043, 0.067, 0.094, 0.96)     // High-contrast HUD overlay
 
-    // Border Tokens (Razor-thin, technical precision lines)
-    readonly property color borderCard:      isSunlightMode ? "#475569" : "#1E2530"  // Standard instrument & card divider
-    readonly property color borderActive:    isSunlightMode ? "#00E5FF" : "#475569"  // Active state / high-contrast steel border
-    readonly property color borderSubtle:    isSunlightMode ? "#334155" : "#161B23"  // Internal subtle separator
+    // Border Tokens (Subtle graphite grey precision lines)
+    readonly property color borderCard:      isSunlightMode ? "#475569" : "#222F3D"  // Subtle graphite grey
+    readonly property color borderActive:    "#8BEA68"                               // Electric tactical green active border
+    readonly property color borderSubtle:    isSunlightMode ? "#334155" : "#1A2430"  // Internal divider
 
-    // Primary & Interactive Accent Tokens (DJI Professional Aerospace Standard)
-    readonly property color primary:         "#0082FA"  // DJI Signature Command Blue (No blinding white)
-    readonly property color primaryHover:    "#0091FF"  // Electric Blue hover
-    readonly property color primaryDim:      Qt.rgba(0.0, 0.51, 0.98, 0.16) // Subtle tactical highlight
-    readonly property color secondaryBlue:   "#64748B"  // Technical slate grey
-    readonly property color accent:          "#0082FA"  // DJI Electric Aviation Blue
-    readonly property color accentHover:     "#0091FF"  // Electric Blue hover
-    readonly property color accentDim:       Qt.rgba(0.0, 0.51, 0.98, 0.16) // Blue glow highlight
-    readonly property color djiBlue:         "#0082FA"  // DJI Signature Command Blue
-    readonly property color djiBlueHover:    "#0091FF"  // Electric Blue hover
-    readonly property color djiBlueDim:      Qt.rgba(0.0, 0.51, 0.98, 0.16)
-    readonly property color djiCyan:         "#00E5FF"  // DJI Waypoint & Route Cyan
-    readonly property color djiCyanDim:      Qt.rgba(0.0, 0.90, 1.0, 0.16)
-    readonly property color bgGlass:         Qt.rgba(0.07, 0.09, 0.13, 0.88) // Frosted tactical glass
-    readonly property color borderGlass:     Qt.rgba(1.0, 1.0, 1.0, 0.12)    // High-precision glass edge
+    // Primary & Interactive Accent Tokens (IZI Graphite Green Specification)
+    readonly property color primary:         "#8BEA68"  // IZI Signature Electric Tactical Green
+    readonly property color primaryHover:    "#9EFA7C"  // Brightened Green Hover
+    readonly property color primaryDim:      Qt.rgba(0.545, 0.918, 0.408, 0.16) // Subtle Green Glow
+    readonly property color secondaryBlue:   "#6A7785"  // Technical slate grey (no blue)
+    readonly property color accent:          "#8BEA68"  // Tactical Green Accent
+    readonly property color accentHover:     "#9EFA7C"  // Brightened Green Hover
+    readonly property color accentDim:       Qt.rgba(0.545, 0.918, 0.408, 0.16)
+    readonly property color djiBlue:         "#8BEA68"  // Aliased to IZI Green (eliminates blue)
+    readonly property color djiBlueHover:    "#9EFA7C"
+    readonly property color djiBlueDim:      Qt.rgba(0.545, 0.918, 0.408, 0.16)
+    readonly property color djiCyan:         "#8BEA68"  // Aliased to IZI Green (eliminates cyan)
+    readonly property color djiCyanDim:      Qt.rgba(0.545, 0.918, 0.408, 0.16)
+    readonly property color bgGlass:         Qt.rgba(0.09, 0.13, 0.17, 0.90)    // Frosted graphite glass (#17212C)
+    readonly property color borderGlass:     Qt.rgba(0.545, 0.918, 0.408, 0.20) // Subtle green-tinted glass edge
 
     // Status Colors (Strictly Restrained Military Telemetry Standards)
-    // Green -> Connected / Healthy / Armed-Ready
-    // Amber -> Standby / Caution / Waiting
-    // Red   -> Critical fault / Danger / Armed
-    readonly property color success:         "#10B981"  // Operational green
-    readonly property color successDim:      Qt.rgba(0.06, 0.72, 0.50, 0.15)
-    readonly property color warning:         "#F59E0B"  // Caution amber
+    readonly property color success:         "#8BEA68"  // Operational / Ready Green
+    readonly property color successDim:      Qt.rgba(0.545, 0.918, 0.408, 0.15)
+    readonly property color warning:         "#F59E0B"  // Caution Amber
     readonly property color warningDim:      Qt.rgba(0.96, 0.62, 0.04, 0.15)
-    readonly property color danger:          "#EF4444"  // Alert / Armed / Fault red
+    readonly property color danger:          "#EF4444"  // Alert / Armed / Fault Red
     readonly property color dangerDim:       Qt.rgba(0.94, 0.27, 0.27, 0.15)
     readonly property color error:           danger
     readonly property color errorDim:        dangerDim
-    readonly property color info:            "#94A3B8"  // Informational slate grey
+    readonly property color info:            "#A7B0B8"  // Informational slate grey
 
     // Typography Colors
-    readonly property color textPrimary:     isSunlightMode ? "#FFFFFF" : "#F8FAFC"  // Crisp high-contrast white
-    readonly property color textSecondary:   isSunlightMode ? "#CBD5E1" : "#94A3B8"  // Technical secondary cool grey
-    readonly property color textMuted:       isSunlightMode ? "#94A3B8" : "#64748B"  // Darker slate text
-    readonly property color textLight:       "#FFFFFF"  // Pure white
+    readonly property color textPrimary:     isSunlightMode ? "#FFFFFF" : "#FFFFFF"  // Crisp Pure White
+    readonly property color textSecondary:   isSunlightMode ? "#CBD5E1" : "#A7B0B8"  // Secondary cool graphite grey
+    readonly property color textMuted:       isSunlightMode ? "#94A3B8" : "#6A7785"  // Darker slate text
+    readonly property color textLight:       "#FFFFFF"  // Pure White
 
     // ------------------------------------------------------------------------
     // Primary Flight Display (PFD) HUD Tokens (Aviation Grade)
     // ------------------------------------------------------------------------
-    readonly property color pfdSkyGradientStart:    "#0A111A"
-    readonly property color pfdSkyGradientEnd:      "#121A26"
+    readonly property color pfdSkyGradientStart:    "#0B1118"
+    readonly property color pfdSkyGradientEnd:      "#101720"
 
-    readonly property color pfdGroundGradientStart: "#181A1D"
-    readonly property color pfdGroundGradientEnd:   "#0B0D0F"
+    readonly property color pfdGroundGradientStart: "#17212C"
+    readonly property color pfdGroundGradientEnd:   "#0B1118"
 
-    readonly property color pfdHorizonLine:         "#10B981"  // Tactical HUD green horizon
-    readonly property color pfdTapeBg:              Qt.rgba(0.03, 0.04, 0.06, 0.94)
-    readonly property color pfdTapeTick:            "#64748B"
-    readonly property color pfdTapeText:            "#F8FAFC"
+    readonly property color pfdHorizonLine:         "#8BEA68"  // Tactical HUD Green Horizon
+    readonly property color pfdTapeBg:              Qt.rgba(0.043, 0.067, 0.094, 0.94)
+    readonly property color pfdTapeTick:            "#6A7785"
+    readonly property color pfdTapeText:            "#FFFFFF"
 
-    readonly property color pfdPointerBox:          "#0E1217"
-    readonly property color pfdPointerBorder:       "#CBD5E1"
+    readonly property color pfdPointerBox:          "#101720"
+    readonly property color pfdPointerBorder:       "#8BEA68"
 
     // ------------------------------------------------------------------------
     // Typography Scale (Industrial Technical Sans-Serif & Monospace)

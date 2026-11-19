@@ -26,6 +26,7 @@ qgc_configure_target(CompanyUIModule)
 set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/CompanyTheme.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/CompanyTelemetry.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/HomeScreen.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/MainWindow.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/TopBar.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/Sidebar.qml
@@ -82,6 +83,9 @@ qt_add_qml_module(CompanyUIModule
 set(CUSTOM_ICON_ICO "${CMAKE_CURRENT_SOURCE_DIR}/deploy/windows/WindowsIZI.ico")
 set(CUSTOM_ICON_PNG "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/izi_icon.png")
 set(CUSTOM_ICON_SVG "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/izi_icon.svg")
+set(CUSTOM_HERO_WORDMARK "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/izi_hero_wordmark.png")
+set(CUSTOM_HEADER_LOGO "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/izi_header_logo.png")
+set(CUSTOM_AERIAL_BG "${CMAKE_CURRENT_SOURCE_DIR}/res/images/home_aerial_bg.jpg")
 
 set_source_files_properties("${CUSTOM_ICON_ICO}"
     PROPERTIES QT_RESOURCE_ALIAS "qgroundcontrol.ico"
@@ -91,6 +95,15 @@ set_source_files_properties("${CUSTOM_ICON_PNG}"
 )
 set_source_files_properties("${CUSTOM_ICON_SVG}"
     PROPERTIES QT_RESOURCE_ALIAS "izi_icon.svg"
+)
+set_source_files_properties("${CUSTOM_HERO_WORDMARK}"
+    PROPERTIES QT_RESOURCE_ALIAS "izi_hero_wordmark.png"
+)
+set_source_files_properties("${CUSTOM_HEADER_LOGO}"
+    PROPERTIES QT_RESOURCE_ALIAS "izi_header_logo.png"
+)
+set_source_files_properties("${CUSTOM_AERIAL_BG}"
+    PROPERTIES QT_RESOURCE_ALIAS "home_aerial_bg.jpg"
 )
 
 qt_add_resources(${CMAKE_PROJECT_NAME} custom_app_icons
@@ -106,6 +119,14 @@ qt_add_resources(${CMAKE_PROJECT_NAME} custom_brand_icons
     FILES
         "${CUSTOM_ICON_PNG}"
         "${CUSTOM_ICON_SVG}"
+        "${CUSTOM_HERO_WORDMARK}"
+        "${CUSTOM_HEADER_LOGO}"
+)
+
+qt_add_resources(${CMAKE_PROJECT_NAME} custom_brand_images
+    PREFIX "/res/images"
+    FILES
+        "${CUSTOM_AERIAL_BG}"
 )
 
 # ----------------------------------------------------------------------------

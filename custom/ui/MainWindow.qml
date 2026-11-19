@@ -25,6 +25,9 @@ ApplicationWindow {
 
     readonly property bool _isNarrow: width < 1024 || ScreenTools.isMobile
 
+    // Primary Landing Navigation State (Home Screen vs Active Workspace)
+    property bool isHomeView: true
+
     // ------------------------------------------------------------------------
     // Persistent App Settings (QtCore.Settings)
     // ------------------------------------------------------------------------
@@ -172,6 +175,10 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         z: 10
+        visible: !mainWindow.isHomeView
+        onHomeRequested: () => {
+            mainWindow.isHomeView = true
+        }
         onTabRequested: (tabIndex) => {
             contentArea.switchTab(tabIndex)
         }
@@ -202,10 +209,11 @@ ApplicationWindow {
     // ------------------------------------------------------------------------
     Item {
         id: workspaceRoot
-        anchors.top: topBar.bottom
+        anchors.top: mainWindow.isHomeView ? parent.top : topBar.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
+        visible: !mainWindow.isHomeView
 
         // Drawer controller state
         QtObject {
@@ -226,6 +234,7 @@ ApplicationWindow {
             anchors.right: parent.right
 
             function switchTab(index) {
+                mainWindow.isHomeView = false
                 sidebar.currentTab = index
                 viewStack.currentIndex = index
                 if (index <= 1) {
@@ -432,6 +441,28 @@ ApplicationWindow {
                 if (mainWindow._isNarrow) navDrawer.isOpen = false
                 safetyModal.isOpen = true
             }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // IZI GCS Dedicated Home Screen (Approved Brand Redesign)
+    // ------------------------------------------------------------------------
+    HomeScreen {
+        id: homeScreen
+        anchors.fill: parent
+        visible: mainWindow.isHomeView
+        z: 30
+        onNavigateToWorkspace: (tabIndex, subView) => {
+            contentArea.switchTab(tabIndex)
+            if (subView && subView !== "") {
+                dashboardView.currentSubView = subView
+            }
+        }
+        onOpenSettingsRequested: () => {
+            contentArea.switchTab(5)
+        }
+        onOpenPreFlightChecklistRequested: () => {
+            preFlightModal.isOpen = true
         }
     }
 

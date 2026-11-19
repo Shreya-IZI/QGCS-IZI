@@ -26,6 +26,7 @@ Rectangle {
     signal safetyModalRequested()
     signal preFlightModalRequested()
     signal openJoystickSettingsRequested()
+    signal homeRequested()
 
     // Bottom border separator line
     Rectangle {
@@ -88,6 +89,37 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.toggleDrawerRequested()
             }
+        }
+
+        // Home Navigation Button (Return to IZI GCS Home Screen)
+        Rectangle {
+            id: homeNavBtn
+            Layout.preferredWidth: 32
+            Layout.preferredHeight: 32
+            radius: CompanyTheme.radiusSm
+            color: homeNavMouse.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCard
+            border.color: homeNavMouse.containsMouse ? CompanyTheme.primary : CompanyTheme.borderCard
+            border.width: 1
+
+            Text {
+                anchors.centerIn: parent
+                text: "‹"
+                color: homeNavMouse.containsMouse ? CompanyTheme.primary : CompanyTheme.textPrimary
+                font.pointSize: 18
+                font.bold: true
+            }
+
+            MouseArea {
+                id: homeNavMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.homeRequested()
+            }
+
+            ToolTip.visible: homeNavMouse.containsMouse
+            ToolTip.delay: 300
+            ToolTip.text: qsTr("Return to IZI Home Screen")
         }
 
         // --------------------------------------------------------------------
