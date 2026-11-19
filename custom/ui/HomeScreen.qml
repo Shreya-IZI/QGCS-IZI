@@ -83,6 +83,26 @@ Rectangle {
         color: "transparent"
         z: 20
 
+        // Window drag and double-click maximize area (Desktop Frameless Mode)
+        MouseArea {
+            anchors.fill: parent
+            z: -1
+            onPressed: {
+                if (typeof mainWindow !== "undefined" && mainWindow.startSystemMove) {
+                    mainWindow.startSystemMove()
+                }
+            }
+            onDoubleClicked: {
+                if (typeof mainWindow !== "undefined") {
+                    if (mainWindow.visibility === Window.Maximized) {
+                        mainWindow.showNormal()
+                    } else {
+                        mainWindow.showMaximized()
+                    }
+                }
+            }
+        }
+
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: CompanyTheme.spacingLg
@@ -258,6 +278,115 @@ Rectangle {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.openSettingsRequested()
+                    }
+                }
+
+                // ------------------------------------------------------------
+                // Desktop Frameless Window Controls (Minimize, Maximize, Close / Cut)
+                // ------------------------------------------------------------
+                RowLayout {
+                    spacing: 2
+                    Layout.fillHeight: true
+                    visible: !ScreenTools.isMobile
+
+                    // Vertical Divider
+                    Rectangle {
+                        width: 1
+                        height: 14
+                        color: CompanyTheme.borderCard
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.leftMargin: 6
+                        Layout.rightMargin: 6
+                    }
+
+                    // Minimize Button
+                    Rectangle {
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 30
+                        radius: CompanyTheme.radiusSm
+                        color: minMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "—"
+                            color: minMouse.containsMouse ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
+                            font.pointSize: 10
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: minMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (typeof mainWindow !== "undefined") {
+                                    mainWindow.showMinimized()
+                                }
+                            }
+                        }
+                    }
+
+                    // Maximize / Restore Button
+                    Rectangle {
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 30
+                        radius: CompanyTheme.radiusSm
+                        color: maxMouse.containsMouse ? CompanyTheme.bgCardHover : "transparent"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: (typeof mainWindow !== "undefined" && mainWindow.visibility === Window.Maximized) ? "❐" : "□"
+                            color: maxMouse.containsMouse ? CompanyTheme.textPrimary : CompanyTheme.textSecondary
+                            font.pointSize: 10
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: maxMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (typeof mainWindow !== "undefined") {
+                                    if (mainWindow.visibility === Window.Maximized) {
+                                        mainWindow.showNormal()
+                                    } else {
+                                        mainWindow.showMaximized()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Close / Cut Button
+                    Rectangle {
+                        Layout.preferredWidth: 36
+                        Layout.preferredHeight: 30
+                        radius: CompanyTheme.radiusSm
+                        color: closeMouse.containsMouse ? CompanyTheme.danger : "transparent"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "✕"
+                            color: closeMouse.containsMouse ? CompanyTheme.textLight : CompanyTheme.textSecondary
+                            font.pointSize: 11
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: closeMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (typeof mainWindow !== "undefined" && mainWindow.attemptWindowClose) {
+                                    mainWindow.attemptWindowClose()
+                                } else if (typeof mainWindow !== "undefined") {
+                                    mainWindow.close()
+                                }
+                            }
+                        }
                     }
                 }
             }
