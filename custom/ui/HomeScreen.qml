@@ -103,13 +103,24 @@ Rectangle {
                     visible: false // Visible when returning from an active mission
                 }
 
-                // Official IZI Logo Asset
-                Image {
-                    source: "qrc:/res/icons/izi_header_logo.png"
-                    Layout.preferredHeight: 18
-                    Layout.preferredWidth: 92
-                    fillMode: Image.PreserveAspectFit
-                    mipmap: true
+                // Official IZI Brand Logo & Title
+                RowLayout {
+                    spacing: 8
+                    Layout.alignment: Qt.AlignVCenter
+
+                    IziLogo {
+                        Layout.preferredWidth: 24
+                        Layout.preferredHeight: 18
+                        color: "#FFFFFF"
+                    }
+
+                    Text {
+                        text: "IZI GCS"
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: 11.5
+                        font.bold: true
+                        font.letterSpacing: 0.8
+                    }
                 }
 
                 Rectangle {
@@ -650,15 +661,13 @@ Rectangle {
 
                 ColumnLayout {
                     anchors.centerIn: parent
-                    spacing: 10
+                    spacing: 16
 
-                    // Official IZI Hero Wordmark Asset (with curved arc)
-                    Image {
-                        source: "qrc:/res/icons/izi_hero_wordmark.png"
-                        Layout.preferredWidth: 260
-                        Layout.preferredHeight: 90
-                        fillMode: Image.PreserveAspectFit
-                        mipmap: true
+                    // Official IZI Aerospace Brand Mark
+                    IziLogo {
+                        Layout.preferredWidth: 161
+                        Layout.preferredHeight: 120
+                        color: "#FFFFFF"
                         Layout.alignment: Qt.AlignHCenter
                     }
 
@@ -666,9 +675,9 @@ Rectangle {
                     Text {
                         text: qsTr("GROUND CONTROL STATION")
                         color: CompanyTheme.textPrimary
-                        font.pointSize: 10.5
+                        font.pointSize: 11
                         font.bold: true
-                        font.letterSpacing: 3.5
+                        font.letterSpacing: 4.0
                         Layout.alignment: Qt.AlignHCenter
                     }
                 }
