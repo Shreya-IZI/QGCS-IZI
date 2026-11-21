@@ -19,7 +19,7 @@ Rectangle {
 
     readonly property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property bool _hasVehicle: _activeVehicle !== null
-    readonly property bool _isNarrow: width < 980 || ScreenTools.isMobile
+    readonly property bool _isNarrow: width < 760
 
     // ------------------------------------------------------------------------
     // 1. AERIAL LANDSCAPE BACKDROP & TACTICAL VIGNETTE
@@ -282,12 +282,12 @@ Rectangle {
                 }
 
                 // ------------------------------------------------------------
-                // Desktop Frameless Window Controls (Minimize, Maximize, Close / Cut)
+                // Desktop / Tablet Frameless Window Controls (Minimize, Maximize, Close / Cut)
                 // ------------------------------------------------------------
                 RowLayout {
                     spacing: 2
                     Layout.fillHeight: true
-                    visible: !ScreenTools.isMobile
+                    visible: true
 
                     // Vertical Divider
                     Rectangle {
@@ -384,6 +384,8 @@ Rectangle {
                                     mainWindow.attemptWindowClose()
                                 } else if (typeof mainWindow !== "undefined") {
                                     mainWindow.close()
+                                } else {
+                                    Qt.quit()
                                 }
                             }
                         }

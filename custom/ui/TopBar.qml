@@ -1468,7 +1468,7 @@ Rectangle {
 
             // Window Management Controls (Minimize, Maximize/Restore, Close)
             RowLayout {
-                visible: !ScreenTools.isMobile && (mainWindow.flags & Qt.FramelessWindowHint)
+                visible: true
                 spacing: 0
                 Layout.fillHeight: true
 
@@ -1548,6 +1548,8 @@ Rectangle {
                                 mainWindow.attemptWindowClose()
                             } else if (typeof mainWindow !== "undefined") {
                                 mainWindow.close()
+                            } else {
+                                Qt.quit()
                             }
                         }
                     }
