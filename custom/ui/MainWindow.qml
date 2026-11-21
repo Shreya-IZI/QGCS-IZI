@@ -452,6 +452,7 @@ ApplicationWindow {
         anchors.fill: parent
         visible: mainWindow.isHomeView
         z: 30
+        currentTabIndex: sidebar.currentTab
         onNavigateToWorkspace: (tabIndex, subView) => {
             contentArea.switchTab(tabIndex)
             if (subView && subView !== "") {

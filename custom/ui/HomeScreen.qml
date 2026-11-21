@@ -21,6 +21,34 @@ Rectangle {
     readonly property bool _hasVehicle: _activeVehicle !== null
     readonly property bool _isNarrow: width < 760
 
+    // Tracks the currently selected workspace or card
+    property int currentTabIndex: 1
+    property string activeCard: "fly"
+
+    onCurrentTabIndexChanged: {
+        switch (currentTabIndex) {
+        case 0:
+        case 1:
+            activeCard = "fly"
+            break
+        case 2:
+            activeCard = "plan"
+            break
+        case 3:
+            activeCard = "fleet"
+            break
+        case 4:
+            activeCard = "analyze"
+            break
+        case 5:
+            activeCard = "settings"
+            break
+        case 7:
+            activeCard = "configure"
+            break
+        }
+    }
+
     // ------------------------------------------------------------------------
     // 1. AERIAL LANDSCAPE BACKDROP & TACTICAL VIGNETTE
     // ------------------------------------------------------------------------
@@ -423,17 +451,20 @@ Rectangle {
                     rowSpacing: CompanyTheme.spacingMd
                     width: parent.width
 
-                    // CARD 1: FLY (Live Flight & Control) - Highlighted with Green Border
+                    // CARD 1: FLY (Live Flight & Control)
                     Rectangle {
                         id: flyCard
+                        readonly property bool isSelected: root.activeCard === "fly"
+                        readonly property bool isHighlighted: isSelected || flyMouse.containsMouse || flyMouse.pressed
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: 84
                         radius: CompanyTheme.radiusSm + 2
-                        color: flyMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
-                        border.color: CompanyTheme.primary // Highlighted Green Active Border
-                        border.width: 1.5
+                        color: isHighlighted ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: isHighlighted ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: isSelected ? 1.5 : (isHighlighted ? 1.5 : 1.0)
 
-                        // Subtle green ambient glow when active
+                        // Subtle green ambient glow when active or pressed/hovered
                         Rectangle {
                             anchors.fill: parent
                             radius: parent.radius
@@ -442,6 +473,7 @@ Rectangle {
                             border.width: 1
                             opacity: 0.35
                             scale: 1.01
+                            visible: parent.isHighlighted
                         }
 
                         RowLayout {
@@ -488,19 +520,37 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.navigateToWorkspace(1, "CAM")
+                            onClicked: {
+                                root.activeCard = "fly"
+                                root.navigateToWorkspace(1, "CAM")
+                            }
                         }
                     }
 
                     // CARD 2: PLAN (Create & Edit Missions)
                     Rectangle {
                         id: planCard
+                        readonly property bool isSelected: root.activeCard === "plan"
+                        readonly property bool isHighlighted: isSelected || planMouse.containsMouse || planMouse.pressed
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: 84
                         radius: CompanyTheme.radiusSm + 2
-                        color: planMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
-                        border.color: CompanyTheme.borderCard
-                        border.width: 1
+                        color: isHighlighted ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: isHighlighted ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: isSelected ? 1.5 : (isHighlighted ? 1.5 : 1.0)
+
+                        // Subtle green ambient glow when active or pressed/hovered
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: "transparent"
+                            border.color: CompanyTheme.primary
+                            border.width: 1
+                            opacity: 0.35
+                            scale: 1.01
+                            visible: parent.isHighlighted
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -546,19 +596,37 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.navigateToWorkspace(2, "")
+                            onClicked: {
+                                root.activeCard = "plan"
+                                root.navigateToWorkspace(2, "")
+                            }
                         }
                     }
 
                     // CARD 3: ANALYZE (Flight Data & Logs)
                     Rectangle {
                         id: analyzeCard
+                        readonly property bool isSelected: root.activeCard === "analyze"
+                        readonly property bool isHighlighted: isSelected || analyzeMouse.containsMouse || analyzeMouse.pressed
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: 84
                         radius: CompanyTheme.radiusSm + 2
-                        color: analyzeMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
-                        border.color: CompanyTheme.borderCard
-                        border.width: 1
+                        color: isHighlighted ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: isHighlighted ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: isSelected ? 1.5 : (isHighlighted ? 1.5 : 1.0)
+
+                        // Subtle green ambient glow when active or pressed/hovered
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: "transparent"
+                            border.color: CompanyTheme.primary
+                            border.width: 1
+                            opacity: 0.35
+                            scale: 1.01
+                            visible: parent.isHighlighted
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -604,19 +672,37 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.navigateToWorkspace(4, "")
+                            onClicked: {
+                                root.activeCard = "analyze"
+                                root.navigateToWorkspace(4, "")
+                            }
                         }
                     }
 
                     // CARD 4: CONFIGURE (Vehicle & Payload)
                     Rectangle {
                         id: configureCard
+                        readonly property bool isSelected: root.activeCard === "configure"
+                        readonly property bool isHighlighted: isSelected || configureMouse.containsMouse || configureMouse.pressed
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: 84
                         radius: CompanyTheme.radiusSm + 2
-                        color: configureMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
-                        border.color: CompanyTheme.borderCard
-                        border.width: 1
+                        color: isHighlighted ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: isHighlighted ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: isSelected ? 1.5 : (isHighlighted ? 1.5 : 1.0)
+
+                        // Subtle green ambient glow when active or pressed/hovered
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: "transparent"
+                            border.color: CompanyTheme.primary
+                            border.width: 1
+                            opacity: 0.35
+                            scale: 1.01
+                            visible: parent.isHighlighted
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -662,19 +748,37 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.navigateToWorkspace(7, "")
+                            onClicked: {
+                                root.activeCard = "configure"
+                                root.navigateToWorkspace(7, "")
+                            }
                         }
                     }
 
                     // CARD 5: FLEET (Manage Vehicles)
                     Rectangle {
                         id: fleetCard
+                        readonly property bool isSelected: root.activeCard === "fleet"
+                        readonly property bool isHighlighted: isSelected || fleetMouse.containsMouse || fleetMouse.pressed
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: 84
                         radius: CompanyTheme.radiusSm + 2
-                        color: fleetMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
-                        border.color: CompanyTheme.borderCard
-                        border.width: 1
+                        color: isHighlighted ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: isHighlighted ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: isSelected ? 1.5 : (isHighlighted ? 1.5 : 1.0)
+
+                        // Subtle green ambient glow when active or pressed/hovered
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: "transparent"
+                            border.color: CompanyTheme.primary
+                            border.width: 1
+                            opacity: 0.35
+                            scale: 1.01
+                            visible: parent.isHighlighted
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -720,19 +824,37 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.navigateToWorkspace(3, "")
+                            onClicked: {
+                                root.activeCard = "fleet"
+                                root.navigateToWorkspace(3, "")
+                            }
                         }
                     }
 
                     // CARD 6: SETTINGS (System & Preferences)
                     Rectangle {
                         id: settingsCard
+                        readonly property bool isSelected: root.activeCard === "settings"
+                        readonly property bool isHighlighted: isSelected || settingsMouse.containsMouse || settingsMouse.pressed
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: 84
                         radius: CompanyTheme.radiusSm + 2
-                        color: settingsMouse.containsMouse ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
-                        border.color: CompanyTheme.borderCard
-                        border.width: 1
+                        color: isHighlighted ? CompanyTheme.bgCardHover : CompanyTheme.bgCard
+                        border.color: isHighlighted ? CompanyTheme.primary : CompanyTheme.borderCard
+                        border.width: isSelected ? 1.5 : (isHighlighted ? 1.5 : 1.0)
+
+                        // Subtle green ambient glow when active or pressed/hovered
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: "transparent"
+                            border.color: CompanyTheme.primary
+                            border.width: 1
+                            opacity: 0.35
+                            scale: 1.01
+                            visible: parent.isHighlighted
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -778,7 +900,10 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.navigateToWorkspace(5, "")
+                            onClicked: {
+                                root.activeCard = "settings"
+                                root.navigateToWorkspace(5, "")
+                            }
                         }
                     }
                 }
