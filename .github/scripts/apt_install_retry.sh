@@ -83,6 +83,32 @@ fi
 
 install_ok=false
 if [[ "${update_ok}" == "true" ]]; then
+  # Dynamically resolve alternatives for packages that vary by Ubuntu/Debian release (e.g. gstreamer good-dev vs extra-dev)
+  resolved_packages=()
+  for pkg in "${packages[@]}"; do
+    if [[ "${pkg}" == "libgstreamer-plugins-good1.0-dev" || "${pkg}" == "libgstreamer-plugins-extra1.0-dev" ]]; then
+      candidate=$(apt-cache policy "${pkg}" 2>/dev/null | awk '/Candidate:/ {print $2}')
+      if [[ -n "${candidate}" && "${candidate}" != "(none)" ]]; then
+        resolved_packages+=("${pkg}")
+      else
+        alt="libgstreamer-plugins-extra1.0-dev"
+        if [[ "${pkg}" == "libgstreamer-plugins-extra1.0-dev" ]]; then
+          alt="libgstreamer-plugins-good1.0-dev"
+        fi
+        alt_candidate=$(apt-cache policy "${alt}" 2>/dev/null | awk '/Candidate:/ {print $2}')
+        if [[ -n "${alt_candidate}" && "${alt_candidate}" != "(none)" ]]; then
+          echo "::notice::Swapping unavailable ${pkg} to ${alt}"
+          resolved_packages+=("${alt}")
+        else
+          echo "::warning::Neither ${pkg} nor ${alt} available in apt repositories; skipping"
+        fi
+      fi
+    else
+      resolved_packages+=("${pkg}")
+    fi
+  done
+  packages=("${resolved_packages[@]}")
+
   for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
     if sudo timeout -k "${KILL_GRACE}" "${INSTALL_TIMEOUT}" apt-get "${APT_OPTS[@]}" install -y "${install_args[@]}" "${packages[@]}"; then
       install_ok=true

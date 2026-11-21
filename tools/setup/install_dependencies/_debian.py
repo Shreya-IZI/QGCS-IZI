@@ -32,6 +32,7 @@ JUST_TARGETS: dict[str, str] = {
 
 DEBIAN_PACKAGE_ALTERNATIVES: dict[str, list[str]] = {
     "libgstreamer-plugins-good1.0-dev": ["libgstreamer-plugins-extra1.0-dev"],
+    "libgstreamer-plugins-extra1.0-dev": ["libgstreamer-plugins-good1.0-dev"],
 }
 
 
@@ -65,7 +66,7 @@ def resolve_package_alternatives(packages: list[str]) -> list[str]:
             continue
         alt = next((a for a in DEBIAN_PACKAGE_ALTERNATIVES[pkg] if availability.get(a)), None)
         if alt:
-            print(f"  Package {pkg} not available; using {alt}")
+            print(f"  Package {pkg} not available; using {alt}", file=sys.stderr)
             resolved.append(alt)
         else:
             _c.log_warn(f"Package {pkg} and its alternatives are unavailable; skipping")

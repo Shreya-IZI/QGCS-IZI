@@ -28,7 +28,11 @@ LINUX_PLATFORMS = ("debian", "fedora", "arch")
 def print_packages(platform: str, category: str | None = None) -> None:
     """Print packages as a single space-separated line (machine-readable)."""
     if platform == "debian":
-        print(" ".join(get_debian_packages(category)))
+        from ._debian import resolve_package_alternatives
+
+        pkgs = get_debian_packages(category)
+        resolved = resolve_package_alternatives(pkgs)
+        print(" ".join(resolved))
     elif platform == "fedora":
         print(" ".join(get_fedora_packages(category)))
     elif platform == "arch":
