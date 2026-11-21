@@ -644,18 +644,31 @@ Rectangle {
             ToolTip.text: qsTr("CRITICAL SAFETY: Click to trigger Emergency Motor Kill for UAS #%1 (Requires confirmation)").arg(CompanyTelemetry.vehicleId)
         }
 
-        // Expanding spacer
-        Item {
+        // --------------------------------------------------------------------
+        // 3. Middle Scrollable Indicators & Tools (Flickable for Touch & Overflow)
+        // --------------------------------------------------------------------
+        Flickable {
+            id: topBarFlickable
             Layout.fillWidth: true
-        }
+            Layout.fillHeight: true
+            contentWidth: Math.max(width, indicatorsRow.implicitWidth)
+            contentHeight: height
+            clip: true
+            boundsBehavior: Flickable.DragOverBounds
+            flickableDirection: Flickable.HorizontalFlick
 
-        // --------------------------------------------------------------------
-        // 3. Operational Indicators: GPS, Battery (mAh), RSSI/Link, UTC
-        // --------------------------------------------------------------------
-        RowLayout {
-            spacing: root._isNarrow ? CompanyTheme.spacingXs : CompanyTheme.spacingSm
+            RowLayout {
+                id: indicatorsRow
+                width: Math.max(topBarFlickable.width, implicitWidth)
+                height: parent.height
+                spacing: root._isNarrow ? CompanyTheme.spacingXs : CompanyTheme.spacingSm
 
-            // 3A. GPS Satellite, RTK & Precision Chip
+                // Expanding spacer: aligns indicators to the right when screen is wide
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                // 3A. GPS Satellite, RTK & Precision Chip
             Rectangle {
                 id: gpsChip
                 Layout.preferredHeight: 28
@@ -1465,12 +1478,16 @@ Rectangle {
                 ToolTip.delay: 300
                 ToolTip.text: CompanyTheme.isSunlightMode ? qsTr("Sunlight Mode: ACTIVE (High-Contrast Outdoor)\nClick for Tactical Night Mode") : qsTr("Sunlight Mode: OFF (Tactical Dark)\nClick for High-Contrast Outdoor Sunlight Mode")
             }
+        }
+    } // Flickable: topBarFlickable
 
-            // Window Management Controls (Minimize, Maximize/Restore, Close)
-            RowLayout {
-                visible: true
-                spacing: 0
-                Layout.fillHeight: true
+    // ------------------------------------------------------------------------
+    // 4. Pinned Right Window Management Controls (Always visible & accessible)
+    // ------------------------------------------------------------------------
+    RowLayout {
+        visible: true
+        spacing: 0
+        Layout.fillHeight: true
 
                 // Minimize Button
                 Rectangle {
@@ -1556,7 +1573,6 @@ Rectangle {
                 }
             }
         }
-    }
 
     // ========================================================================
     // Quick Joystick / RC Transmitter Control & Diagnostics Popup
