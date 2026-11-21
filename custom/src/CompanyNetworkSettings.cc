@@ -266,17 +266,17 @@ void CompanyNetworkSettings::loadSettings()
 {
     QSettings settings;
 
-    // Thermal Video
+    // Thermal Video (Skydroid G30 Port 555 Default)
     settings.beginGroup(QStringLiteral("Company_ThermalVideo"));
-    _thermalVideoUrl  = settings.value(QStringLiteral("url"), QStringLiteral("rtsp://192.168.168.119:8554/thermal")).toString();
-    _thermalVideoPort = settings.value(QStringLiteral("port"), 8554).toInt();
+    _thermalVideoUrl  = settings.value(QStringLiteral("url"), QStringLiteral("rtsp://192.168.144.108:555/stream=2")).toString();
+    _thermalVideoPort = settings.value(QStringLiteral("port"), 555).toInt();
     _thermalVideoType = settings.value(QStringLiteral("type"), QStringLiteral("RTSP")).toString();
     settings.endGroup();
 
-    // Multi-Camera Payload Video
+    // Multi-Camera Payload Video (Skydroid G30 Dual Stream Defaults)
     settings.beginGroup(QStringLiteral("Company_MultiCamera"));
-    _eoVideoUrl         = settings.value(QStringLiteral("eoVideoUrl"), QStringLiteral("rtsp://192.168.168.119:554/live/ch0")).toString();
-    _irVideoUrl         = settings.value(QStringLiteral("irVideoUrl"), QStringLiteral("rtsp://192.168.168.119:554/live/ch1")).toString();
+    _eoVideoUrl         = settings.value(QStringLiteral("eoVideoUrl"), QStringLiteral("rtsp://192.168.144.108:554/stream=0")).toString();
+    _irVideoUrl         = settings.value(QStringLiteral("irVideoUrl"), QStringLiteral("rtsp://192.168.144.108:555/stream=2")).toString();
     _selectedCameraFeed = settings.value(QStringLiteral("selectedFeed"), QStringLiteral("EO")).toString();
     settings.endGroup();
 

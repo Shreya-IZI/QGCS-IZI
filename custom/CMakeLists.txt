@@ -54,6 +54,7 @@ set(COMPANY_UI_QML_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/IconVector.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/DroneGraphic.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/IziLogo.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui/controls/GimbalControlOverlay.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/tether/TetherMonitorCard.qml
 )
 
