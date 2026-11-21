@@ -83,7 +83,7 @@ DEBIAN_PACKAGES: dict[str, list[str]] = {
         "libgstreamer1.0-dev",
         "libgstreamer-plugins-bad1.0-dev",
         "libgstreamer-plugins-base1.0-dev",
-        "libgstreamer-plugins-good1.0-dev",
+        "libgstreamer-plugins-extra1.0-dev",
         "libgstreamer-gl1.0-0",
         "gstreamer1.0-plugins-bad",
         "gstreamer1.0-plugins-base",

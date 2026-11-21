@@ -131,6 +131,13 @@ def test_resolve_package_alternatives_swaps_to_available_alternative() -> None:
         assert resolve_package_alternatives(["libgstreamer-plugins-good1.0-dev"]) == [
             "libgstreamer-plugins-extra1.0-dev"
         ]
+    with patch(
+        "setup.install_dependencies._common.check_apt_package_available",
+        side_effect=lambda pkg: pkg == "libgstreamer-plugins-good1.0-dev",
+    ):
+        assert resolve_package_alternatives(["libgstreamer-plugins-extra1.0-dev"]) == [
+            "libgstreamer-plugins-good1.0-dev"
+        ]
 
 
 def test_resolve_package_alternatives_drops_when_none_available() -> None:
