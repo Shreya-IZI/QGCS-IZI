@@ -18,7 +18,7 @@ Rectangle {
     signal openPreFlightChecklistRequested()
 
     readonly property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
-    readonly property bool _hasVehicle: _activeVehicle !== null
+    readonly property bool _hasVehicle: _activeVehicle !== null && CompanyTelemetry.hasVehicle
     readonly property bool _isNarrow: width < 760
 
     // Tracks the currently selected workspace or card
@@ -238,15 +238,15 @@ Rectangle {
                         name: "battery"
                         size: 14
                         color: {
-                            if (!root._hasVehicle) return CompanyTheme.textMuted
-                            if (CompanyTelemetry.batteryPercentValue > 25) return CompanyTheme.success
-                            if (CompanyTelemetry.batteryPercentValue > 15) return CompanyTheme.warning
+                            if (!root._hasVehicle || !CompanyTelemetry.hasBattery) return CompanyTheme.textMuted
+                            if (CompanyTelemetry.batteryPercent > 25) return CompanyTheme.success
+                            if (CompanyTelemetry.batteryPercent > 15) return CompanyTheme.warning
                             return CompanyTheme.danger
                         }
                     }
                     Text {
-                        text: CompanyTelemetry.batteryPercentStr !== "--" ? CompanyTelemetry.batteryPercentStr : "92%"
-                        color: CompanyTheme.textPrimary
+                        text: (root._hasVehicle && CompanyTelemetry.hasBattery) ? CompanyTelemetry.batteryPercentStr : "--%"
+                        color: (root._hasVehicle && CompanyTelemetry.hasBattery) ? CompanyTheme.textPrimary : CompanyTheme.textMuted
                         font.pointSize: 9
                         font.bold: true
                         font.family: CompanyTheme.fontMono
@@ -259,11 +259,11 @@ Rectangle {
                     IconVector {
                         name: "rc"
                         size: 14
-                        color: CompanyTelemetry.rcRssiStr !== "--" ? CompanyTheme.success : CompanyTheme.textSecondary
+                        color: (root._hasVehicle && CompanyTelemetry.hasRcRSSI) ? CompanyTheme.success : CompanyTheme.textMuted
                     }
                     Text {
                         text: "RC"
-                        color: CompanyTheme.textPrimary
+                        color: (root._hasVehicle && CompanyTelemetry.hasRcRSSI) ? CompanyTheme.textPrimary : CompanyTheme.textMuted
                         font.pointSize: 9
                         font.bold: true
                     }
@@ -275,11 +275,11 @@ Rectangle {
                     IconVector {
                         name: "gps"
                         size: 14
-                        color: CompanyTheme.textPrimary
+                        color: (root._hasVehicle && CompanyTelemetry.is3DFix) ? CompanyTheme.textPrimary : CompanyTheme.textMuted
                     }
                     Text {
-                        text: "GPS " + (CompanyTelemetry._gps && CompanyTelemetry._gps.count && CompanyTelemetry._gps.count.value >= 0 ? String(CompanyTelemetry._gps.count.value) : "12")
-                        color: CompanyTheme.textPrimary
+                        text: "GPS " + ((root._hasVehicle && CompanyTelemetry.gpsSatellites >= 0) ? String(CompanyTelemetry.gpsSatellites) : "--")
+                        color: (root._hasVehicle && CompanyTelemetry.is3DFix) ? CompanyTheme.textPrimary : CompanyTheme.textMuted
                         font.pointSize: 9
                         font.bold: true
                         font.family: CompanyTheme.fontMono
@@ -981,28 +981,31 @@ Rectangle {
                         spacing: 4
                         Text {
                             text: {
-                                if (root._hasVehicle) {
-                                    return root._activeVehicle.id ? "VEHICLE-" + root._activeVehicle.id : "VANA-VTOL-01"
+                                if (root._hasVehicle && root._activeVehicle) {
+                                    return root._activeVehicle.id ? ("UAS #" + root._activeVehicle.id) : qsTr("VEHICLE CONNECTED")
                                 }
-                                return "VANA-VTOL-01"
+                                return qsTr("NO VEHICLE CONNECTED")
                             }
-                            color: CompanyTheme.textPrimary
+                            color: root._hasVehicle ? CompanyTheme.textPrimary : CompanyTheme.textMuted
                             font.pointSize: 10.5
                             font.bold: true
                         }
                         Text {
                             text: "▾"
-                            color: CompanyTheme.textSecondary
+                            color: root._hasVehicle ? CompanyTheme.textSecondary : CompanyTheme.textMuted
                             font.pointSize: 9
+                            visible: root._hasVehicle
                         }
                     }
 
                     Text {
                         text: {
-                            if (root._hasVehicle) {
-                                return CompanyTelemetry.vehicleTypeStr + " • " + CompanyTelemetry.autopilotTypeStr
+                            if (root._hasVehicle && root._activeVehicle) {
+                                var vType = root._activeVehicle.vehicleTypeString || "UAS"
+                                var aType = root._activeVehicle.autopilotTypeName || "Autopilot"
+                                return vType + " • " + aType
                             }
-                            return "VTOL • ArduPilot"
+                            return qsTr("Awaiting Telemetry Link")
                         }
                         color: CompanyTheme.textSecondary
                         font.pointSize: 7.5
@@ -1026,13 +1029,20 @@ Rectangle {
                 // Alt
                 RowLayout {
                     spacing: 6
-                    IconVector { name: "altitude"; size: 14; color: CompanyTheme.textSecondary }
+                    IconVector {
+                        name: "altitude"
+                        size: 14
+                        color: root._hasVehicle ? CompanyTheme.textSecondary : CompanyTheme.textMuted
+                    }
                     ColumnLayout {
                         spacing: 1
                         Text { text: qsTr("Alt"); color: CompanyTheme.textSecondary; font.pointSize: 7 }
                         Text {
-                            text: CompanyTelemetry.altitudeRelativeStr !== "--" ? CompanyTelemetry.altitudeRelativeStr : "0.0 m"
-                            color: CompanyTheme.textPrimary; font.pointSize: 9.5; font.bold: true; font.family: CompanyTheme.fontMono
+                            text: (root._hasVehicle && CompanyTelemetry.altitudeRelativeStr !== "--") ? CompanyTelemetry.altitudeRelativeStr : "-- m"
+                            color: root._hasVehicle ? CompanyTheme.textPrimary : CompanyTheme.textMuted
+                            font.pointSize: 9.5
+                            font.bold: true
+                            font.family: CompanyTheme.fontMono
                         }
                     }
                 }
@@ -1040,13 +1050,20 @@ Rectangle {
                 // Speed
                 RowLayout {
                     spacing: 6
-                    IconVector { name: "speedometer"; size: 14; color: CompanyTheme.textSecondary }
+                    IconVector {
+                        name: "speedometer"
+                        size: 14
+                        color: root._hasVehicle ? CompanyTheme.textSecondary : CompanyTheme.textMuted
+                    }
                     ColumnLayout {
                         spacing: 1
                         Text { text: qsTr("Speed"); color: CompanyTheme.textSecondary; font.pointSize: 7 }
                         Text {
-                            text: CompanyTelemetry.groundSpeedStr !== "--" ? CompanyTelemetry.groundSpeedStr : "0.0 m/s"
-                            color: CompanyTheme.textPrimary; font.pointSize: 9.5; font.bold: true; font.family: CompanyTheme.fontMono
+                            text: (root._hasVehicle && CompanyTelemetry.groundSpeedStr !== "--") ? CompanyTelemetry.groundSpeedStr : "-- m/s"
+                            color: root._hasVehicle ? CompanyTheme.textPrimary : CompanyTheme.textMuted
+                            font.pointSize: 9.5
+                            font.bold: true
+                            font.family: CompanyTheme.fontMono
                         }
                     }
                 }
@@ -1054,13 +1071,20 @@ Rectangle {
                 // V.Speed
                 RowLayout {
                     spacing: 6
-                    IconVector { name: "vspeed"; size: 14; color: CompanyTheme.textSecondary }
+                    IconVector {
+                        name: "vspeed"
+                        size: 14
+                        color: root._hasVehicle ? CompanyTheme.textSecondary : CompanyTheme.textMuted
+                    }
                     ColumnLayout {
                         spacing: 1
                         Text { text: qsTr("V.Speed"); color: CompanyTheme.textSecondary; font.pointSize: 7 }
                         Text {
-                            text: CompanyTelemetry.climbRateStr !== "--" ? CompanyTelemetry.climbRateStr : "0.0 m/s"
-                            color: CompanyTheme.textPrimary; font.pointSize: 9.5; font.bold: true; font.family: CompanyTheme.fontMono
+                            text: (root._hasVehicle && CompanyTelemetry.climbRateStr !== "--") ? CompanyTelemetry.climbRateStr : "-- m/s"
+                            color: root._hasVehicle ? CompanyTheme.textPrimary : CompanyTheme.textMuted
+                            font.pointSize: 9.5
+                            font.bold: true
+                            font.family: CompanyTheme.fontMono
                         }
                     }
                 }
@@ -1071,14 +1095,17 @@ Rectangle {
                     IconVector {
                         name: "battery"
                         size: 15
-                        color: CompanyTheme.success
+                        color: (root._hasVehicle && CompanyTelemetry.hasBattery) ? CompanyTheme.success : CompanyTheme.textMuted
                     }
                     ColumnLayout {
                         spacing: 1
                         Text { text: qsTr("Battery"); color: CompanyTheme.textSecondary; font.pointSize: 7 }
                         Text {
-                            text: CompanyTelemetry.batteryPercentStr !== "--" && CompanyTelemetry.batteryPercentStr !== "--%" ? CompanyTelemetry.batteryPercentStr : "92%"
-                            color: CompanyTheme.textPrimary; font.pointSize: 9.5; font.bold: true; font.family: CompanyTheme.fontMono
+                            text: (root._hasVehicle && CompanyTelemetry.hasBattery) ? CompanyTelemetry.batteryPercentStr : "--"
+                            color: (root._hasVehicle && CompanyTelemetry.hasBattery) ? CompanyTheme.textPrimary : CompanyTheme.textMuted
+                            font.pointSize: 9.5
+                            font.bold: true
+                            font.family: CompanyTheme.fontMono
                         }
                     }
                 }
@@ -1086,13 +1113,20 @@ Rectangle {
                 // GPS
                 RowLayout {
                     spacing: 6
-                    IconVector { name: "gps"; size: 14; color: CompanyTheme.textSecondary }
+                    IconVector {
+                        name: "gps"
+                        size: 14
+                        color: root._hasVehicle ? CompanyTheme.textSecondary : CompanyTheme.textMuted
+                    }
                     ColumnLayout {
                         spacing: 1
                         Text { text: qsTr("GPS"); color: CompanyTheme.textSecondary; font.pointSize: 7 }
                         Text {
-                            text: (CompanyTelemetry._gps && CompanyTelemetry._gps.count && CompanyTelemetry._gps.count.value >= 0) ? String(CompanyTelemetry._gps.count.value) : "12"
-                            color: CompanyTheme.textPrimary; font.pointSize: 9.5; font.bold: true; font.family: CompanyTheme.fontMono
+                            text: (root._hasVehicle && CompanyTelemetry.gpsSatellites >= 0) ? String(CompanyTelemetry.gpsSatellites) : "--"
+                            color: root._hasVehicle ? CompanyTheme.textPrimary : CompanyTheme.textMuted
+                            font.pointSize: 9.5
+                            font.bold: true
+                            font.family: CompanyTheme.fontMono
                         }
                     }
                 }
@@ -1103,14 +1137,16 @@ Rectangle {
                     IconVector {
                         name: "signal"
                         size: 14
-                        color: CompanyTheme.success
+                        color: (root._hasVehicle && CompanyTelemetry.hasRcRSSI) ? CompanyTheme.success : CompanyTheme.textMuted
                     }
                     ColumnLayout {
                         spacing: 1
                         Text { text: qsTr("RC"); color: CompanyTheme.textSecondary; font.pointSize: 7 }
                         Text {
-                            text: CompanyTelemetry.rcRSSIStr !== "--%" ? CompanyTelemetry.rcRSSIStr : "Good"
-                            color: CompanyTheme.success; font.pointSize: 9.5; font.bold: true
+                            text: (root._hasVehicle && CompanyTelemetry.hasRcRSSI) ? CompanyTelemetry.rcRSSIStr : (root._hasVehicle ? qsTr("Good") : "--")
+                            color: (root._hasVehicle && CompanyTelemetry.hasRcRSSI) ? CompanyTheme.success : CompanyTheme.textMuted
+                            font.pointSize: 9.5
+                            font.bold: true
                         }
                     }
                 }
@@ -1122,16 +1158,22 @@ Rectangle {
                 implicitWidth: readyRow.implicitWidth + 24
                 radius: 15
                 color: {
-                    if (root._hasVehicle && root._activeVehicle.armed) {
+                    if (root._hasVehicle && root._activeVehicle && root._activeVehicle.armed) {
                         return Qt.rgba(0.937, 0.267, 0.267, 0.20)
                     }
-                    return Qt.rgba(0.545, 0.918, 0.408, 0.16)
+                    if (root._hasVehicle) {
+                        return Qt.rgba(0.545, 0.918, 0.408, 0.16)
+                    }
+                    return Qt.rgba(0.2, 0.24, 0.28, 0.35)
                 }
                 border.color: {
-                    if (root._hasVehicle && root._activeVehicle.armed) {
+                    if (root._hasVehicle && root._activeVehicle && root._activeVehicle.armed) {
                         return CompanyTheme.danger
                     }
-                    return CompanyTheme.primary
+                    if (root._hasVehicle) {
+                        return CompanyTheme.primary
+                    }
+                    return CompanyTheme.borderCard
                 }
                 border.width: 1
 
@@ -1141,21 +1183,33 @@ Rectangle {
                     spacing: 6
 
                     IconVector {
-                        name: "check_circle"
+                        name: {
+                            if (root._hasVehicle && root._activeVehicle && root._activeVehicle.armed) return "alert-triangle"
+                            if (root._hasVehicle) return "check_circle"
+                            return "radio"
+                        }
                         size: 14
-                        color: (root._hasVehicle && root._activeVehicle.armed) ? CompanyTheme.danger : CompanyTheme.primary
+                        color: {
+                            if (root._hasVehicle && root._activeVehicle && root._activeVehicle.armed) return CompanyTheme.danger
+                            if (root._hasVehicle) return CompanyTheme.primary
+                            return CompanyTheme.textMuted
+                        }
                     }
 
                     Text {
                         text: {
-                            if (root._hasVehicle) {
+                            if (root._hasVehicle && root._activeVehicle) {
                                 if (root._activeVehicle.armed) return qsTr("Armed (In Flight)")
                                 if (root._activeVehicle.readyToFlyAvailable && root._activeVehicle.readyToFly) return qsTr("Ready to Fly")
                                 return qsTr("Standby (Ready)")
                             }
-                            return qsTr("Ready to Fly")
+                            return qsTr("Disconnected")
                         }
-                        color: (root._hasVehicle && root._activeVehicle.armed) ? CompanyTheme.danger : CompanyTheme.primary
+                        color: {
+                            if (root._hasVehicle && root._activeVehicle && root._activeVehicle.armed) return CompanyTheme.danger
+                            if (root._hasVehicle) return CompanyTheme.primary
+                            return CompanyTheme.textMuted
+                        }
                         font.pointSize: 9
                         font.bold: true
                     }
