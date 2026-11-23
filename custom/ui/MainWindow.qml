@@ -509,6 +509,84 @@ ApplicationWindow {
         if (!appSettings.onboardingComplete) {
             onboardingLoader.active = true
         }
+        initSkydroidAndDefaultLinks()
+    }
+
+    function initSkydroidAndDefaultLinks() {
+        if (!QGroundControl.linkManager || !QGroundControl.linkManager.linkConfigurations) return
+
+        // 1. Ensure core auto-connect settings are active
+        if (QGroundControl.settingsManager && QGroundControl.settingsManager.autoConnectSettings) {
+            var ac = QGroundControl.settingsManager.autoConnectSettings
+            if (ac.autoConnectUDP && !ac.autoConnectUDP.rawValue) {
+                ac.autoConnectUDP.rawValue = true
+            }
+            if (ac.autoConnectPixhawk && !ac.autoConnectPixhawk.rawValue) {
+                ac.autoConnectPixhawk.rawValue = true
+            }
+            if (ac.autoConnectSiKRadio && !ac.autoConnectSiKRadio.rawValue) {
+                ac.autoConnectSiKRadio.rawValue = true
+            }
+        }
+        if (QGroundControl.settingsManager && QGroundControl.settingsManager.appSettings) {
+            var app = QGroundControl.settingsManager.appSettings
+            if (app.androidUsePosixSerial && !app.androidUsePosixSerial.rawValue) {
+                app.androidUsePosixSerial.rawValue = true
+            }
+        }
+
+        var configs = QGroundControl.linkManager.linkConfigurations
+        var has14551 = false
+        var has14451 = false
+
+        for (var i = 0; i < configs.count; i++) {
+            var cfg = configs.get(i)
+            if (cfg && cfg.linkType === 1) { // TypeUdp
+                if (cfg.localPort === 14551) {
+                    has14551 = true
+                    if (!cfg.linkActive) {
+                        QGroundControl.linkManager.createConnectedLink(cfg)
+                    }
+                } else if (cfg.localPort === 14451) {
+                    has14451 = true
+                    if (!cfg.linkActive) {
+                        QGroundControl.linkManager.createConnectedLink(cfg)
+                    }
+                }
+            }
+        }
+
+        // 2. Automatically register Skydroid G30 standard telemetry port (UDP 14551)
+        if (!has14551) {
+            var skydroid14551 = QGroundControl.linkManager.createConfiguration(1, "Skydroid G30 (UDP 14551)")
+            if (skydroid14551) {
+                skydroid14551.localPort = 14551
+                skydroid14551.autoConnect = true
+                skydroid14551.dynamic = false
+                QGroundControl.linkManager.endCreateConfiguration(skydroid14551)
+                QGroundControl.linkManager.createConnectedLink(skydroid14551)
+            }
+        }
+
+        // 3. Automatically register Skydroid Alt telemetry port (UDP 14451)
+        if (!has14451) {
+            var skydroid14451 = QGroundControl.linkManager.createConfiguration(1, "Skydroid Alt (UDP 14451)")
+            if (skydroid14451) {
+                skydroid14451.localPort = 14451
+                skydroid14451.autoConnect = true
+                skydroid14451.dynamic = false
+                QGroundControl.linkManager.endCreateConfiguration(skydroid14451)
+                QGroundControl.linkManager.createConnectedLink(skydroid14451)
+            }
+        }
+    }
+
+    Timer {
+        id: linkRetryTimer
+        interval: 1500
+        running: true
+        repeat: false
+        onTriggered: initSkydroidAndDefaultLinks()
     }
 
     Connections {
