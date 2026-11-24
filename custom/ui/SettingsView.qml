@@ -1219,6 +1219,36 @@ Item {
                                 }
 
                                 CompanyButton {
+                                    text: qsTr("+ Gremsy G1 (UDP 14565)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 1 && c.localPort === 14565) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing Gremsy G1 telemetry link (UDP 14565)")
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(1, "Gremsy VIO G1 (UDP 14565)")
+                                            if (cfg) {
+                                                cfg.localPort = 14565
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected Gremsy VIO G1 telemetry on UDP 14565")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
                                     text: qsTr("CONNECT ALL LINKS")
                                     onClicked: {
                                         var configs = QGroundControl.linkManager.linkConfigurations
@@ -1988,6 +2018,41 @@ Item {
                                             root._videoSettings.streamEnabled.rawValue = true
                                             QGroundControl.videoManager.stopVideo()
                                             QGroundControl.videoManager.startVideo()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                implicitWidth: gremsyRtspText.implicitWidth + 16
+                                height: 26
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.primary
+                                border.width: 1
+                                Text {
+                                    id: gremsyRtspText
+                                    anchors.centerIn: parent
+                                    text: qsTr("Gremsy VIO G1 (RTSP 192.168.144.240)")
+                                    color: CompanyTheme.primary
+                                    font.pointSize: CompanyTheme.fontTiny
+                                    font.bold: true
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (root._videoSettings) {
+                                            root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                            root._videoSettings.rtspUrl.rawValue = "rtsp://192.168.144.240:8554/payload"
+                                            root._videoSettings.streamEnabled.rawValue = true
+                                            QGroundControl.videoManager.stopVideo()
+                                            QGroundControl.videoManager.startVideo()
+                                        }
+                                        if (root._netSettings) {
+                                            root._netSettings.setEoVideoUrl("rtsp://192.168.144.240:8554/payload")
+                                            root._netSettings.setIrVideoUrl("rtsp://192.168.144.240:8554/payload_ir")
+                                            root._netSettings.setThermalVideoUrl("rtsp://192.168.144.240:8554/payload_ir")
                                         }
                                     }
                                 }
