@@ -202,6 +202,10 @@ ApplicationWindow {
             contentArea.switchTab(5)
             settingsView.activeSubTab = "JOYSTICK"
         }
+        onOpenCommLinksRequested: () => {
+            contentArea.switchTab(5)
+            settingsView.activeSubTab = "NETWORK"
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -461,6 +465,10 @@ ApplicationWindow {
         }
         onOpenSettingsRequested: () => {
             contentArea.switchTab(5)
+        }
+        onOpenCommLinksRequested: () => {
+            contentArea.switchTab(5)
+            settingsView.activeSubTab = "NETWORK"
         }
         onOpenPreFlightChecklistRequested: () => {
             preFlightModal.isOpen = true

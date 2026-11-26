@@ -15,6 +15,7 @@ Rectangle {
     // Navigation and Action Signals
     signal navigateToWorkspace(int tabIndex, string subView)
     signal openSettingsRequested()
+    signal openCommLinksRequested()
     signal openPreFlightChecklistRequested()
 
     readonly property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
@@ -194,14 +195,18 @@ Rectangle {
                 spacing: 14
                 Layout.alignment: Qt.AlignVCenter
 
-                // Connection Status Chip
+                // Connection Status Chip (Interactive 1-Click Connect / Disconnect)
                 Rectangle {
-                    Layout.preferredHeight: 24
-                    implicitWidth: connRow.implicitWidth + 18
-                    radius: 12
-                    color: root._hasVehicle ? Qt.rgba(0.545, 0.918, 0.408, 0.15) : Qt.rgba(0.937, 0.267, 0.267, 0.15)
+                    Layout.preferredHeight: 26
+                    implicitWidth: connRow.implicitWidth + 20
+                    radius: 13
+                    color: {
+                        if (connMouse.pressed) return root._hasVehicle ? Qt.rgba(0.545, 0.918, 0.408, 0.25) : Qt.rgba(0.937, 0.267, 0.267, 0.25)
+                        if (connMouse.containsMouse) return root._hasVehicle ? Qt.rgba(0.545, 0.918, 0.408, 0.20) : Qt.rgba(0.937, 0.267, 0.267, 0.20)
+                        return root._hasVehicle ? Qt.rgba(0.545, 0.918, 0.408, 0.15) : Qt.rgba(0.937, 0.267, 0.267, 0.15)
+                    }
                     border.color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.danger
-                    border.width: 1
+                    border.width: 1.5
 
                     RowLayout {
                         id: connRow
@@ -209,9 +214,9 @@ Rectangle {
                         spacing: 6
 
                         Rectangle {
-                            width: 6
-                            height: 6
-                            radius: 3
+                            width: 7
+                            height: 7
+                            radius: 3.5
                             color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.danger
                         }
 
@@ -220,6 +225,109 @@ Rectangle {
                             color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.danger
                             font.pointSize: 9
                             font.bold: true
+                        }
+
+                        IconVector {
+                            name: root._hasVehicle ? "chevron_down" : "link"
+                            size: 10
+                            color: root._hasVehicle ? CompanyTheme.success : CompanyTheme.danger
+                        }
+                    }
+
+                    MouseArea {
+                        id: connMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (root._hasVehicle) {
+                                connMenuPopup.open()
+                            } else {
+                                // 1-Touch direct connect: trigger active link retries and open network settings
+                                var configs = QGroundControl.linkManager ? QGroundControl.linkManager.linkConfigurations : null
+                                if (configs) {
+                                    for (var i = 0; i < configs.count; i++) {
+                                        var c = configs.get(i)
+                                        if (c && !c.linkActive && (c.autoConnect || c.linkType === 1)) {
+                                            QGroundControl.linkManager.createConnectedLink(c)
+                                        }
+                                    }
+                                }
+                                root.openCommLinksRequested()
+                            }
+                        }
+                    }
+
+                    // Connected Vehicle Quick Management Popup
+                    Popup {
+                        id: connMenuPopup
+                        y: parent.height + 4
+                        x: Math.min(0, parent.width - width)
+                        width: 240
+                        padding: 10
+                        modal: true
+                        focus: true
+                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                        background: Rectangle {
+                            color: CompanyTheme.bgSidebar
+                            radius: CompanyTheme.radiusMd
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                        }
+
+                        contentItem: ColumnLayout {
+                            spacing: 8
+
+                            Text {
+                                text: qsTr("VEHICLE LINK ACTIVE")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontSmall
+                                font.bold: true
+                            }
+
+                            Text {
+                                text: qsTr("UAS #%1 connected via MAVLink telemetry.").arg(CompanyTelemetry.vehicleId)
+                                color: CompanyTheme.textSecondary
+                                font.pointSize: CompanyTheme.fontTiny
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                CompanyButton {
+                                    text: qsTr("DISCONNECT")
+                                    isDanger: true
+                                    Layout.fillWidth: true
+                                    onClicked: {
+                                        connMenuPopup.close()
+                                        if (QGroundControl.linkManager) {
+                                            var configs = QGroundControl.linkManager.linkConfigurations
+                                            if (configs) {
+                                                for (var i = 0; i < configs.count; i++) {
+                                                    var c = configs.get(i)
+                                                    if (c && c.linkActive) {
+                                                        QGroundControl.linkManager.disconnectLinkConfiguration(c)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("MANAGE")
+                                    isOutline: true
+                                    Layout.fillWidth: true
+                                    onClicked: {
+                                        connMenuPopup.close()
+                                        root.openCommLinksRequested()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1222,7 +1330,17 @@ Rectangle {
                         if (root._hasVehicle) {
                             root.openPreFlightChecklistRequested()
                         } else {
-                            root.navigateToWorkspace(1, "CAM")
+                            // Connect button functionality: directly launch communication links to connect
+                            var configs = QGroundControl.linkManager ? QGroundControl.linkManager.linkConfigurations : null
+                            if (configs) {
+                                for (var i = 0; i < configs.count; i++) {
+                                    var c = configs.get(i)
+                                    if (c && !c.linkActive && (c.autoConnect || c.linkType === 1)) {
+                                        QGroundControl.linkManager.createConnectedLink(c)
+                                    }
+                                }
+                            }
+                            root.openCommLinksRequested()
                         }
                     }
                 }

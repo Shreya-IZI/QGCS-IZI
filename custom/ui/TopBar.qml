@@ -26,6 +26,7 @@ Rectangle {
     signal safetyModalRequested()
     signal preFlightModalRequested()
     signal openJoystickSettingsRequested()
+    signal openCommLinksRequested()
     signal homeRequested()
 
     // Bottom border separator line
@@ -595,6 +596,88 @@ Rectangle {
                         font.pointSize: 11
                         font.family: CompanyTheme.fontMono
                         font.bold: true
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                hoverEnabled: true
+                onClicked: {
+                    if (root._hasVehicle) {
+                        topBarConnPopup.open()
+                    } else {
+                        root.openCommLinksRequested()
+                    }
+                }
+            }
+
+            Popup {
+                id: topBarConnPopup
+                y: parent.height + 4
+                width: 220
+                padding: 10
+                modal: true
+                focus: true
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    color: CompanyTheme.bgSidebar
+                    radius: CompanyTheme.radiusMd
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                }
+
+                contentItem: ColumnLayout {
+                    spacing: 8
+
+                    Text {
+                        text: qsTr("ACTIVE UAS CONNECTION")
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: CompanyTheme.fontSmall
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: qsTr("Vehicle #%1 linked via MAVLink.").arg(CompanyTelemetry.vehicleId)
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        CompanyButton {
+                            text: qsTr("DISCONNECT")
+                            isDanger: true
+                            Layout.fillWidth: true
+                            onClicked: {
+                                topBarConnPopup.close()
+                                if (QGroundControl.linkManager) {
+                                    var configs = QGroundControl.linkManager.linkConfigurations
+                                    if (configs) {
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkActive) {
+                                                QGroundControl.linkManager.disconnectLinkConfiguration(c)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        CompanyButton {
+                            text: qsTr("MANAGE")
+                            isOutline: true
+                            Layout.fillWidth: true
+                            onClicked: {
+                                topBarConnPopup.close()
+                                root.openCommLinksRequested()
+                            }
+                        }
                     }
                 }
             }

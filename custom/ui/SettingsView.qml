@@ -1219,6 +1219,37 @@ Item {
                                 }
 
                                 CompanyButton {
+                                    text: qsTr("+ Drone TCP (192.168.168.11:5760)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 2 && (c.port === 5760 || c.port === 5762)) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing TCP link (%1:%2)").arg(existing.host).arg(existing.port)
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(2, "Skydroid Drone TCP (5760)")
+                                            if (cfg) {
+                                                cfg.host = "192.168.168.11"
+                                                cfg.port = 5760
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected TCP link to 192.168.168.11:5760")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
                                     text: qsTr("+ Gremsy G1 (UDP 14565)")
                                     isOutline: true
                                     onClicked: {
@@ -1472,34 +1503,23 @@ Item {
                                     font.pointSize: CompanyTheme.fontSmall
                                 }
 
-                                GridLayout {
+                                // Mobile & Tablet friendly responsive layout
+                                Flow {
                                     Layout.fillWidth: true
-                                    columns: 4
-                                    columnSpacing: CompanyTheme.spacingSm
-                                    rowSpacing: 4
+                                    spacing: 12
 
-                                    // Link Name
+                                    // 1. Link Type Toggle (UDP vs TCP)
                                     ColumnLayout {
-                                        spacing: 2
-                                        Layout.fillWidth: true
-                                        Text { text: qsTr("Link Name"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
-                                        Rectangle {
-                                            Layout.fillWidth: true; implicitHeight: 32; radius: 3; color: CompanyTheme.bgInput; border.color: CompanyTheme.borderCard; border.width: 1
-                                            TextInput {
-                                                id: newLinkNameInput
-                                                anchors.fill: parent; anchors.margins: 6
-                                                verticalAlignment: TextInput.AlignVCenter
-                                                color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall
-                                                text: "Custom UDP"
-                                            }
+                                        spacing: 4
+                                        width: 150
+
+                                        Text {
+                                            text: qsTr("Connection Protocol")
+                                            color: CompanyTheme.textSecondary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
                                         }
-                                    }
 
-                                    // Link Type (UDP / TCP)
-                                    ColumnLayout {
-                                        spacing: 2
-                                        Layout.preferredWidth: 120
-                                        Text { text: qsTr("Type"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
                                         RowLayout {
                                             spacing: 4
                                             property int selectedType: 1 // 1=UDP, 2=TCP
@@ -1507,55 +1527,123 @@ Item {
 
                                             CompanyButton {
                                                 text: "UDP"
+                                                isPrimary: typeSelectorGroup.selectedType === 1
                                                 isOutline: typeSelectorGroup.selectedType !== 1
                                                 onClicked: {
                                                     typeSelectorGroup.selectedType = 1
-                                                    if (newLinkNameInput.text === "Custom TCP") newLinkNameInput.text = "Custom UDP"
+                                                    if (newLinkNameInput.text === "Custom TCP" || newLinkNameInput.text === "") newLinkNameInput.text = "Custom UDP"
+                                                    if (newLinkPortInput.text === "5760") newLinkPortInput.text = "14551"
                                                 }
                                             }
+
                                             CompanyButton {
                                                 text: "TCP"
+                                                isPrimary: typeSelectorGroup.selectedType === 2
                                                 isOutline: typeSelectorGroup.selectedType !== 2
                                                 onClicked: {
                                                     typeSelectorGroup.selectedType = 2
-                                                    if (newLinkNameInput.text === "Custom UDP") newLinkNameInput.text = "Custom TCP"
+                                                    if (newLinkNameInput.text === "Custom UDP" || newLinkNameInput.text === "") newLinkNameInput.text = "Custom TCP"
+                                                    if (newLinkPortInput.text === "14551" || newLinkPortInput.text === "14550") newLinkPortInput.text = "5760"
                                                 }
                                             }
                                         }
                                     }
 
-                                    // Target Host (for TCP) or Listen Port (for UDP)
+                                    // 2. Link Name
                                     ColumnLayout {
-                                        spacing: 2
-                                        Layout.fillWidth: true
-                                        visible: typeSelectorGroup.selectedType === 2
-                                        Text { text: qsTr("Host IP / Server"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
+                                        spacing: 4
+                                        width: Math.max(180, (commLinksCardCol.width - 40) * 0.28)
+
+                                        Text {
+                                            text: qsTr("Link Display Name")
+                                            color: CompanyTheme.textSecondary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
                                         Rectangle {
-                                            Layout.fillWidth: true; implicitHeight: 32; radius: 3; color: CompanyTheme.bgInput; border.color: CompanyTheme.borderCard; border.width: 1
+                                            Layout.fillWidth: true
+                                            implicitHeight: 36
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+
+                                            TextInput {
+                                                id: newLinkNameInput
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.pointSize: CompanyTheme.fontSmall
+                                                text: "Custom UDP"
+                                            }
+                                        }
+                                    }
+
+                                    // 3. Target Host (TCP Only)
+                                    ColumnLayout {
+                                        spacing: 4
+                                        width: Math.max(160, (commLinksCardCol.width - 40) * 0.28)
+                                        visible: typeSelectorGroup.selectedType === 2
+
+                                        Text {
+                                            text: qsTr("Target Host IP / Domain")
+                                            color: CompanyTheme.primary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            implicitHeight: 36
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.primary
+                                            border.width: 1
+
                                             TextInput {
                                                 id: newLinkHostInput
-                                                anchors.fill: parent; anchors.margins: 6
+                                                anchors.fill: parent
+                                                anchors.margins: 8
                                                 verticalAlignment: TextInput.AlignVCenter
-                                                color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall
+                                                color: CompanyTheme.textPrimary
+                                                font.pointSize: CompanyTheme.fontSmall
                                                 font.family: CompanyTheme.fontMono
                                                 text: "192.168.168.11"
                                             }
                                         }
                                     }
 
-                                    // Port
+                                    // 4. Port Input (UDP Listen Port or TCP Target Port)
                                     ColumnLayout {
-                                        spacing: 2
-                                        Layout.preferredWidth: 100
-                                        Text { text: typeSelectorGroup.selectedType === 1 ? qsTr("UDP Listen Port") : qsTr("TCP Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontTiny }
+                                        spacing: 4
+                                        width: 130
+
+                                        Text {
+                                            text: typeSelectorGroup.selectedType === 1 ? qsTr("UDP Listen Port") : qsTr("TCP Server Port")
+                                            color: CompanyTheme.primary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
                                         Rectangle {
-                                            Layout.fillWidth: true; implicitHeight: 32; radius: 3; color: CompanyTheme.bgInput; border.color: CompanyTheme.borderCard; border.width: 1
+                                            Layout.fillWidth: true
+                                            implicitHeight: 36
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.primary
+                                            border.width: 1
+
                                             TextInput {
                                                 id: newLinkPortInput
-                                                anchors.fill: parent; anchors.margins: 6
+                                                anchors.fill: parent
+                                                anchors.margins: 8
                                                 verticalAlignment: TextInput.AlignVCenter
-                                                color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall
+                                                color: CompanyTheme.textPrimary
+                                                font.pointSize: CompanyTheme.fontSmall
                                                 font.family: CompanyTheme.fontMono
+                                                font.bold: true
                                                 text: typeSelectorGroup.selectedType === 1 ? "14551" : "5760"
                                             }
                                         }
@@ -1564,10 +1652,11 @@ Item {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: CompanyTheme.spacingSm
+                                    spacing: CompanyTheme.spacingMd
 
                                     CompanyButton {
                                         text: qsTr("ADD & CONNECT LINK")
+                                        isPrimary: true
                                         onClicked: {
                                             var name = newLinkNameInput.text.trim()
                                             var type = typeSelectorGroup.selectedType
