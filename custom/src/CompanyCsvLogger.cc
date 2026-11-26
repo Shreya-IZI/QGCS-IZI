@@ -7,6 +7,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QStandardPaths>
+#include <QtCore/QStorageInfo>
 #include <QtCore/QUrl>
 #include <QtGui/QDesktopServices>
 
@@ -494,6 +495,21 @@ void CompanyCsvLogger::_onPeriodicTimeout()
 {
     if (!_loggingActive || !_csvFile.isOpen()) {
         return;
+    }
+
+    // PERF-04 Safety Guard: Halt logging if drive has less than 200 MB free
+    static int checkCounter = 0;
+    if (++checkCounter % 10 == 0) { // Check storage health periodically every 10 samples
+        const QStorageInfo storage(_csvFile.fileName());
+        if (storage.isValid()) {
+            constexpr qint64 minFreeBytes = 200 * 1024 * 1024; // 200 MB
+            if (storage.bytesAvailable() < minFreeBytes) {
+                const double freeMb = static_cast<double>(storage.bytesAvailable()) / (1024.0 * 1024.0);
+                qCWarning(CompanyCsvLoggerLog) << "Low disk space (" << freeMb << "MB). Stopping CSV telemetry logging.";
+                stopLogging();
+                return;
+            }
+        }
     }
 
     _writeTelemetryRow();
