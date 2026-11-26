@@ -64,7 +64,7 @@ jobs:
             host: windows
             arch: win64_msvc2022_64
             preset: Windows
-            package: QGroundControl-installer-AMD64
+            package: QGroundControl-installer-Intel-x64
             gstreamer: true
 
           - variant: arm64
@@ -72,7 +72,7 @@ jobs:
             host: windows_arm64
             arch: win64_msvc2022_arm64
             preset: Windows-arm64
-            package: QGroundControl-installer-ARM64
+            package: QGroundControl-installer-ARM64-Native
             gstreamer: true
 
           - variant: arm64-cross
@@ -80,7 +80,7 @@ jobs:
             host: windows
             arch: win64_msvc2022_arm64_cross_compiled
             preset: Windows-arm64
-            package: QGroundControl-installer-AMD64-ARM64
+            package: QGroundControl-installer-ARM64-Cross
             gstreamer: false
 
     defaults:
@@ -241,3 +241,14 @@ jobs:
           name: ${{ matrix.package }}
           path: ${{ runner.temp }}\build\*installer*.exe
           if-no-files-found: error
+
+      - name: Add Installer Link to Workflow Summary
+        if: matrix.build_type == 'Release'
+        shell: pwsh
+        run: |
+          $buildDir = "${{ runner.temp }}\build"
+          $installer = Get-ChildItem -Path $buildDir -Filter "*installer*.exe" | Select-Object -First 1
+          if ($installer) {
+            $sizeMb = [math]::Round($installer.Length / 1MB, 1)
+            "# Windows Installer (${{ matrix.variant }})`n`n- **Package Name:** `${{ matrix.package }}``n- **Binary:** `$($installer.Name)` ($sizeMb MB)`n- **Architecture:** `${{ matrix.arch }}`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
