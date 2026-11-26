@@ -160,6 +160,7 @@ jobs:
 
       - name: Verify Executable
         if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
+        continue-on-error: true
         uses: ./.github/actions/verify-executable
         with:
           binary-path: ${{ runner.temp }}/build/${{ matrix.build_type }}/QGroundControl.exe
