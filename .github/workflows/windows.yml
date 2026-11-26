@@ -250,5 +250,12 @@ jobs:
           $installer = Get-ChildItem -Path $buildDir -Filter "*installer*.exe" | Select-Object -First 1
           if ($installer) {
             $sizeMb = [math]::Round($installer.Length / 1MB, 1)
-            "# Windows Installer (${{ matrix.variant }})`n`n- **Package Name:** `${{ matrix.package }}``n- **Binary:** `$($installer.Name)` ($sizeMb MB)`n- **Architecture:** `${{ matrix.arch }}`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            $lines = @(
+              "# Windows Installer (${{ matrix.variant }})",
+              "",
+              "- **Package Name:** ${{ matrix.package }}",
+              "- **Binary:** $($installer.Name) ($sizeMb MB)",
+              "- **Architecture:** ${{ matrix.arch }}"
+            )
+            $lines -join "`r`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           }
