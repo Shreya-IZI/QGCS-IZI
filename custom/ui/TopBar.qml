@@ -551,10 +551,14 @@ Rectangle {
         // --------------------------------------------------------------------
         // 2. Center: Enterprise Flight Control with Status Breadcrumb
         // --------------------------------------------------------------------
-        RowLayout {
-            spacing: CompanyTheme.spacingSm
+        Item {
+            id: centerStatusContainer
+            implicitWidth: centerStatusCol.implicitWidth
+            implicitHeight: centerStatusCol.implicitHeight
 
             ColumnLayout {
+                id: centerStatusCol
+                anchors.fill: parent
                 spacing: 2
 
                 Text {

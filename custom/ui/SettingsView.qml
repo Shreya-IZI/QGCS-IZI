@@ -1348,11 +1348,15 @@ Item {
                                 model: QGroundControl.linkManager ? QGroundControl.linkManager.linkConfigurations : null
 
                                 Rectangle {
+                                    id: linkCardItem
+                                    required property var modelData
+                                    readonly property var linkObj: modelData
+
                                     Layout.fillWidth: true
                                     implicitHeight: linkRowLayout.implicitHeight + 16
                                     radius: CompanyTheme.radiusSm
-                                    color: object.linkActive ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.06) : CompanyTheme.bgCardSecondary
-                                    border.color: object.linkActive ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.35) : CompanyTheme.borderSubtle
+                                    color: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.06) : CompanyTheme.bgCardSecondary
+                                    border.color: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.35) : CompanyTheme.borderSubtle
                                     border.width: 1
 
                                     RowLayout {
@@ -1366,7 +1370,7 @@ Item {
                                             width: 10
                                             height: 10
                                             radius: 5
-                                            color: object.linkActive ? CompanyTheme.success : CompanyTheme.textMuted
+                                            color: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? CompanyTheme.success : CompanyTheme.textMuted
                                         }
 
                                         // Link Name & Details
@@ -1377,7 +1381,7 @@ Item {
                                             RowLayout {
                                                 spacing: 8
                                                 Text {
-                                                    text: object.name
+                                                    text: linkCardItem.linkObj ? linkCardItem.linkObj.name : ""
                                                     color: CompanyTheme.textPrimary
                                                     font.bold: true
                                                     font.pointSize: CompanyTheme.fontBody
@@ -1395,9 +1399,10 @@ Item {
                                                         id: typeText
                                                         anchors.centerIn: parent
                                                         text: {
-                                                            if (object.linkType === 1) return "UDP"
-                                                            if (object.linkType === 2) return "TCP"
-                                                            if (object.linkType === 0) return "SERIAL"
+                                                            if (!linkCardItem.linkObj) return "LINK"
+                                                            if (linkCardItem.linkObj.linkType === 1) return "UDP"
+                                                            if (linkCardItem.linkObj.linkType === 2) return "TCP"
+                                                            if (linkCardItem.linkObj.linkType === 0) return "SERIAL"
                                                             return "LINK"
                                                         }
                                                         color: CompanyTheme.primary
@@ -1410,23 +1415,27 @@ Item {
                                                 // AutoConnect badge
                                                 Rectangle {
                                                     radius: 3
-                                                    color: object.autoConnect ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.15) : CompanyTheme.bgDark
-                                                    border.color: object.autoConnect ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.4) : CompanyTheme.borderSubtle
+                                                    color: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.15) : CompanyTheme.bgDark
+                                                    border.color: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.4) : CompanyTheme.borderSubtle
                                                     border.width: 1
                                                     implicitWidth: autoText.implicitWidth + 8
                                                     implicitHeight: autoText.implicitHeight + 4
                                                     Text {
                                                         id: autoText
                                                         anchors.centerIn: parent
-                                                        text: object.autoConnect ? qsTr("AUTOCONNECT: ON") : qsTr("AUTOCONNECT: OFF")
-                                                        color: object.autoConnect ? CompanyTheme.success : CompanyTheme.textMuted
+                                                        text: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? qsTr("AUTOCONNECT: ON") : qsTr("AUTOCONNECT: OFF")
+                                                        color: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? CompanyTheme.success : CompanyTheme.textMuted
                                                         font.pointSize: 8
                                                         font.bold: true
                                                     }
                                                     MouseArea {
                                                         anchors.fill: parent
                                                         cursorShape: Qt.PointingHandCursor
-                                                        onClicked: object.autoConnect = !object.autoConnect
+                                                        onClicked: {
+                                                            if (linkCardItem.linkObj) {
+                                                                linkCardItem.linkObj.autoConnect = !linkCardItem.linkObj.autoConnect
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1437,29 +1446,31 @@ Item {
                                                 font.pointSize: CompanyTheme.fontTiny
                                                 font.family: CompanyTheme.fontMono
                                                 text: {
-                                                    if (object.linkType === 1) {
-                                                        return qsTr("Listening Port: %1").arg(object.localPort)
-                                                    } else if (object.linkType === 2) {
-                                                        return qsTr("Host: %1:%2").arg(object.host).arg(object.port)
-                                                    } else if (object.linkType === 0) {
-                                                        return qsTr("Port: %1 | Baud: %2").arg(object.portDisplayName || object.portName || "Serial").arg(object.baud)
+                                                    if (!linkCardItem.linkObj) return ""
+                                                    if (linkCardItem.linkObj.linkType === 1) {
+                                                        return qsTr("Listening Port: %1").arg(linkCardItem.linkObj.localPort)
+                                                    } else if (linkCardItem.linkObj.linkType === 2) {
+                                                        return qsTr("Host: %1:%2").arg(linkCardItem.linkObj.host).arg(linkCardItem.linkObj.port)
+                                                    } else if (linkCardItem.linkObj.linkType === 0) {
+                                                        return qsTr("Port: %1 | Baud: %2").arg(linkCardItem.linkObj.portDisplayName || linkCardItem.linkObj.portName || "Serial").arg(linkCardItem.linkObj.baud)
                                                     }
-                                                    return qsTr("Active: %1").arg(object.linkActive ? "Yes" : "No")
+                                                    return qsTr("Active: %1").arg(linkCardItem.linkObj.linkActive ? "Yes" : "No")
                                                 }
                                             }
                                         }
 
                                         // Connect / Disconnect Action
                                         CompanyButton {
-                                            text: object.linkActive ? qsTr("DISCONNECT") : qsTr("CONNECT")
-                                            isOutline: !object.linkActive
+                                            text: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? qsTr("DISCONNECT") : qsTr("CONNECT")
+                                            isOutline: !(linkCardItem.linkObj && linkCardItem.linkObj.linkActive)
                                             onClicked: {
-                                                if (object.linkActive) {
-                                                    QGroundControl.linkManager.disconnectLinkConfiguration(object)
-                                                    commLinksCard.statusMessage = qsTr("Disconnected %1").arg(object.name)
+                                                if (!linkCardItem.linkObj) return
+                                                if (linkCardItem.linkObj.linkActive) {
+                                                    QGroundControl.linkManager.disconnectLinkConfiguration(linkCardItem.linkObj)
+                                                    commLinksCard.statusMessage = qsTr("Disconnected %1").arg(linkCardItem.linkObj.name)
                                                 } else {
-                                                    QGroundControl.linkManager.createConnectedLink(object)
-                                                    commLinksCard.statusMessage = qsTr("Connecting %1...").arg(object.name)
+                                                    QGroundControl.linkManager.createConnectedLink(linkCardItem.linkObj)
+                                                    commLinksCard.statusMessage = qsTr("Connecting %1...").arg(linkCardItem.linkObj.name)
                                                 }
                                             }
                                         }
@@ -1468,10 +1479,11 @@ Item {
                                         CompanyButton {
                                             text: qsTr("DELETE")
                                             isOutline: true
-                                            visible: !object.dynamic
+                                            visible: linkCardItem.linkObj ? !linkCardItem.linkObj.dynamic : true
                                             onClicked: {
-                                                var n = object.name
-                                                QGroundControl.linkManager.removeConfiguration(object)
+                                                if (!linkCardItem.linkObj) return
+                                                var n = linkCardItem.linkObj.name
+                                                QGroundControl.linkManager.removeConfiguration(linkCardItem.linkObj)
                                                 commLinksCard.statusMessage = qsTr("Removed configuration: %1").arg(n)
                                             }
                                         }
