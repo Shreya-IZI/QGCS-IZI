@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - master
+      - main
       - 'Stable*'
+      - 'feat/*'
     tags:
       - 'v*'
     paths-ignore:
