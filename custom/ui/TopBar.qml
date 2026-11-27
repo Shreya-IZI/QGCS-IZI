@@ -26,6 +26,8 @@ Rectangle {
     signal safetyModalRequested()
     signal preFlightModalRequested()
     signal openJoystickSettingsRequested()
+    signal openCommLinksRequested()
+    signal homeRequested()
 
     // Bottom border separator line
     Rectangle {
@@ -88,6 +90,37 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.toggleDrawerRequested()
             }
+        }
+
+        // Home Navigation Button (Return to IZI GCS Home Screen)
+        Rectangle {
+            id: homeNavBtn
+            Layout.preferredWidth: 32
+            Layout.preferredHeight: 32
+            radius: CompanyTheme.radiusSm
+            color: homeNavMouse.containsMouse ? CompanyTheme.primaryDim : CompanyTheme.bgCard
+            border.color: homeNavMouse.containsMouse ? CompanyTheme.primary : CompanyTheme.borderCard
+            border.width: 1
+
+            Text {
+                anchors.centerIn: parent
+                text: "‹"
+                color: homeNavMouse.containsMouse ? CompanyTheme.primary : CompanyTheme.textPrimary
+                font.pointSize: 18
+                font.bold: true
+            }
+
+            MouseArea {
+                id: homeNavMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.homeRequested()
+            }
+
+            ToolTip.visible: homeNavMouse.containsMouse
+            ToolTip.delay: 300
+            ToolTip.text: qsTr("Return to IZI Home Screen")
         }
 
         // --------------------------------------------------------------------
@@ -518,10 +551,14 @@ Rectangle {
         // --------------------------------------------------------------------
         // 2. Center: Enterprise Flight Control with Status Breadcrumb
         // --------------------------------------------------------------------
-        RowLayout {
-            spacing: CompanyTheme.spacingSm
+        Item {
+            id: centerStatusContainer
+            implicitWidth: centerStatusCol.implicitWidth
+            implicitHeight: centerStatusCol.implicitHeight
 
             ColumnLayout {
+                id: centerStatusCol
+                anchors.fill: parent
                 spacing: 2
 
                 Text {
@@ -563,6 +600,88 @@ Rectangle {
                         font.pointSize: 11
                         font.family: CompanyTheme.fontMono
                         font.bold: true
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                hoverEnabled: true
+                onClicked: {
+                    if (root._hasVehicle) {
+                        topBarConnPopup.open()
+                    } else {
+                        root.openCommLinksRequested()
+                    }
+                }
+            }
+
+            Popup {
+                id: topBarConnPopup
+                y: parent.height + 4
+                width: 220
+                padding: 10
+                modal: true
+                focus: true
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    color: CompanyTheme.bgSidebar
+                    radius: CompanyTheme.radiusMd
+                    border.color: CompanyTheme.borderCard
+                    border.width: 1
+                }
+
+                contentItem: ColumnLayout {
+                    spacing: 8
+
+                    Text {
+                        text: qsTr("ACTIVE UAS CONNECTION")
+                        color: CompanyTheme.textPrimary
+                        font.pointSize: CompanyTheme.fontSmall
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: qsTr("Vehicle #%1 linked via MAVLink.").arg(CompanyTelemetry.vehicleId)
+                        color: CompanyTheme.textSecondary
+                        font.pointSize: CompanyTheme.fontTiny
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        CompanyButton {
+                            text: qsTr("DISCONNECT")
+                            isDanger: true
+                            Layout.fillWidth: true
+                            onClicked: {
+                                topBarConnPopup.close()
+                                if (QGroundControl.linkManager) {
+                                    var configs = QGroundControl.linkManager.linkConfigurations
+                                    if (configs) {
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkActive) {
+                                                QGroundControl.linkManager.disconnectLinkConfiguration(c)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        CompanyButton {
+                            text: qsTr("MANAGE")
+                            isOutline: true
+                            Layout.fillWidth: true
+                            onClicked: {
+                                topBarConnPopup.close()
+                                root.openCommLinksRequested()
+                            }
+                        }
                     }
                 }
             }
@@ -612,18 +731,31 @@ Rectangle {
             ToolTip.text: qsTr("CRITICAL SAFETY: Click to trigger Emergency Motor Kill for UAS #%1 (Requires confirmation)").arg(CompanyTelemetry.vehicleId)
         }
 
-        // Expanding spacer
-        Item {
+        // --------------------------------------------------------------------
+        // 3. Middle Scrollable Indicators & Tools (Flickable for Touch & Overflow)
+        // --------------------------------------------------------------------
+        Flickable {
+            id: topBarFlickable
             Layout.fillWidth: true
-        }
+            Layout.fillHeight: true
+            contentWidth: Math.max(width, indicatorsRow.implicitWidth)
+            contentHeight: height
+            clip: true
+            boundsBehavior: Flickable.DragOverBounds
+            flickableDirection: Flickable.HorizontalFlick
 
-        // --------------------------------------------------------------------
-        // 3. Operational Indicators: GPS, Battery (mAh), RSSI/Link, UTC
-        // --------------------------------------------------------------------
-        RowLayout {
-            spacing: root._isNarrow ? CompanyTheme.spacingXs : CompanyTheme.spacingSm
+            RowLayout {
+                id: indicatorsRow
+                width: Math.max(topBarFlickable.width, implicitWidth)
+                height: parent.height
+                spacing: root._isNarrow ? CompanyTheme.spacingXs : CompanyTheme.spacingSm
 
-            // 3A. GPS Satellite, RTK & Precision Chip
+                // Expanding spacer: aligns indicators to the right when screen is wide
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                // 3A. GPS Satellite, RTK & Precision Chip
             Rectangle {
                 id: gpsChip
                 Layout.preferredHeight: 28
@@ -1433,12 +1565,16 @@ Rectangle {
                 ToolTip.delay: 300
                 ToolTip.text: CompanyTheme.isSunlightMode ? qsTr("Sunlight Mode: ACTIVE (High-Contrast Outdoor)\nClick for Tactical Night Mode") : qsTr("Sunlight Mode: OFF (Tactical Dark)\nClick for High-Contrast Outdoor Sunlight Mode")
             }
+        }
+    } // Flickable: topBarFlickable
 
-            // Window Management Controls (Minimize, Maximize/Restore, Close)
-            RowLayout {
-                visible: !ScreenTools.isMobile && (mainWindow.flags & Qt.FramelessWindowHint)
-                spacing: 0
-                Layout.fillHeight: true
+    // ------------------------------------------------------------------------
+    // 4. Pinned Right Window Management Controls (Always visible & accessible)
+    // ------------------------------------------------------------------------
+    RowLayout {
+        visible: true
+        spacing: 0
+        Layout.fillHeight: true
 
                 // Minimize Button
                 Rectangle {
@@ -1516,13 +1652,14 @@ Rectangle {
                                 mainWindow.attemptWindowClose()
                             } else if (typeof mainWindow !== "undefined") {
                                 mainWindow.close()
+                            } else {
+                                Qt.quit()
                             }
                         }
                     }
                 }
             }
         }
-    }
 
     // ========================================================================
     // Quick Joystick / RC Transmitter Control & Diagnostics Popup

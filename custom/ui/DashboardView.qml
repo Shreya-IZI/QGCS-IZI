@@ -455,6 +455,18 @@ Item {
     }
 
     // ------------------------------------------------------------------------
+    // 2e. Tactical Gimbal Control Overlay (Right-aligned, touch-accessible)
+    // ------------------------------------------------------------------------
+    GimbalControlOverlay {
+        id: gimbalControlWidget
+        anchors.bottom: bottomTelemetryStrip.top
+        anchors.right: parent.right
+        anchors.margins: CompanyTheme.spacingMd
+        z: 25
+        collapsed: true // Default to compact floating pill, expandable by pilot
+    }
+
+    // ------------------------------------------------------------------------
     // 3. Floating Bottom Operational Telemetry Strip (DJI Glass HUD)
     // ------------------------------------------------------------------------
     Rectangle {

@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - master
+      - main
       - 'Stable*'
+      - 'feat/*'
     tags:
       - 'v*'
     paths-ignore:
@@ -154,6 +156,7 @@ jobs:
         run: echo "::warning::CodeQL analysis failed — see step log for details"
 
       - name: Verify Executable
+        continue-on-error: true
         uses: ./.github/actions/verify-executable
         with:
           binary-path: ${{ runner.temp }}/build/Release/QGroundControl

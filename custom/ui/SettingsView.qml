@@ -1024,284 +1024,467 @@ Item {
                 visible: root.activeSubTab === "NETWORK"
 
                 // ------------------------------------------------------------
-                // 1. VEHICLE / MAVLINK LINK CONFIGURATION
+                // 1. MAVLINK TELEMETRY & COMM LINKS ROUTER
                 // ------------------------------------------------------------
                 Rectangle {
+                    id: commLinksCard
                     Layout.fillWidth: true
                     radius: CompanyTheme.radiusMd
                     color: CompanyTheme.bgCard
                     border.color: CompanyTheme.borderCard
                     border.width: 1
-                    implicitHeight: mavlinkCardCol.implicitHeight + CompanyTheme.spacingLg * 2
+                    implicitHeight: commLinksCardCol.implicitHeight + CompanyTheme.spacingLg * 2
+
+                    property string statusMessage: ""
+                    property bool showAddCustomForm: false
 
                     ColumnLayout {
-                        id: mavlinkCardCol
+                        id: commLinksCardCol
                         anchors.fill: parent
                         anchors.margins: CompanyTheme.spacingLg
                         spacing: CompanyTheme.spacingMd
 
+                        // Header & Status
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: CompanyTheme.spacingSm
+
                             IconVector { name: "radio"; size: 18; color: CompanyTheme.primary }
                             Text {
-                                text: qsTr("VEHICLE / MAVLINK LINK (ARDUPILOT / PX4)")
+                                text: qsTr("MAVLINK TELEMETRY & COMM LINKS ROUTER")
                                 color: CompanyTheme.textPrimary
                                 font.pointSize: CompanyTheme.fontH2
                                 font.bold: true
                                 Layout.fillWidth: true
                             }
                             StatusBadge {
-                                text: root._hasVehicle ? qsTr("CONNECTED") : qsTr("DISCONNECTED")
+                                text: root._hasVehicle ? qsTr("VEHICLE ONLINE") : qsTr("SCANNING / LISTENING")
                                 badgeColor: root._hasVehicle ? CompanyTheme.success : CompanyTheme.warning
                             }
                         }
 
+                        Text {
+                            text: qsTr("Live telemetry routing for Skydroid G30 handheld ground stations, UDP network streams, direct TCP sockets, and internal POSIX serial ports.")
+                            color: CompanyTheme.textMuted
+                            font.pointSize: CompanyTheme.fontSmall
+                            Layout.fillWidth: true
+                        }
+
                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: CompanyTheme.borderSubtle }
 
-                        GridLayout {
-                            Layout.fillWidth: true
-                            columns: 3
-                            columnSpacing: CompanyTheme.spacingMd
-                            rowSpacing: CompanyTheme.spacingSm
-
-                            // Inbound UDP Listen Port
-                            ColumnLayout {
-                                spacing: 4
-                                Layout.fillWidth: true
-                                Text { text: qsTr("Inbound UDP Listen Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 34
-                                    radius: CompanyTheme.radiusSm
-                                    color: CompanyTheme.bgInput
-                                    border.color: CompanyTheme.borderCard
-                                    border.width: 1
-                                    TextInput {
-                                        id: udpListenPortInput
-                                        anchors.fill: parent
-                                        anchors.margins: 8
-                                        verticalAlignment: TextInput.AlignVCenter
-                                        color: CompanyTheme.textPrimary
-                                        font.pointSize: CompanyTheme.fontBody
-                                        font.family: CompanyTheme.fontMono
-                                        selectByMouse: true
-                                        text: root._autoConnectSettings ? root._autoConnectSettings.udpListenPort.rawValue : "14550"
-                                        onEditingFinished: {
-                                            var p = parseInt(text)
-                                            if (p >= 1024 && p <= 65535 && root._autoConnectSettings) {
-                                                root._autoConnectSettings.udpListenPort.rawValue = p
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Outbound Target Vehicle IP
-                            ColumnLayout {
-                                spacing: 4
-                                Layout.fillWidth: true
-                                Text { text: qsTr("Target Vehicle IP (Unicast)"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 34
-                                    radius: CompanyTheme.radiusSm
-                                    color: CompanyTheme.bgInput
-                                    border.color: (udpTargetIpInput.text === "" || (root._netSettings && root._netSettings.isValidIPv4(udpTargetIpInput.text))) ? CompanyTheme.borderCard : CompanyTheme.danger
-                                    border.width: 1
-                                    TextInput {
-                                        id: udpTargetIpInput
-                                        anchors.fill: parent
-                                        anchors.margins: 8
-                                        verticalAlignment: TextInput.AlignVCenter
-                                        color: CompanyTheme.textPrimary
-                                        font.pointSize: CompanyTheme.fontBody
-                                        font.family: CompanyTheme.fontMono
-                                        selectByMouse: true
-                                        text: root._autoConnectSettings ? root._autoConnectSettings.udpTargetHostIP.rawValue : ""
-                                        onEditingFinished: {
-                                            if (root._autoConnectSettings) {
-                                                root._autoConnectSettings.udpTargetHostIP.rawValue = text
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Outbound Target Vehicle Port
-                            ColumnLayout {
-                                spacing: 4
-                                Layout.fillWidth: true
-                                Text { text: qsTr("Target Vehicle Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 34
-                                    radius: CompanyTheme.radiusSm
-                                    color: CompanyTheme.bgInput
-                                    border.color: CompanyTheme.borderCard
-                                    border.width: 1
-                                    TextInput {
-                                        id: udpTargetPortInput
-                                        anchors.fill: parent
-                                        anchors.margins: 8
-                                        verticalAlignment: TextInput.AlignVCenter
-                                        color: CompanyTheme.textPrimary
-                                        font.pointSize: CompanyTheme.fontBody
-                                        font.family: CompanyTheme.fontMono
-                                        selectByMouse: true
-                                        text: root._autoConnectSettings ? root._autoConnectSettings.udpTargetHostPort.rawValue : "14550"
-                                        onEditingFinished: {
-                                            var p = parseInt(text)
-                                            if (p >= 1024 && p <= 65535 && root._autoConnectSettings) {
-                                                root._autoConnectSettings.udpTargetHostPort.rawValue = p
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // MAVLink Options Row
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: CompanyTheme.spacingMd
-
-                            ColumnLayout {
-                                spacing: 2
-                                Layout.fillWidth: true
-                                Text { text: qsTr("UDP Auto-Connect Service"); color: CompanyTheme.textPrimary; font.bold: true; font.pointSize: CompanyTheme.fontSmall }
-                                Text { text: qsTr("Automatically open and bind UDP listen port upon application startup"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny }
-                            }
-
-                            CompanyButton {
-                                id: autoConnectBtn
-                                text: (root._autoConnectSettings && root._autoConnectSettings.autoConnectUDP.rawValue) ? qsTr("UDP AUTOCONNECT: ON") : qsTr("UDP AUTOCONNECT: OFF")
-                                isOutline: !(root._autoConnectSettings && root._autoConnectSettings.autoConnectUDP.rawValue)
-                                onClicked: {
-                                    if (root._autoConnectSettings) {
-                                        root._autoConnectSettings.autoConnectUDP.rawValue = !root._autoConnectSettings.autoConnectUDP.rawValue
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ------------------------------------------------------------
-                // 1B. TCP TELEMETRY LINK (HOST & PORT)
-                // ------------------------------------------------------------
-                Rectangle {
-                    id: tcpLinkCard
-                    Layout.fillWidth: true
-                    radius: CompanyTheme.radiusMd
-                    color: CompanyTheme.bgCard
-                    border.color: CompanyTheme.borderCard
-                    border.width: 1
-                    implicitHeight: tcpCardCol.implicitHeight + CompanyTheme.spacingLg * 2
-
-                    function getTcpConfig() {
-                        if (!QGroundControl.linkManager || !QGroundControl.linkManager.linkConfigurations) return null
-                        for (var i = 0; i < QGroundControl.linkManager.linkConfigurations.count; i++) {
-                            var cfg = QGroundControl.linkManager.linkConfigurations.get(i)
-                            if (cfg && cfg.type === 2) { // TypeTcp
-                                return cfg
-                            }
-                        }
-                        return null
-                    }
-
-                    property var _tcpConfig: getTcpConfig()
-                    readonly property bool _isTcpActive: _tcpConfig ? _tcpConfig.linkActive : false
-                    property string _statusMessage: ""
-
-                    ColumnLayout {
-                        id: tcpCardCol
-                        anchors.fill: parent
-                        anchors.margins: CompanyTheme.spacingLg
-                        spacing: CompanyTheme.spacingMd
-
-                        RowLayout {
+                        // 1-Touch Quick Connect Presets
+                        ColumnLayout {
                             Layout.fillWidth: true
                             spacing: CompanyTheme.spacingSm
-                            IconVector { name: "radio"; size: 18; color: CompanyTheme.primary }
-                            Text {
-                                text: qsTr("TCP TELEMETRY LINK (HOST & PORT)")
-                                color: CompanyTheme.textPrimary
-                                font.pointSize: CompanyTheme.fontH2
-                                font.bold: true
+
+                            RowLayout {
                                 Layout.fillWidth: true
+                                Text {
+                                    text: qsTr("FAST PRESETS (ONE-TOUCH DISCOVERY)")
+                                    color: CompanyTheme.primary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                    font.bold: true
+                                    Layout.fillWidth: true
+                                }
+                                Text {
+                                    text: qsTr("Click to add & connect standard flight controller endpoints")
+                                    color: CompanyTheme.textMuted
+                                    font.pointSize: CompanyTheme.fontTiny
+                                }
                             }
-                            StatusBadge {
-                                text: tcpLinkCard._isTcpActive ? qsTr("CONNECTED") : qsTr("STANDBY")
-                                badgeColor: tcpLinkCard._isTcpActive ? CompanyTheme.success : CompanyTheme.textMuted
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: CompanyTheme.spacingSm
+
+                                CompanyButton {
+                                    text: qsTr("+ Skydroid G30 (UDP 14551)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 1 && c.localPort === 14551) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing Skydroid G30 link (UDP 14551)")
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(1, "Skydroid G30 (UDP 14551)")
+                                            if (cfg) {
+                                                cfg.localPort = 14551
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected Skydroid G30 link on UDP port 14551")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("+ Skydroid Alt (UDP 14451)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 1 && c.localPort === 14451) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing Skydroid Alt link (UDP 14451)")
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(1, "Skydroid Alt (UDP 14451)")
+                                            if (cfg) {
+                                                cfg.localPort = 14451
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected Skydroid Alt link on UDP port 14451")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("+ Standard UDP (14550)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 1 && c.localPort === 14550) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing Standard UDP link (14550)")
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(1, "Standard MAVLink (UDP 14550)")
+                                            if (cfg) {
+                                                cfg.localPort = 14550
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected Standard UDP link on port 14550")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("+ Local TCP (5760)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 2 && c.port === 5760) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing Local TCP link (5760)")
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(2, "Local TCP (5760)")
+                                            if (cfg) {
+                                                cfg.host = "127.0.0.1"
+                                                cfg.port = 5760
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected Local TCP link on 127.0.0.1:5760")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("+ Drone TCP (192.168.168.11:5760)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 2 && (c.port === 5760 || c.port === 5762)) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing TCP link (%1:%2)").arg(existing.host).arg(existing.port)
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(2, "Skydroid Drone TCP (5760)")
+                                            if (cfg) {
+                                                cfg.host = "192.168.168.11"
+                                                cfg.port = 5760
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected TCP link to 192.168.168.11:5760")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("+ Gremsy G1 (UDP 14565)")
+                                    isOutline: true
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var existing = null
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && c.linkType === 1 && c.localPort === 14565) {
+                                                existing = c
+                                                break
+                                            }
+                                        }
+                                        if (existing) {
+                                            QGroundControl.linkManager.createConnectedLink(existing)
+                                            commLinksCard.statusMessage = qsTr("Connected existing Gremsy G1 telemetry link (UDP 14565)")
+                                        } else {
+                                            var cfg = QGroundControl.linkManager.createConfiguration(1, "Gremsy VIO G1 (UDP 14565)")
+                                            if (cfg) {
+                                                cfg.localPort = 14565
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created & connected Gremsy VIO G1 telemetry on UDP 14565")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CompanyButton {
+                                    text: qsTr("CONNECT ALL LINKS")
+                                    onClicked: {
+                                        var configs = QGroundControl.linkManager.linkConfigurations
+                                        var connectedCount = 0
+                                        for (var i = 0; i < configs.count; i++) {
+                                            var c = configs.get(i)
+                                            if (c && !c.linkActive) {
+                                                QGroundControl.linkManager.createConnectedLink(c)
+                                                connectedCount++
+                                            }
+                                        }
+                                        commLinksCard.statusMessage = qsTr("Triggered connection on %1 link(s)").arg(connectedCount)
+                                    }
+                                }
                             }
                         }
 
                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: CompanyTheme.borderSubtle }
 
-                        GridLayout {
+                        // Configured Link Configurations List
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            columns: 2
-                            columnSpacing: CompanyTheme.spacingMd
-                            rowSpacing: CompanyTheme.spacingSm
+                            spacing: CompanyTheme.spacingSm
 
-                            // TCP Host IP
-                            ColumnLayout {
-                                spacing: 4
+                            RowLayout {
                                 Layout.fillWidth: true
-                                Text { text: qsTr("Target TCP Host IP"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
-                                Rectangle {
+                                Text {
+                                    text: qsTr("ACTIVE COMM LINK CONFIGURATIONS")
+                                    color: CompanyTheme.textPrimary
+                                    font.pointSize: CompanyTheme.fontSmall
+                                    font.bold: true
                                     Layout.fillWidth: true
-                                    implicitHeight: 34
-                                    radius: CompanyTheme.radiusSm
-                                    color: CompanyTheme.bgInput
-                                    border.color: CompanyTheme.borderCard
-                                    border.width: 1
-                                    TextInput {
-                                        id: tcpHostInput
-                                        anchors.fill: parent
-                                        anchors.margins: 8
-                                        verticalAlignment: TextInput.AlignVCenter
-                                        color: CompanyTheme.textPrimary
-                                        font.pointSize: CompanyTheme.fontBody
-                                        font.family: CompanyTheme.fontMono
-                                        selectByMouse: true
-                                        text: tcpLinkCard._tcpConfig ? tcpLinkCard._tcpConfig.host : "192.168.168.11"
-                                        onEditingFinished: {
-                                            if (tcpLinkCard._tcpConfig) {
-                                                tcpLinkCard._tcpConfig.host = text.trim()
-                                            }
-                                        }
+                                }
+                                CompanyButton {
+                                    text: commLinksCard.showAddCustomForm ? qsTr("CLOSE ADD FORM") : qsTr("+ ADD CUSTOM LINK")
+                                    isOutline: true
+                                    onClicked: commLinksCard.showAddCustomForm = !commLinksCard.showAddCustomForm
+                                }
+                            }
+
+                            // Empty state notice
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 40
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.borderSubtle
+                                border.width: 1
+                                visible: !QGroundControl.linkManager || !QGroundControl.linkManager.linkConfigurations || QGroundControl.linkManager.linkConfigurations.count === 0
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 8
+                                    IconVector { name: "info"; size: 14; color: CompanyTheme.warning }
+                                    Text {
+                                        text: qsTr("No communication links configured. Use the fast presets above or add a custom link.")
+                                        color: CompanyTheme.textSecondary
+                                        font.pointSize: CompanyTheme.fontTiny
                                     }
                                 }
                             }
 
-                            // TCP Port
-                            ColumnLayout {
-                                spacing: 4
-                                Layout.fillWidth: true
-                                Text { text: qsTr("Target TCP Port"); color: CompanyTheme.textSecondary; font.pointSize: CompanyTheme.fontSmall }
+                            // Link cards list
+                            Repeater {
+                                model: QGroundControl.linkManager ? QGroundControl.linkManager.linkConfigurations : null
+
                                 Rectangle {
+                                    id: linkCardItem
+                                    required property var modelData
+                                    readonly property var linkObj: modelData
+
                                     Layout.fillWidth: true
-                                    implicitHeight: 34
+                                    implicitHeight: linkRowLayout.implicitHeight + 16
                                     radius: CompanyTheme.radiusSm
-                                    color: CompanyTheme.bgInput
-                                    border.color: CompanyTheme.borderCard
+                                    color: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.06) : CompanyTheme.bgCardSecondary
+                                    border.color: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? Qt.rgba(CompanyTheme.primary.r, CompanyTheme.primary.g, CompanyTheme.primary.b, 0.35) : CompanyTheme.borderSubtle
                                     border.width: 1
-                                    TextInput {
-                                        id: tcpPortInput
+
+                                    RowLayout {
+                                        id: linkRowLayout
                                         anchors.fill: parent
                                         anchors.margins: 8
-                                        verticalAlignment: TextInput.AlignVCenter
-                                        color: CompanyTheme.textPrimary
-                                        font.pointSize: CompanyTheme.fontBody
-                                        font.family: CompanyTheme.fontMono
-                                        selectByMouse: true
-                                        text: tcpLinkCard._tcpConfig ? String(tcpLinkCard._tcpConfig.port) : "20002"
-                                        onEditingFinished: {
-                                            var p = parseInt(text)
-                                            if (p >= 1 && p <= 65535 && tcpLinkCard._tcpConfig) {
-                                                tcpLinkCard._tcpConfig.port = p
+                                        spacing: CompanyTheme.spacingMd
+
+                                        // Status Dot
+                                        Rectangle {
+                                            width: 10
+                                            height: 10
+                                            radius: 5
+                                            color: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? CompanyTheme.success : CompanyTheme.textMuted
+                                        }
+
+                                        // Link Name & Details
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            RowLayout {
+                                                spacing: 8
+                                                Text {
+                                                    text: linkCardItem.linkObj ? linkCardItem.linkObj.name : ""
+                                                    color: CompanyTheme.textPrimary
+                                                    font.bold: true
+                                                    font.pointSize: CompanyTheme.fontBody
+                                                }
+
+                                                // Type badge
+                                                Rectangle {
+                                                    radius: 3
+                                                    color: CompanyTheme.bgDark
+                                                    border.color: CompanyTheme.borderSubtle
+                                                    border.width: 1
+                                                    implicitWidth: typeText.implicitWidth + 8
+                                                    implicitHeight: typeText.implicitHeight + 4
+                                                    Text {
+                                                        id: typeText
+                                                        anchors.centerIn: parent
+                                                        text: {
+                                                            if (!linkCardItem.linkObj) return "LINK"
+                                                            if (linkCardItem.linkObj.linkType === 1) return "UDP"
+                                                            if (linkCardItem.linkObj.linkType === 2) return "TCP"
+                                                            if (linkCardItem.linkObj.linkType === 0) return "SERIAL"
+                                                            return "LINK"
+                                                        }
+                                                        color: CompanyTheme.primary
+                                                        font.pointSize: 8
+                                                        font.bold: true
+                                                        font.family: CompanyTheme.fontMono
+                                                    }
+                                                }
+
+                                                // AutoConnect badge
+                                                Rectangle {
+                                                    radius: 3
+                                                    color: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.15) : CompanyTheme.bgDark
+                                                    border.color: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.4) : CompanyTheme.borderSubtle
+                                                    border.width: 1
+                                                    implicitWidth: autoText.implicitWidth + 8
+                                                    implicitHeight: autoText.implicitHeight + 4
+                                                    Text {
+                                                        id: autoText
+                                                        anchors.centerIn: parent
+                                                        text: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? qsTr("AUTOCONNECT: ON") : qsTr("AUTOCONNECT: OFF")
+                                                        color: (linkCardItem.linkObj && linkCardItem.linkObj.autoConnect) ? CompanyTheme.success : CompanyTheme.textMuted
+                                                        font.pointSize: 8
+                                                        font.bold: true
+                                                    }
+                                                    MouseArea {
+                                                        anchors.fill: parent
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            if (linkCardItem.linkObj) {
+                                                                linkCardItem.linkObj.autoConnect = !linkCardItem.linkObj.autoConnect
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // Sub-detail text
+                                            Text {
+                                                color: CompanyTheme.textSecondary
+                                                font.pointSize: CompanyTheme.fontTiny
+                                                font.family: CompanyTheme.fontMono
+                                                text: {
+                                                    if (!linkCardItem.linkObj) return ""
+                                                    if (linkCardItem.linkObj.linkType === 1) {
+                                                        return qsTr("Listening Port: %1").arg(linkCardItem.linkObj.localPort)
+                                                    } else if (linkCardItem.linkObj.linkType === 2) {
+                                                        return qsTr("Host: %1:%2").arg(linkCardItem.linkObj.host).arg(linkCardItem.linkObj.port)
+                                                    } else if (linkCardItem.linkObj.linkType === 0) {
+                                                        return qsTr("Port: %1 | Baud: %2").arg(linkCardItem.linkObj.portDisplayName || linkCardItem.linkObj.portName || "Serial").arg(linkCardItem.linkObj.baud)
+                                                    }
+                                                    return qsTr("Active: %1").arg(linkCardItem.linkObj.linkActive ? "Yes" : "No")
+                                                }
+                                            }
+                                        }
+
+                                        // Connect / Disconnect Action
+                                        CompanyButton {
+                                            text: (linkCardItem.linkObj && linkCardItem.linkObj.linkActive) ? qsTr("DISCONNECT") : qsTr("CONNECT")
+                                            isOutline: !(linkCardItem.linkObj && linkCardItem.linkObj.linkActive)
+                                            onClicked: {
+                                                if (!linkCardItem.linkObj) return
+                                                if (linkCardItem.linkObj.linkActive) {
+                                                    QGroundControl.linkManager.disconnectLinkConfiguration(linkCardItem.linkObj)
+                                                    commLinksCard.statusMessage = qsTr("Disconnected %1").arg(linkCardItem.linkObj.name)
+                                                } else {
+                                                    QGroundControl.linkManager.createConnectedLink(linkCardItem.linkObj)
+                                                    commLinksCard.statusMessage = qsTr("Connecting %1...").arg(linkCardItem.linkObj.name)
+                                                }
+                                            }
+                                        }
+
+                                        // Delete Action
+                                        CompanyButton {
+                                            text: qsTr("DELETE")
+                                            isOutline: true
+                                            visible: linkCardItem.linkObj ? !linkCardItem.linkObj.dynamic : true
+                                            onClicked: {
+                                                if (!linkCardItem.linkObj) return
+                                                var n = linkCardItem.linkObj.name
+                                                QGroundControl.linkManager.removeConfiguration(linkCardItem.linkObj)
+                                                commLinksCard.statusMessage = qsTr("Removed configuration: %1").arg(n)
                                             }
                                         }
                                     }
@@ -1309,72 +1492,334 @@ Item {
                             }
                         }
 
-                        // TCP Action Controls
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: CompanyTheme.spacingMd
-
-                            ColumnLayout {
-                                spacing: 2
-                                Layout.fillWidth: true
-                                Text { text: qsTr("Direct TCP Telemetry Client"); color: CompanyTheme.textPrimary; font.bold: true; font.pointSize: CompanyTheme.fontSmall }
-                                Text { text: qsTr("Connect directly to an onboard or ground station TCP telemetry server (e.g. 192.168.168.11:20002)"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny }
-                            }
-
-                            CompanyButton {
-                                id: tcpConnectBtn
-                                text: tcpLinkCard._isTcpActive ? qsTr("DISCONNECT TCP") : qsTr("CONNECT TCP")
-                                isOutline: !tcpLinkCard._isTcpActive
-                                onClicked: {
-                                    var host = tcpHostInput.text.trim()
-                                    var port = parseInt(tcpPortInput.text)
-                                    if (host === "") {
-                                        tcpLinkCard._statusMessage = qsTr("Please enter a valid target host IP address.")
-                                        return
-                                    }
-                                    if (isNaN(port) || port < 1 || port > 65535) {
-                                        tcpLinkCard._statusMessage = qsTr("Please enter a valid TCP port between 1 and 65535.")
-                                        return
-                                    }
-
-                                    var cfg = tcpLinkCard._tcpConfig
-                                    if (!cfg) {
-                                        cfg = QGroundControl.linkManager.createConfiguration(2, "GroundStation_TCP")
-                                        if (cfg) {
-                                            cfg.host = host
-                                            cfg.port = port
-                                            cfg.autoConnect = false
-                                            QGroundControl.linkManager.endCreateConfiguration(cfg)
-                                            tcpLinkCard._tcpConfig = cfg
-                                        }
-                                    } else {
-                                        cfg.host = host
-                                        cfg.port = port
-                                    }
-                                    if (cfg) {
-                                        if (cfg.linkActive) {
-                                            QGroundControl.linkManager.disconnectLinkConfiguration(cfg)
-                                            tcpLinkCard._statusMessage = qsTr("Disconnected.")
-                                        } else {
-                                            tcpLinkCard._statusMessage = qsTr("Connecting to %1:%2...").arg(host).arg(port)
-                                            QGroundControl.linkManager.createConnectedLink(cfg)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Guidance & Inline Status Notice
+                        // Inline Custom Link Creator Form
                         Rectangle {
                             Layout.fillWidth: true
-                            implicitHeight: inlineNoticeRow.implicitHeight + 16
+                            implicitHeight: customFormCol.implicitHeight + 20
                             radius: CompanyTheme.radiusSm
-                            color: tcpLinkCard._isTcpActive ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.08) : CompanyTheme.bgCardElevated
-                            border.color: tcpLinkCard._isTcpActive ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.3) : CompanyTheme.borderSubtle
+                            color: CompanyTheme.bgCardSecondary
+                            border.color: CompanyTheme.borderCard
+                            border.width: 1
+                            visible: commLinksCard.showAddCustomForm
+
+                            ColumnLayout {
+                                id: customFormCol
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: CompanyTheme.spacingSm
+
+                                Text {
+                                    text: qsTr("CREATE NEW CUSTOM LINK")
+                                    color: CompanyTheme.primary
+                                    font.bold: true
+                                    font.pointSize: CompanyTheme.fontSmall
+                                }
+
+                                // Mobile & Tablet friendly responsive layout
+                                Flow {
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    // 1. Link Type Toggle (UDP vs TCP)
+                                    ColumnLayout {
+                                        spacing: 4
+                                        width: 150
+
+                                        Text {
+                                            text: qsTr("Connection Protocol")
+                                            color: CompanyTheme.textSecondary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
+                                        RowLayout {
+                                            spacing: 4
+                                            property int selectedType: 1 // 1=UDP, 2=TCP
+                                            id: typeSelectorGroup
+
+                                            CompanyButton {
+                                                text: "UDP"
+                                                isPrimary: typeSelectorGroup.selectedType === 1
+                                                isOutline: typeSelectorGroup.selectedType !== 1
+                                                onClicked: {
+                                                    typeSelectorGroup.selectedType = 1
+                                                    if (newLinkNameInput.text === "Custom TCP" || newLinkNameInput.text === "") newLinkNameInput.text = "Custom UDP"
+                                                    if (newLinkPortInput.text === "5760") newLinkPortInput.text = "14551"
+                                                }
+                                            }
+
+                                            CompanyButton {
+                                                text: "TCP"
+                                                isPrimary: typeSelectorGroup.selectedType === 2
+                                                isOutline: typeSelectorGroup.selectedType !== 2
+                                                onClicked: {
+                                                    typeSelectorGroup.selectedType = 2
+                                                    if (newLinkNameInput.text === "Custom UDP" || newLinkNameInput.text === "") newLinkNameInput.text = "Custom TCP"
+                                                    if (newLinkPortInput.text === "14551" || newLinkPortInput.text === "14550") newLinkPortInput.text = "5760"
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 2. Link Name
+                                    ColumnLayout {
+                                        spacing: 4
+                                        width: Math.max(180, (commLinksCardCol.width - 40) * 0.28)
+
+                                        Text {
+                                            text: qsTr("Link Display Name")
+                                            color: CompanyTheme.textSecondary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            implicitHeight: 36
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.borderCard
+                                            border.width: 1
+
+                                            TextInput {
+                                                id: newLinkNameInput
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.pointSize: CompanyTheme.fontSmall
+                                                text: "Custom UDP"
+                                            }
+                                        }
+                                    }
+
+                                    // 3. Target Host (TCP Only)
+                                    ColumnLayout {
+                                        spacing: 4
+                                        width: Math.max(160, (commLinksCardCol.width - 40) * 0.28)
+                                        visible: typeSelectorGroup.selectedType === 2
+
+                                        Text {
+                                            text: qsTr("Target Host IP / Domain")
+                                            color: CompanyTheme.primary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            implicitHeight: 36
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.primary
+                                            border.width: 1
+
+                                            TextInput {
+                                                id: newLinkHostInput
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.pointSize: CompanyTheme.fontSmall
+                                                font.family: CompanyTheme.fontMono
+                                                text: "192.168.168.11"
+                                            }
+                                        }
+                                    }
+
+                                    // 4. Port Input (UDP Listen Port or TCP Target Port)
+                                    ColumnLayout {
+                                        spacing: 4
+                                        width: 130
+
+                                        Text {
+                                            text: typeSelectorGroup.selectedType === 1 ? qsTr("UDP Listen Port") : qsTr("TCP Server Port")
+                                            color: CompanyTheme.primary
+                                            font.pointSize: CompanyTheme.fontTiny
+                                            font.bold: true
+                                        }
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            implicitHeight: 36
+                                            radius: CompanyTheme.radiusSm
+                                            color: CompanyTheme.bgInput
+                                            border.color: CompanyTheme.primary
+                                            border.width: 1
+
+                                            TextInput {
+                                                id: newLinkPortInput
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                color: CompanyTheme.textPrimary
+                                                font.pointSize: CompanyTheme.fontSmall
+                                                font.family: CompanyTheme.fontMono
+                                                font.bold: true
+                                                text: typeSelectorGroup.selectedType === 1 ? "14551" : "5760"
+                                            }
+                                        }
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+
+                                    CompanyButton {
+                                        text: qsTr("ADD & CONNECT LINK")
+                                        isPrimary: true
+                                        onClicked: {
+                                            var name = newLinkNameInput.text.trim()
+                                            var type = typeSelectorGroup.selectedType
+                                            var port = parseInt(newLinkPortInput.text)
+                                            if (name === "") name = type === 1 ? "Custom UDP " + port : "Custom TCP " + port
+                                            if (isNaN(port) || port < 1 || port > 65535) {
+                                                commLinksCard.statusMessage = qsTr("Invalid port number: %1").arg(newLinkPortInput.text)
+                                                return
+                                            }
+
+                                            var cfg = QGroundControl.linkManager.createConfiguration(type, name)
+                                            if (cfg) {
+                                                if (type === 1) {
+                                                    cfg.localPort = port
+                                                } else if (type === 2) {
+                                                    cfg.host = newLinkHostInput.text.trim()
+                                                    cfg.port = port
+                                                }
+                                                cfg.autoConnect = true
+                                                cfg.dynamic = false
+                                                QGroundControl.linkManager.endCreateConfiguration(cfg)
+                                                QGroundControl.linkManager.createConnectedLink(cfg)
+                                                commLinksCard.statusMessage = qsTr("Created and connected %1").arg(name)
+                                                commLinksCard.showAddCustomForm = false
+                                            }
+                                        }
+                                    }
+
+                                    CompanyButton {
+                                        text: qsTr("CANCEL")
+                                        isOutline: true
+                                        onClicked: commLinksCard.showAddCustomForm = false
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: CompanyTheme.borderSubtle }
+
+                        // Hardware Subsystems & Auto-Connect Controls
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: CompanyTheme.spacingSm
+
+                            Text {
+                                text: qsTr("HARDWARE ADAPTERS & AUTOCONNECT DAEMONS")
+                                color: CompanyTheme.textPrimary
+                                font.pointSize: CompanyTheme.fontSmall
+                                font.bold: true
+                            }
+
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: 2
+                                columnSpacing: CompanyTheme.spacingLg
+                                rowSpacing: CompanyTheme.spacingSm
+
+                                // UDP AutoConnect
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 2
+                                        Text { text: qsTr("UDP Daemon AutoConnect"); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; font.bold: true }
+                                        Text { text: qsTr("Automatically binds default telemetry sockets upon launch"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny }
+                                    }
+                                    CompanyButton {
+                                        text: (root._autoConnectSettings && root._autoConnectSettings.autoConnectUDP.rawValue) ? qsTr("UDP: ON") : qsTr("UDP: OFF")
+                                        isOutline: !(root._autoConnectSettings && root._autoConnectSettings.autoConnectUDP.rawValue)
+                                        onClicked: {
+                                            if (root._autoConnectSettings) {
+                                                root._autoConnectSettings.autoConnectUDP.rawValue = !root._autoConnectSettings.autoConnectUDP.rawValue
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Android POSIX Serial (/dev/tty*)
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 2
+                                        Text { text: qsTr("Android POSIX Serial (/dev/tty*)"); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; font.bold: true }
+                                        Text { text: qsTr("Required for handheld internal UART buses (Skydroid / Herelink)"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny }
+                                    }
+                                    CompanyButton {
+                                        text: (root._appSettings && root._appSettings.androidUsePosixSerial && root._appSettings.androidUsePosixSerial.rawValue) ? qsTr("POSIX: ON") : qsTr("POSIX: OFF")
+                                        isOutline: !(root._appSettings && root._appSettings.androidUsePosixSerial && root._appSettings.androidUsePosixSerial.rawValue)
+                                        onClicked: {
+                                            if (root._appSettings && root._appSettings.androidUsePosixSerial) {
+                                                root._appSettings.androidUsePosixSerial.rawValue = !root._appSettings.androidUsePosixSerial.rawValue
+                                                commLinksCard.statusMessage = qsTr("POSIX Serial set to: %1 (Restart app if needed)").arg(root._appSettings.androidUsePosixSerial.rawValue ? "ON" : "OFF")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Pixhawk USB
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 2
+                                        Text { text: qsTr("Pixhawk USB Auto-Connect"); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; font.bold: true }
+                                        Text { text: qsTr("Scans for direct USB OTG flight controllers"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny }
+                                    }
+                                    CompanyButton {
+                                        text: (root._autoConnectSettings && root._autoConnectSettings.autoConnectPixhawk.rawValue) ? qsTr("USB: ON") : qsTr("USB: OFF")
+                                        isOutline: !(root._autoConnectSettings && root._autoConnectSettings.autoConnectPixhawk.rawValue)
+                                        onClicked: {
+                                            if (root._autoConnectSettings) {
+                                                root._autoConnectSettings.autoConnectPixhawk.rawValue = !root._autoConnectSettings.autoConnectPixhawk.rawValue
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // SiK Radio
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: CompanyTheme.spacingMd
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 2
+                                        Text { text: qsTr("SiK Radio Auto-Connect"); color: CompanyTheme.textPrimary; font.pointSize: CompanyTheme.fontSmall; font.bold: true }
+                                        Text { text: qsTr("Scans for 433MHz/915MHz telemetry transceivers"); color: CompanyTheme.textMuted; font.pointSize: CompanyTheme.fontTiny }
+                                    }
+                                    CompanyButton {
+                                        text: (root._autoConnectSettings && root._autoConnectSettings.autoConnectSiKRadio.rawValue) ? qsTr("RADIO: ON") : qsTr("RADIO: OFF")
+                                        isOutline: !(root._autoConnectSettings && root._autoConnectSettings.autoConnectSiKRadio.rawValue)
+                                        onClicked: {
+                                            if (root._autoConnectSettings) {
+                                                root._autoConnectSettings.autoConnectSiKRadio.rawValue = !root._autoConnectSettings.autoConnectSiKRadio.rawValue
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Guidance Notice & Status feedback
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: routerNoticeRow.implicitHeight + 16
+                            radius: CompanyTheme.radiusSm
+                            color: root._hasVehicle ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.08) : CompanyTheme.bgCardElevated
+                            border.color: root._hasVehicle ? Qt.rgba(CompanyTheme.success.r, CompanyTheme.success.g, CompanyTheme.success.b, 0.3) : CompanyTheme.borderSubtle
                             border.width: 1
 
                             RowLayout {
-                                id: inlineNoticeRow
+                                id: routerNoticeRow
                                 anchors.fill: parent
                                 anchors.margins: 8
                                 spacing: 8
@@ -1382,22 +1827,22 @@ Item {
                                 IconVector {
                                     name: "info"
                                     size: 14
-                                    color: tcpLinkCard._isTcpActive ? CompanyTheme.success : (tcpLinkCard._statusMessage.indexOf(qsTr("Please")) !== -1 ? CompanyTheme.warning : CompanyTheme.textMuted)
+                                    color: root._hasVehicle ? CompanyTheme.success : (commLinksCard.statusMessage !== "" ? CompanyTheme.primary : CompanyTheme.textMuted)
                                 }
 
                                 Text {
                                     Layout.fillWidth: true
                                     wrapMode: Text.WordWrap
                                     font.pointSize: CompanyTheme.fontTiny
-                                    color: tcpLinkCard._isTcpActive ? CompanyTheme.success : (tcpLinkCard._statusMessage.indexOf(qsTr("Please")) !== -1 ? CompanyTheme.warning : CompanyTheme.textSecondary)
+                                    color: root._hasVehicle ? CompanyTheme.success : (commLinksCard.statusMessage !== "" ? CompanyTheme.primary : CompanyTheme.textSecondary)
                                     text: {
-                                        if (tcpLinkCard._isTcpActive) {
-                                            return qsTr("Active TCP connection established with telemetry host %1:%2").arg(tcpHostInput.text.trim()).arg(tcpPortInput.text.trim())
+                                        if (root._hasVehicle) {
+                                            return qsTr("Vehicle telemetry link is active and communicating in real-time.")
                                         }
-                                        if (tcpLinkCard._statusMessage !== "") {
-                                            return tcpLinkCard._statusMessage
+                                        if (commLinksCard.statusMessage !== "") {
+                                            return commLinksCard.statusMessage
                                         }
-                                        return qsTr("Automatic Link Discovery: USB Comms and UDP Broadcast (port 14550) connect automatically upon vehicle detection. Manual TCP client configuration is only required when routing via a companion computer proxy.")
+                                        return qsTr("Skydroid G30 Connection Guide: Skydroid G30 handheld unit transmits telemetry via UDP port 14551 by default (or UDP port 14451 on legacy transmitters). The app auto-listens on these ports. If your DeviceTool is configured to forward to another port, click '+ ADD CUSTOM LINK' above.")
                                     }
                                 }
                             }
@@ -1674,6 +2119,41 @@ Item {
                                             root._videoSettings.streamEnabled.rawValue = true
                                             QGroundControl.videoManager.stopVideo()
                                             QGroundControl.videoManager.startVideo()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                implicitWidth: gremsyRtspText.implicitWidth + 16
+                                height: 26
+                                radius: CompanyTheme.radiusSm
+                                color: CompanyTheme.bgCardSecondary
+                                border.color: CompanyTheme.primary
+                                border.width: 1
+                                Text {
+                                    id: gremsyRtspText
+                                    anchors.centerIn: parent
+                                    text: qsTr("Gremsy VIO G1 (RTSP 192.168.144.240)")
+                                    color: CompanyTheme.primary
+                                    font.pointSize: CompanyTheme.fontTiny
+                                    font.bold: true
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (root._videoSettings) {
+                                            root._videoSettings.videoSource.rawValue = "RTSP Video Stream"
+                                            root._videoSettings.rtspUrl.rawValue = "rtsp://192.168.144.240:8554/payload"
+                                            root._videoSettings.streamEnabled.rawValue = true
+                                            QGroundControl.videoManager.stopVideo()
+                                            QGroundControl.videoManager.startVideo()
+                                        }
+                                        if (root._netSettings) {
+                                            root._netSettings.setEoVideoUrl("rtsp://192.168.144.240:8554/payload")
+                                            root._netSettings.setIrVideoUrl("rtsp://192.168.144.240:8554/payload_ir")
+                                            root._netSettings.setThermalVideoUrl("rtsp://192.168.144.240:8554/payload_ir")
                                         }
                                     }
                                 }

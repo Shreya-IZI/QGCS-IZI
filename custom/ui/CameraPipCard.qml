@@ -126,11 +126,11 @@ Item {
                         width: 28
                         height: 18
                         radius: 3
-                        color: root.activeSensor === "RGB" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
+                        color: root.activeSensor === "RGB" ? CompanyTheme.primary : CompanyTheme.bgCard
                         Text {
                             anchors.centerIn: parent
                             text: "EO"
-                            color: root.activeSensor === "RGB" ? "#FFFFFF" : CompanyTheme.textSecondary
+                            color: root.activeSensor === "RGB" ? "#000000" : CompanyTheme.textSecondary
                             font.pointSize: 7
                             font.bold: true
                         }
@@ -143,7 +143,7 @@ Item {
                                 var net = (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : null
                                 if (net) net.selectedCameraFeed = "EO"
                                 if (vs) {
-                                    vs.rtspUrl.rawValue = (net ? net.eoVideoUrl : "rtsp://192.168.168.119:554/live/ch0")
+                                    vs.rtspUrl.rawValue = (net ? net.eoVideoUrl : "rtsp://192.168.144.108:554/stream=0")
                                     if (vs.streamEnabled && vs.streamEnabled.rawValue) {
                                         QGroundControl.videoManager.stopVideo()
                                         QGroundControl.videoManager.startVideo()
@@ -157,11 +157,11 @@ Item {
                         width: 28
                         height: 18
                         radius: 3
-                        color: root.activeSensor === "IR" ? CompanyTheme.djiBlue : CompanyTheme.bgCard
+                        color: root.activeSensor === "IR" ? CompanyTheme.primary : CompanyTheme.bgCard
                         Text {
                             anchors.centerIn: parent
                             text: "IR"
-                            color: root.activeSensor === "IR" ? "#FFFFFF" : CompanyTheme.textSecondary
+                            color: root.activeSensor === "IR" ? "#000000" : CompanyTheme.textSecondary
                             font.pointSize: 7
                             font.bold: true
                         }
@@ -174,7 +174,7 @@ Item {
                                 var net = (typeof CompanyNetworkSettings !== "undefined" && CompanyNetworkSettings) ? CompanyNetworkSettings : null
                                 if (net) net.selectedCameraFeed = "IR"
                                 if (vs) {
-                                    vs.rtspUrl.rawValue = (net ? net.irVideoUrl : "rtsp://192.168.168.119:554/live/ch1")
+                                    vs.rtspUrl.rawValue = (net ? net.irVideoUrl : "rtsp://192.168.144.108:555/stream=2")
                                     if (vs.streamEnabled && vs.streamEnabled.rawValue) {
                                         QGroundControl.videoManager.stopVideo()
                                         QGroundControl.videoManager.startVideo()

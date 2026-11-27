@@ -144,14 +144,14 @@ signals:
 private:
     void _syncWithQGCSettings();
 
-    // Thermal Video
-    QString _thermalVideoUrl     = QStringLiteral("rtsp://192.168.168.119:8554/thermal");
-    int     _thermalVideoPort    = 8554;
+    // Thermal Video (Skydroid G30 Thermal Sensor Port 555)
+    QString _thermalVideoUrl     = QStringLiteral("rtsp://192.168.144.108:555/stream=2");
+    int     _thermalVideoPort    = 555;
     QString _thermalVideoType    = QStringLiteral("RTSP");
 
-    // Multi-Camera Payload Video
-    QString _eoVideoUrl          = QStringLiteral("rtsp://192.168.168.119:554/live/ch0");
-    QString _irVideoUrl          = QStringLiteral("rtsp://192.168.168.119:554/live/ch1");
+    // Multi-Camera Payload Video (Skydroid G30 Dual-Gimbal Endpoints)
+    QString _eoVideoUrl          = QStringLiteral("rtsp://192.168.144.108:554/stream=0");
+    QString _irVideoUrl          = QStringLiteral("rtsp://192.168.144.108:555/stream=2");
     QString _selectedCameraFeed  = QStringLiteral("EO");
 
     // UDP Telemetry Broadcast

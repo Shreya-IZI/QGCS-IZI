@@ -7,6 +7,7 @@
 #include <QtCore/QMetaType>
 #include <QtCore/QSettings>
 #include <QtCore/QStandardPaths>
+#include <QtCore/QStorageInfo>
 #include <QtCore/QTimer>
 #include <cstring>
 
@@ -511,6 +512,19 @@ bool MAVLinkProtocol::_checkTelemetrySavePath()
             tr("Unable to save telemetry log. Telemetry save directory \"%1\" does not exist.").arg(saveDirPath);
         QGC::showAppMessage(error);
         return false;
+    }
+
+    // PERF-04 Safety Guard: Verify at least 250 MB free disk space before saving telemetry log
+    const QStorageInfo storage(saveDirPath);
+    if (storage.isValid()) {
+        constexpr qint64 minFreeBytes = 250 * 1024 * 1024; // 250 MB
+        if (storage.bytesAvailable() < minFreeBytes) {
+            const double freeMb = static_cast<double>(storage.bytesAvailable()) / (1024.0 * 1024.0);
+            const QString error = tr("Low Disk Space Warning: Only %1 MB available on drive. Telemetry logging stopped to protect system storage.")
+                                      .arg(freeMb, 0, 'f', 1);
+            QGC::showAppMessage(error);
+            return false;
+        }
     }
 
     return true;
